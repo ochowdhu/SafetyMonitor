@@ -1,0 +1,7 @@
+\ProvidesFile{Ultlfonts.fd}
+             [2007/01/16 v0.1.2
+              LTL Fonts definitions]
+\DeclareFontFamily{U}{ltlfonts}{}
+\DeclareFontShape{U}{ltlfonts}{m}{n}{ <-> ltlfonts }{}
+\DeclareFontShape{U}{ltlfonts}{b}{n}{ <-> sub * ltlfonts/m/n }{}
+\endinput

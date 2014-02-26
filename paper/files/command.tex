@@ -1,0 +1,244 @@
+%% comments
+%\newcommand{\notes}[1]{}
+\newcommand{\notes}[1]{\textcolor{red}{#1}}
+\newcommand{\dg}[1]{\notes{Deepak says: #1}}
+\newcommand{\limin}[1]{\notes{Limin says: #1}}
+\newcommand{\anupam}[1]{\notes{Anupam says: #1}}
+\newcommand{\omar}[1]{\notes{Omar says: #1}}
+
+\newcommand{\eat}[1]{}
+% \newcommand{\Paragraph}[1]{\vspace{5pt}\noindent\textbf{#1}}
+\newcommand{\Paragraph}[1]{\vspace{2pt}\noindent\textbf{\textit{#1}}}
+\newcommand{\evalPoint}{\ensuremath{\mathit{evalPtr}}\xspace}
+\newcommand{\curPoint}{\ensuremath{\mathit{curPtr}}\xspace}
+
+\newcommand{\etal}{\textit{et al.}\xspace}
+\newcommand{\ie}{\textit{i.e.}\xspace}
+\newcommand{\eg}{\textit{e.g.}\xspace}
+\newcommand{\viz}{\textit{viz.}\xspace}
+\newcommand{\etc}{\textit{etc.}\xspace}
+
+\newcommand{\state}{\ensuremath{\pi}\xspace}
+\newcommand{\statedown}[1]{\ensuremath{\pi_{#1}}\xspace}
+\newcommand{\stateup}[1]{\ensuremath{\pi^{#1}}\xspace}
+\newcommand{\structure}[1]{\ensuremath{\mathbb{S}_{#1}}\xspace}
+\newcommand{\structureud}[2]{\ensuremath{\mathbb{S}_{#1}^{#2}}\xspace}
+\newcommand{\idx}{\ensuremath{idx}\xspace}
+\newcommand{\map}{\ensuremath{\mathcal{A}}\xspace}
+\newcommand{\result}{\ensuremath{\mathbb{R}}\xspace}
+
+
+\newcommand{\yesterday}{\ensuremath{\LTLcircleminus}\xspace}
+\newcommand{\tomorrow}{\ensuremath{\LTLcircle}\xspace}
+\newcommand{\henceforth}{\ensuremath{\LTLsquare}\xspace}
+\newcommand{\eventually}{\ensuremath{\LTLdiamond}\xspace}
+\newcommand{\historically}{\ensuremath{\LTLsquareminus}\xspace}
+\newcommand{\once}{\ensuremath{\LTLdiamondminus}\xspace}
+\newcommand{\since}{\ensuremath{\,\mathrm{\cal S}\,}\xspace}
+\newcommand{\until}{\ensuremath{\,\mathrm{\cal U}\,}\xspace}
+\newcommand{\weaksince}{\ensuremath{\,\mathrm{\cal B}\,}\xspace}
+\newcommand{\weakuntil}{\ensuremath{\,\mathrm{\cal W}\,}\xspace}
+\newcommand{\weakyesterday}{\ensuremath{\LTLcircletilde}}
+
+
+\newcommand{\TIME}{\ensuremath{\tau}\xspace}
+\newcommand{\LOG}{\ensuremath{\mathcal{L}}\xspace}
+\newcommand{\PF}{\ensuremath{\psi}\xspace}
+\newcommand{\FS}{FSOV}
+\newcommand{\BS}{BuildTemporalStructure}
+\newcommand{\FSWV}{FSWV}
+%%% new judgement commands
+
+\newcommand{\cur}{\ensuremath{\chi_C}\xspace}
+\newcommand{\fut}{\ensuremath{\chi_F}\xspace}
+\newcommand{\bld}{\textbf{B}\xspace}
+\newcommand{\nbld}{\textbf{NB}\xspace}
+\newcommand{\chk}{\textbf{C}\xspace}
+\newcommand{\tl}{\textbf{TL}\xspace}
+\newcommand{\ut}{\textbf{IT}\xspace}
+\newcommand{\tc}{\textbf{tc}\xspace}
+\newcommand{\tb}{\textbf{tb}\xspace}
+\newcommand{\na}{\textbf{na}\xspace}
+\newcommand{\ms}[1]{\ensuremath{\{#1\}}\xspace}
+% \newcommand{\note}[1]{\color{red}#1\color{black}}
+
+\newcommand{\bsat}{\ensuremath{\vdash_{\textbf{\color{blue}B}}}\xspace}
+\newcommand{\nsat}{\ensuremath{\vdash}\xspace}
+
+% \newcommand{\blabel}[1]{\color{blue}[\textit{\scriptsize#1}]}
+% \newcommand{\nlabel}[1]{\color{red}[\textit{\scriptsize#1}]}
+
+\newcommand{\blabel}[1]{\color{blue}[\textit{\textbf{#1}}]}
+\newcommand{\nlabel}[1]{\color{black}[\textit{\textbf{#1}}]}
+
+
+% \newcommand{\cL}{\ensuremath{\mathcal{L}}\xspace}
+
+% \newcommand{\bformula}{\texttt{B-formula}\xspace}
+% \newcommand{\bformulas}{\texttt{B-formulas}\xspace}
+
+\newcommand{\bformula}{\texttt{B-formula}\xspace}
+\newcommand{\bformulas}{\texttt{B-formulas}\xspace}
+
+
+\newcommand{\funcname}[1]{\textbf{\texttt{#1}}}
+
+\newcommand{\cc}{\funcname{checkCompliance}\xspace} % checkCompliance 
+\newcommand{\bts}{\funcname{uSS}\xspace} %buildTemporalStructure 
+\newcommand{\ips}{\funcname{ips}\xspace} % isPolicySatisfied
+\newcommand{\sat}{\funcname{sat}\xspace} % sat predicate axiom
+% \newcommand{\dom}{\funcname{domain}\xspace} %domain
+\newcommand{\dom}{\funcname{dom}\xspace} %domain
+% \newcommand{\monitor}{\funcname{Policy-Monitor}\xspace}
+\newcommand{\monitor}{\funcname{pr\'ecis}\xspace}
+
+\newcommand{\statesize}{\ensuremath{\Upsilon}\xspace}
+
+\newcommand{\tsub}{\ensuremath{\mathsf{b\mbox{-}tsub}}\xspace}
+\newcommand{\stsub}{\ensuremath{\mathsf{b\mbox{-}s\mbox{-}tsub}}\xspace}
+
+\newcommand{\ins}{\ensuremath{\sigma_{\mathrm{in}}}\xspace}
+\newcommand{\DELAY}{\ensuremath{\Delta}\xspace}
+\newcommand{\delay}{\ensuremath{\delta}\xspace}
+% \newcommand{\invalid}{\textbf{\textit{invalid}}\xspace}
+%\newcommand{\invalid}{\textbf{\textit{\texttt{invalid}}}\xspace}
+\newcommand{\invalid}{\ensuremath{\sigma_\bot}\xspace}
+
+\newcommand{\lsat}{\ensuremath{\vdash_{\textbf{\color{magenta}tl}}}\xspace}
+
+\newcommand{\inp}{\ensuremath{\chi_I}\xspace}
+\newcommand{\outp}{\ensuremath{\chi_O}\xspace}
+
+% Some shortcuts
+\newcommand{\sigin}{\ensuremath{\sigma_{\textit{in}}}\xspace}
+\newcommand{\Sigout}{\ensuremath{\Sigma_{\textit{out}}}\xspace}
+\newcommand{\JJoin}{\hbox{{\Large$\bowtie$}}\xspace}
+
+\newcommand{\planguage}{\ensuremath{\mathbf{\alpha\mathcal{VSL}}}\xspace}
+
+% \renewcommand{\vec}[1]{\ensuremath{\overrightarrow{#1}}\xspace}
+\newcommand{\interval}{\ensuremath{\mathbb{I}}\xspace}
+
+\newcommand{\cL}{\ensuremath{\mathcal{L}}\xspace}
+\newcommand{\cD}{\ensuremath{\mathcal{D}}\xspace}
+
+% \newcommand{\policy}{\ensuremath{\mathbf{\wp}}\xspace}
+% \newcommand{\policy}{\ensuremath{\mathbf{\varphi}}\xspace}
+\newcommand{\policy}{\ensuremath{\varphi}\xspace}
+
+\newcommand{\identity}{\ensuremath{\mathbf{\bullet}}\xspace}
+
+% \WithSuffix\newcommand\ref*[1]{\ref{#1}}
+
+% Rules with \label and \ref
+\newcommand{\rref}[1]{[\ref{#1}]}
+\newcommand{\rrefl}[1]{[\ref*{#1}]}
+% Needs this because \infer doesn't work in label text directly...
+\DeclareRobustCommand{\rinfer}[2]{\infer{#1}{#2}}
+
+% \spnewtheorem{RAxiom}[theorem]{Axiom}{\bfseries}{\itshape}
+
+\newcommand{\send}{\ensuremath{\mathrm{send}}\xspace}
+\newcommand{\inrole}{\ensuremath{\mathrm{inrole}}\xspace}
+\newcommand{\contains}{\ensuremath{\mathrm{contains}}\xspace}
+\newcommand{\psychotherapynotes}{\ensuremath{\mathit{psych\mbox{-}notes}}\xspace}
+\newcommand{\PHI}{\ensuremath{\mathit{PHI}}\xspace}
+\newcommand{\coveredentity}{\ensuremath{\mathit{covered\mbox{-}entity}}\xspace}
+\newcommand{\individual}{\ensuremath{\mathit{individual}}\xspace}
+
+\spnewtheorem{RAxiom}{Axiom}[lemma]{\bfseries}{\rmfamily}
+
+%
+% Formula induction
+%
+% \declaretheorem{axiom}
+
+\newcommand{\formula}[5]{
+\switch
+\case{#1=1}\ensuremath{\top}%
+\case{#1=2}\ensuremath{\bot}%
+\case{#1=3}\ensuremath{{#2}_{#3}({#4}_1,\dots,{#4}_{#5})}%
+\case{#1=4}\ensuremath{{#2}_{#3} \vee {#4}_{#5}}%
+\case{#1=5}\ensuremath{{#2}_{#3} \wedge {#4}_{#5}}%
+% \case{#1=6}\ensuremath{\exists {#2}. {#3}({#2}{#4}){#5}}%
+\case{#1=6}\ensuremath{\exists {#2}. {#3}{#4}{#5}}%
+% \case{#1=7}\ensuremath{\forall {#2}. ({#3}({#2}){#5} \rightarrow {#4}({#2}){#5})}%
+\case{#1=7}\ensuremath{\forall {#2}. ({#3}{#5} \rightarrow {#4}{#5})}%
+\case{#1=8}\ensuremath{{#2}_{#3} \since_{[c,d]} {#4}_{#5}}%
+\case{#1=9}\ensuremath{{#2}_{#3} \until_{[c,d]} {#4}_{#5}}%
+\case{#1=10}\ensuremath{\once_{[c, d]}{#2}_{#3}\mid\historically_{[c, d]}{#2}_{#3}\mid\yesterday_{[c, d]}{#2}_{#3}}%
+\case{#1=11}\ensuremath{\eventually_{[c, d]}{#2}_{#3}\mid\henceforth_{[c, d]}{#2}_{#3}\mid\tomorrow_{[c, d]}{#2}_{#3}}%
+\endswitch
+}
+\newcommand{\sformula}[3]{
+\switch
+\case{#1=3}\formula{#1}{\pred{p}}{}{t}{n}%
+\case{#1=6}\formula{#1}{\vec{x}}{\varphi}{}{}%
+\case{#1=7}\formula{#1}{\vec{x}}{\varphi_{#2}}{\varphi_{#3}}{}%
+\otherwise\formula{#1}{\varphi}{#2}{\varphi}{#3}%
+\endswitch
+}
+
+\newcommand{\ssformula}[1]{\sformula{#1}{1}{2}}
+
+\mkinduct{finduct}{ssformula}{$\varphi \equiv \icase$}{9}
+
+
+\newcommand{\pred}[1]{\ensuremath{\mathsf{#1}}\xspace}
+
+
+%
+% BSat induction
+%
+
+\newcommand{\bsatcases}[1]{
+\switch
+\case{#1=1}\rref{bsat:top}%
+\case{#1=2}\rref{bsat:bot}%
+\case{#1=3}\rref{bsat:pred}%
+\case{#1=4}\rref{bsat:since}%
+\case{#1=5}\rref{bsat:and}%
+\case{#1=6}\rref{bsat:or}%
+\case{#1=7}\rref{bsat:exists}%
+\otherwise Error%
+\endswitch
+}
+
+\mkinduct{binduct}{bsatcases}{\icase}{7}
+
+
+% For italized ``Case''
+% \renewcommand{\styledlabel}[1]{\textit{#1}}
+
+% \newcommand{\SOUNDNESS}{\noindent(\textbf{Soundness})\\}
+\newcommand{\SOUNDNESS}[1]{\noindent(\textbf{Soundness})\begin{adjustwidth}{1em}{}{#1}\end{adjustwidth}}
+% \newcommand{\COMPLETENESS}{\noindent(\textbf{Completeness})\\}
+\newcommand{\COMPLETENESS}[1]{\noindent(\textbf{Completeness})\begin{adjustwidth}{1em}{}{#1}\end{adjustwidth}}
+
+
+\newcommand{\makebrulenlabel}[2]{{\blabel{#2}}\scustomlabel{#1}{#2}}%
+\newcommand{\makeruleflabel}[2]{\scustomlabel{#1}{\ensuremath{#2}}}%
+\newcommand{\makebrule}[5]{%
+ \infer[\makebrulenlabel{#1}{#2}]{{#4}\makeruleflabel{#1:f}{#3}}{#5}%
+ \scustomlabel{#1:r}{\ensuremath{\rinfer{#4}{#5}}}%
+}
+
+\newcommand{\makenrulenlabel}[2]{{\nlabel{#2}}\scustomlabel{#1}{#2}}%
+\newcommand{\makenrule}[5]{%
+ \infer[\makenrulenlabel{#1}{#2}]{{#4}\makeruleflabel{#1:f}{#3}}{#5}%
+ \scustomlabel{#1:r}{\ensuremath{\rinfer{#4}{#5}}}%
+}
+% \newcommand{\makenewrule}[9]{%
+%  \infer[\makenrulenlabel{#1}{#2}]{{#4}\makeruleflabel{#1:f}{#3}}{#5}%
+%  \scustomlabel{#1:r}{\ensuremath{\inferrule*{#4}{#5\\#6\\\\#7\\#8\\\\#9}}}%
+% }
+\newcommand{\makenruleS}[4]{%
+ \infer[\makenrulenlabel{#1}{#2}]{{\cur, \fut \nsat #3 : \outp}\makeruleflabel{#1:f}{#3}}{#4}%
+ \scustomlabel{#1:r}{\ensuremath{\rinfer{\cur, \fut \nsat #3 : \outp}{#4}}}%
+}
+
+
+\newcommand{\snew}{\ensuremath{S_{\mbox{new}}}\xspace}
+\newcommand{\supdate}{\ensuremath{S_{\mbox{update}}}\xspace}
+\newcommand{\scarry}{\ensuremath{S_{\mbox{carry-over}}}\xspace}
+\newcommand{\sremove}{\ensuremath{S_{\mbox{remove}}}\xspace}

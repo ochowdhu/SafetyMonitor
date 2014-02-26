@@ -1,0 +1,245 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{myutils}[2013/06/13 v0.0.1 Some Utils]
+
+% Required for the switch construct
+\RequirePackage{boolexpr}
+
+ 
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% CASE list
+%
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+% nesting counter
+\newcounter{ccounter}
+\setcounter{ccounter}{0}
+
+% counters for four nesting levels
+\newcounter{ccounteri}
+\newcounter{ccounterii}
+\newcounter{ccounteriii}
+\newcounter{ccounteriv}
+
+% get the _name_ of the counter of the current nesting depth
+\newcommand{\thecurrentcase}{ccounter\roman{ccounter}}
+
+% step the current case
+\newcommand{\stepcurrentcase}{\stepcounter{\thecurrentcase}}
+
+% Get the correct case string depending on depth
+\newcommand{\thecaselabel}{
+\switch
+\case{\value{ccounter}=1}Case%
+\case{\value{ccounter}=2}Sub-Case%
+\case{\value{ccounter}=3}Sub-Sub-Case%
+\case{\value{ccounter}=4}Sub-Sub-Sub-Case%
+\otherwise Error%
+\endswitch
+}
+
+%
+% This is a hook to change the styling of the case label
+%
+\newcommand{\styledlabel}[1]{%
+ \textbf{#1}%
+}
+
+
+\newcommand{\mitem}{\item\mbox{}}%
+\newcommand{\litem}{\item\mbox{}\\}%
+
+%
+% CASE list environment
+%   Arg 1: Is inserted in the default label after the ``CASE''
+%   Arg 2: Is inserted after \usecounter in the definition part
+%
+\newenvironment{caselist}[2]{%
+  \addtocounter{ccounter}{1} % we're now in a case list
+  \begin{list}{\styledlabel{\thecaselabel} #1}{\usecounter{ccounter\roman{ccounter}}#2}%
+}%
+{%
+ \end{list} % end the case list
+ \addtocounter{ccounter}{-1} % exited a case list
+}%
+
+
+%
+% ``Simplified'' case list with default lengths such that the CASE label should be
+% left-aligned
+%
+\newenvironment{scaselist}[2]%
+{\begin{caselist}{#1}{\setlength{\labelwidth}{20pt}\setlength{\leftmargin}{20pt}}}%
+{\end{caselist}}%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% INDUCT list
+%
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+%
+% The command for the current case
+%
+% \newcommand{\theicase}[1]{\sformula{#1}{1}{2}}
+% 
+% %
+% % INDUCT list
+% %   Arg 1: Additional definitions
+% %
+% \newenvironment{inductlist}[1]{
+% \begin{scaselist}{$\varphi \equiv \theicase{\value{\thecurrentcase}}$.}{#1}}
+% {\inductcheck\end{scaselist}}
+
+
+%
+% The command for the current case
+%   Will be redefined
+%
+\newcommand{\theslabel}[1]{}
+
+%
+% A shortcut for the current case
+%
+\newcommand{\icase}{\theslabel{\value{\thecurrentcase}}}
+
+%
+% The number of cases
+%   Will be redefined
+%
+% \newcommand{\inductlength}{0}
+
+
+%
+% Checks if all inductive cases have an item
+%   -> Compares case counter agains \inductlength
+%
+\newcommand{\inductcheck}[1]{%
+\ifnum\value{\thecurrentcase}<#1%
+  \errmessage{Induction not complete}%
+%
+  \stepcurrentcase%
+  \errmessage{\expandafter\empty{\theslabel{\value{\thecurrentcase}}} is missing}%
+%
+  \ifnum\value{\thecurrentcase}<#1%
+    \stepcurrentcase%
+    \errmessage{\expandafter\empty{\theslabel{\value{\thecurrentcase}}} is missing}%
+%
+    \ifnum\value{\thecurrentcase}<#1%
+      \stepcurrentcase%
+      \errmessage{\expandafter\empty{\theslabel{\value{\thecurrentcase}}} is missing}%
+%
+      \ifnum\value{\thecurrentcase}<#1%
+	\errmessage{And more...}%
+      \fi%
+    \fi%
+  \fi%
+\fi%
+}
+
+\newcounter{multiitemcounter}%
+%
+% Inductive case list
+%   Arg 1: name of command for case name, should have one argument for current case number
+%   Arg 2: full label (excl. Case), use \icase to call #1 with the right counter
+%   Arg 3: Extra definitions for case list
+%   Arg 4: Number of cases expected, use 0 for no checks
+%
+\newenvironment{inductlist}[4]{%
+% Set the current label to call the command named in #1
+\renewcommand{\theslabel}[1]{\expandafter\csname #1\endcsname{##1}}%
+% If #4 > 0, then do induction check
+\newcommand{\inductlength}{#4}%
+\newcommand{\multiitem}[1]{%
+  \expandafter\item[\stepcounter{\thecurrentcase}{\styledlabel{{\thecaselabel}s} #2%
+  \setcounter{multiitemcounter}{##1}\addtocounter{multiitemcounter}{-1}%
+  \ifnum\value{multiitemcounter}>0%
+    \stepcounter{\thecurrentcase}%
+    , #2%
+    \addtocounter{multiitemcounter}{-1}%
+    \ifnum\value{multiitemcounter}>0%
+      \stepcounter{\thecurrentcase}%
+      , #2%
+      \addtocounter{multiitemcounter}{-1}%
+      \ifnum\value{multiitemcounter}>0%
+	\stepcounter{\thecurrentcase}%
+	, #2%
+      \else%
+	.%
+      \fi%
+    \else%
+      .%
+    \fi%
+  \else%
+    .%
+  \fi}]%
+  \mbox{}%
+}%
+\newcommand{\lmultiitem}[1]{\multiitem{##1}\\}%
+% Begin a case list
+\begin{scaselist}{#2.}{#3}}%
+% Afterwards, do an induction check
+{\inductcheck{\inductlength}\end{scaselist}}%
+
+%
+% Defines a shortcut for inductive list
+%   Arg 1: name of the environment
+%   Arg 2: Arg1 of inductlist
+%   Arg 3: Arg2 of inductlist
+%   Arg 4: Arg4 of inductlist
+%
+\newcommand{\mkinduct}[4]{\newenvironment{#1}{\begin{inductlist}{#2}{#3}{}{#4}}{\end{inductlist}}}
+
+
+%%%%%%%%%%%%%%%%%%%%
+%
+% Line-ending item
+%
+%%%%%%%%%%%%%%%%%%%%
+\makeatletter
+\def\myitem{%
+   \@ifnextchar[ \@myitem{\@noitemargtrue\@myitem[\@itemlabel]}}
+\def\@myitem[#1]{\item[#1]\mbox{}\\}
+\makeatother
+
+
+
+%%%%%%%%%%%%%%%%%%
+%
+% Fancy custom labels (\ref will be fancy)
+%
+%%%%%%%%%%%%%%%%%%
+
+%
+% Prepare for a custom label -> simply create the counter
+%
+\newcommand{\preparecustomlabel}[1]{%
+ \newcounter{#1}%
+ \setcounter{#1}{0}%
+}
+
+%
+% Make a custom label
+%   Arg 1: The name of the counter the label should use
+%   Arg 2: The name of the label
+%   Arg 3: The reference text of the label
+%
+\newcommand{\customlabel}[3]{%
+ \expandafter\renewcommand\csname the#1\endcsname{#3}%
+ \refstepcounter{#1}%
+ \label{#2}%
+}
+
+%
+% Simple custom label that uses a predefined counter
+%
+\preparecustomlabel{simplecustomlabel}
+\newcommand{\scustomlabel}[2]{\customlabel{simplecustomlabel}{#1}{#2}}
+
+
+
+
+\endinput
