@@ -1,6 +1,6 @@
-In this section, we introduce our safety specification language for autonomous vehicles, which we call 
-\planguage (short for, \emph{autonomous vehicle safety specification language}). \planguage is based on 
-\emph{propositional metric temporal logic} (MTL)~\cite{MTL}. The syntax of \planguage is given 
+In this section, we introduce our safety specification logic for autonomous vehicles, which we call 
+\planguage (short for, \emph{autonomous vehicle safety specification language}). \planguage is a 
+fragment of \emph{propositional metric temporal logic} (MTL)~\cite{MTL}. The syntax of \planguage is given 
 below. 
 
 \(
@@ -10,11 +10,11 @@ below.
 \end{array}
 \)
 
-We denote safety policies written in \planguage with \policy, $\phi$, and $\psi$ (possibly with subscripts). 
-We assume we are given a finite set of propositions, denoted by \cP, propositions from which can be used to specify safety policies. 
+We denoted policies written in \planguage with \policy, $\phi$, and $\psi$ (possibly with subscripts). 
+We assume we are given a finite set of propositions, denoted by \cP, which can be used to write policies. 
 Each proposition $p\in\cP$ is a formula of \planguage. We have logical connectives ($\neg, \vee$) and 
 also have past ($\since, \yesterday$) and future ($\until, \tomorrow$) temporal operators. Each temporal 
-operator has an interval (denoted by \interval) associated with it in which the formula is evaluated. The 
+operator has an interval (denoted, \interval) associated with it in which the formula is evaluated. The 
 interval has the form $[lo, hi]$ where $lo, hi\in\mathbb{N}$ and $lo\leq hi$. 
 The interval imposes an additional time interval constraint in which the immediate sub-formula must be true. 
 For instance, $\policy_1\since_{[lo, hi]}\policy_2$ is 
@@ -22,7 +22,7 @@ true represents that $\policy_2$ was true within $lo$ to $hi$ time of the curren
 after that point on, $\policy_1$ has been true. For past temporal operators, we allow the high end point 
 of \interval to be $\infty$. However, we require our \policy to be \emph{future bounded}, \ie, the high 
 end point of \interval associated with all future temporal operators to be finite and bounded. This restriction 
-is necessary for the termination of our safety monitoring algorithm. This will be made clear later. 
+is necessary for the termination of our monitoring algorithm as will be made clear later. 
 
 \Paragraph{Derived Operators. }In our syntax, we present a minimal set of logical connectives and temporal operators. 
 Other logical connectives and temporal operators can be derived using the following equivalences. (Logical false) $\false\equiv \neg \true$ . 
@@ -44,13 +44,8 @@ to denote that the formula \policy is true with respect to the $i^{th}$ position
 $\sigma, \tau, i\models\policy$  inductively in the following way. 
 \begin{itemize}
  \item $\sigma, \tau, i\models\true$
- \item $\sigma, \tau, i\models p$ $\Longleftrightarrow$ $\sigma_i(p) = \true$. 
- \item $\sigma, \tau, i\models\neg\policy$ $\Longleftrightarrow$ $\sigma, \tau, i \not\models\policy$. 
- \item $\sigma, \tau, i\models\policy_1\vee\policy_2$ $\Longleftrightarrow$ $\sigma, \tau, i\models\policy_1$ or $\sigma, \tau, i\models\policy_2$. 
- \item $\sigma, \tau, i\models\policy_1\since_{[lo, hi]}\policy_2$ $\Longleftrightarrow$ there exists a $k\leq i$ such that 
- $lo\leq\tau_i-\tau_k\leq hi$ and $\sigma, \tau, k\models\policy_2$, and for all $j$ such that $k< j\leq i$, $\sigma, \tau, j\models\policy_1$ holds. 
- \item $\sigma, \tau, i\models\policy_1\until_{[lo, hi]}\policy_2$ $\Longleftrightarrow$ there exists a $k\geq i$ such that 
- $lo\leq\tau_k-\tau_i\leq hi$ and $\sigma, \tau, k\models\policy_2$, and for all $j$ such that $i\leq j< k$, $\sigma, \tau, j\models\policy_1$ holds.
- \item $\sigma, \tau, i\models\yesterday_{[lo, hi]}\policy$ $\Longleftrightarrow$ $i > 0$, $lo \leq (\tau_i-\tau_{i-1})\leq hi$, and $\sigma, \tau, i-1\models\policy$.
- \item $\sigma, \tau, i\models\tomorrow_{[lo, hi]}\policy$ $\Longleftrightarrow$ $lo \leq (\tau_{i+1}-\tau_{i})\leq hi$, and $\sigma, \tau, i+1\models\policy$. 
+ \item $\sigma, \tau, i\models p$ if and only if $\sigma_i(p) = \true$. 
+ \item $\sigma, \tau, i\models\neg\policy$ if and only if $\sigma, \tau, i \not\models\policy$. 
+ \item $\sigma, \tau, i\models\policy_1\vee\policy_2$ if and only if $\sigma, \tau, i\models\policy_1$ or $\sigma, \tau, i\models\policy_2$. 
+ \item 
 \end{itemize}

@@ -12,9 +12,6 @@
 \newcommand{\evalPoint}{\ensuremath{\mathit{evalPtr}}\xspace}
 \newcommand{\curPoint}{\ensuremath{\mathit{curPtr}}\xspace}
 
-\newcommand{\cP}{\ensuremath{\mathcal{P}}\xspace}
-
-
 \newcommand{\etal}{\textit{et al.}\xspace}
 \newcommand{\ie}{\textit{i.e.}\xspace}
 \newcommand{\eg}{\textit{e.g.}\xspace}
@@ -102,8 +99,9 @@
 
 \newcommand{\ins}{\ensuremath{\sigma_{\mathrm{in}}}\xspace}
 \newcommand{\DELAY}{\ensuremath{\Delta}\xspace}
-\newcommand{\DELAYi}{\ensuremath{\Delta^{-1}}\xspace}
 \newcommand{\delay}{\ensuremath{\delta}\xspace}
+% \newcommand{\invalid}{\textbf{\textit{invalid}}\xspace}
+%\newcommand{\invalid}{\textbf{\textit{\texttt{invalid}}}\xspace}
 \newcommand{\invalid}{\ensuremath{\sigma_\bot}\xspace}
 
 \newcommand{\lsat}{\ensuremath{\vdash_{\textbf{\color{magenta}tl}}}\xspace}
@@ -118,6 +116,7 @@
 
 \newcommand{\planguage}{\ensuremath{\mathbf{\alpha\mathcal{VSL}}}\xspace}
 
+% \renewcommand{\vec}[1]{\ensuremath{\overrightarrow{#1}}\xspace}
 \newcommand{\interval}{\ensuremath{\mathbb{I}}\xspace}
 
 \newcommand{\cL}{\ensuremath{\mathcal{L}}\xspace}
@@ -129,9 +128,15 @@
 
 \newcommand{\identity}{\ensuremath{\mathbf{\bullet}}\xspace}
 
-\newcommand{\true}{\ensuremath{\mathrm{\texttt{t}}}\xspace}
-\newcommand{\false}{\ensuremath{\mathrm{\texttt{f}}}\xspace}
+% \WithSuffix\newcommand\ref*[1]{\ref{#1}}
 
+% Rules with \label and \ref
+\newcommand{\rref}[1]{[\ref{#1}]}
+\newcommand{\rrefl}[1]{[\ref*{#1}]}
+% Needs this because \infer doesn't work in label text directly...
+\DeclareRobustCommand{\rinfer}[2]{\infer{#1}{#2}}
+
+% \spnewtheorem{RAxiom}[theorem]{Axiom}{\bfseries}{\itshape}
 
 \newcommand{\send}{\ensuremath{\mathrm{send}}\xspace}
 \newcommand{\inrole}{\ensuremath{\mathrm{inrole}}\xspace}
