@@ -1,0 +1,504 @@
+%% write up of monitor algorithm
+% Aaron Kane
+
+% at eventually, need to finish writing up safety_monitor()
+% should also decide on notation for append, step/bound #, etc
+
+\documentclass[10pt,a4paper]{article}
+\usepackage[noend]{algorithmic}
+\usepackage{algorithm}
+\usepackage[latin1]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{bussproofs}
+
+
+\newcommand{\smon}[1]{\ensuremath{smon(\sigma, \tau, #1)}}
+\newcommand{\ty}[1]{\texttt{#1}}
+\newcommand{\bptr}{b}
+\newcommand{\fptr}{f}
+\newcommand{\ov}[1]{\ensuremath{\overline{#1}}}
+\newcommand{\ep}{ep}
+\newcommand{\cp}{cp}
+
+\begin{document}
+
+\section{Intro}
+Our goal is to choose a useful formalism for runtime monitoring of safety-critical embedded systems. To do this we wish to verify that a given execution trace satisfies some desired property (defined by a formula $\psi$). 
+%We model the monitored systems as a series of states similar to a timed transition system (TTS) like those used by Henzinger \cite{Henzinger1994}. 
+
+\section{Preliminaries - System Model}
+In order to handle time bounded formulas and asynchronous execution traces, we use a logic with discrete interval time semantics. Because we are targeting running systems or system logs, we use a discrete timestamp domain $\mathbb{T}$. Although many real systems use IEEE floats which are often treated as real numbers, we know that any timestamps coming from a physical machine must be discrete, fully ordered, and finite, so we present this work using $\mathbb{T} \equiv \mathbb{N}$ with no loss of generality (we can easily map any discrete system timestamps such as IEEE floats to $\mathbb{N}$).
+
+Let $AP$ be the set of atomic propositions.
+% we model the target system as a timed transition system with 4 components: ...
+% an execution of the transition system is a finite sequence of time, state pairs $\sigma = (t_0, s_0), (t_1, s_1),\ldots$ for $t_n \in \mathbb{T} and $s_n \in S$. 
+%
+We model the target system as a \emph{timed transition system} $TS = \{ P, S, \Theta, \mathcal{T}\}$ with 4 components:
+\begin{enumerate}
+\item a finite set of propositions $P \subset AP$
+\item a set of states $S$ where every state $s \in S$ is an interpretation of $P$, i.e. $s(p)$ assigns a truth value to every proposition $p \in P$  (i.e., $s(p): P \rightarrow \{\top, \perp\}$)
+\item an initial state $\Theta$
+\item a set of transitions $\mathcal{T}$. We do not limit the system's dynamics (as we could see any dynamics coming from a system log), so $\forall s_0,s_1 \in S: (s_0,s_1) \in \mathcal{T}$.
+\end{enumerate}
+
+%We model the target system as a transition system $S = (P, S, \Theta, \mathcal{T})$ a 4-tuple with $P \subset AP$ a set of propositions, $S$ a set of states where each state $s \in S$ is a valuation function $s(p): P \rightarrow \{\top, \perp\}$, $\Theta$ an initial state, and $\mathcal{T}$ the set of transitions $S \rightarrow S$. 
+We model a finite execution trace $\sigma = (t_0, s_0),(t_1,s_1),\ldots,(t_n,s_n)$ as a finite timed word with all $t_n \in \mathbb{T}$, $t_n < t_{n+1}$ and all $s_n \in S$. Transitions occur instantaneously but only one transition may occur at any time $t$ (for any execution there is only one state at any given time).
+% $a_n \in \mathcal{T}$ is a state transition and $t_n \in \mathbb{T}$ with $t_n < t_{n+1}$ (ensuring progress).
+
+We use $\sigma_{\tau}(p)$ to denote the truth value of $p$ at time $\tau$, that is $\forall \tau \in [t_0, t_n]$ where $\tau \in [t_i, t_{i+1})$: $s_{\tau}(p) \equiv s_i(p)$ (for $n = |\sigma|$ and $t_{n +1}$ treated as $\infty$).
+
+
+%We model the target system as an execution trace $\sigma = (t_0, s_0),(t_1,s_1),\ldots,(t_n,s_n)$  a finite timed series of states where each state is a valuation function $s(p): AP \rightarrow \{\top, \perp\}$ assigning a truth value to the proposition $p$. We use $s_{\tau}(p)$ to denote the truth value assigned to $p$ at time $\tau$ and treat the system state as continuous between states of the trace, i.e. $\forall \tau: t_n \leq \tau < t_{n+1}$; $s_{\tau}(p) \equiv s_n(p)$.
+
+By modeling the target system as a transition system and the execution trace as a timed word, we can utilize two common system trace types: state snapshots and update message logs. State snapshots are a series of (usually periodic) timestamped system states often coming from instrumented or simulated systems. Value update messages are aperiodic system property "updates", such as a network log where each message carries a single (or multiple but not all) property values. %These logs contain timestamped individual property update messages (e.g. a velocity message on a CAN bus). 
+
+System traces that are a series of state snapshots naturally fits into our execution trace. The execution trace is just the series of timestamped state snapshots. To fit a system trace which is a series of update messages we first note that for a transition system $TS$, a transition trace $(t_0,a_0),(t_1,a_1),\ldots,(t_n,a_n)$ with $t_i \in \mathbb{T}$ and $a_i \in \mathcal{T}$ is equivalent to the execution trace $(t_0,s_0),(t_1,s_1),\ldots,(t_n,s_n)$ where every transition $a_i = (s_{i-1}, s_i)$. Due to this fact we can also easily check a trace of update values such as a network log.
+
+
+\section{Syntax and Semantics}
+Our language syntax is
+
+$$\psi =  p | \neg \psi | \psi_1 \wedge \psi_2 | \psi_1 \vee \psi_2 | \psi_1 \rightarrow \psi_2 | \square_{[l,H]} \psi | \lozenge_{[l,h]} \psi | \psi_1 \mathcal{U}_{[l,h]} \psi_2 | \blacksquare_{[l,H]} \psi | \blacklozenge_{[l,h]} \psi | \psi_1 \mathcal{S}_{[l,h]} \psi_2$$
+
+where $p \in P$ and $l,h \in \mathbb{T}$ with $0 \leq l \leq h$ and $H \in (\mathbb{T} \cup \infty)$ with $0 \leq l \leq H$
+%
+We denote time intervals in the usual way, with $t \in [x,y]$ iff $x \leq t \leq y$, $t \in [x,y)$ iff $x \leq t < y$, $t \in (x,y]$ iff $x < t \leq y$ and $t \in (x,y)$ iff $x < t < y$.
+
+The semantics of our language are defined inductively as follows:
+
+\begin{align*}
+\sigma, \tau \vDash \top & &\\
+\sigma, \tau \nvDash \perp & &\\
+\sigma, \tau \vDash p & \text{ iff } & \sigma_i(p) = \top \\
+\sigma, \tau \vDash \neg \psi & \text{ iff } & \sigma, \tau, i \nvDash \psi \\
+\sigma, \tau \vDash \psi_1 \wedge \psi_2 & \text{ iff } & \sigma, \tau \vDash \psi_1 \text{ and } \sigma, \tau \vDash \psi_2 \\
+\sigma, \tau \vDash \psi_1 \vee \psi_2 & \text{ iff } & \sigma, \tau \vDash \psi_1 \text{ or } \sigma, \tau \vDash \psi_2 \\
+\sigma, \tau \vDash \psi_1 \rightarrow \psi_2 & \text{ iff } & \text{ if } \sigma,\tau \nvDash \psi_1 \text{ then } \sigma,\tau \vDash \psi_2 \\
+%%%%%%%%%% future time
+\sigma,\tau \vDash \square_{[l,H]} \psi & \text{ iff } & \forall \tau' > \tau: (\tau'-\tau) \in [l,H] \rightarrow \sigma, \tau' \vDash \psi \\
+%%%%%
+\sigma,\tau \vDash \lozenge_{[l,h]} \psi & \text{ iff } & \exists \tau' > \tau: (\tau' - \tau) \in [l,h] \rightarrow \sigma, \tau' \vDash \psi \\
+%%%%%
+\sigma, \tau \vDash \psi_1 \mathcal{U}_{[l,h]} \psi_2 & \text{ iff } & \exists \tau': (\tau' - \tau) \in [l,h] \rightarrow \sigma, \tau' \vDash \psi_2 \text{ and } \\ & & \forall \tau'' \in [\tau,\tau') \rightarrow \sigma, \tau'' \vDash \psi_1 \\
+%
+% past time
+\sigma,\tau \vDash \blacksquare_{[l,H]} \psi & \text{ iff } & \forall \tau': (\tau - \tau') \in [l,H] \rightarrow \sigma,\tau' \vDash \psi \\
+\sigma, \tau \vDash \blacklozenge_{[l,h]} \psi & \text{ iff } & \exists \tau': (\tau - \tau') \in [l,h] \rightarrow \sigma, \tau' \vDash \psi \\
+%
+\sigma,\tau \vDash \psi_1 \mathcal{S}_{[l,h]} \psi_2 & \text{ iff } & \exists \tau':  (\tau - \tau') \in [l,h] \rightarrow \sigma, \tau' \vDash \psi_2 \\
+& & \text{ and } \forall \tau'' \in [\tau',\tau); \sigma, \tau'' \vDash \psi_1 \\
+\end{align*}
+
+NOTE: We may wish to use open right bounds in the "always" temporal operator semantics to improve the intuitiveness of our formulas. Open right bounded always makes the always operator work more like a duration rather than defining an interval, which is how many safety rules using always are intuitively interpreted.
+
+An example: for the formula $a \rightarrow \lozenge_{[0,2]} b$ we would want the trace $(0,\{a\ov{b}\}),(2,\{\ov{a}b\})$ to be satisfied while for the formula $a \rightarrow \square_{[0,2]}b$ we would want the trace $(0,\{ab\}),(1,\{\ov{a}b\}),(3,\{\ov{a}\ov{b}\})$ to be satisfied. This fits the intuition of "a pressed means b occurs within 2s" and "if a is pressed then b is immediately true for 2s". If this is desired (still deciding) then we just need to use open right intervals in the $\square$ and $\blacksquare$ operators.
+
+\section{Monitoring Execution Traces}
+\subsection{The Delay Function}
+First, we define the delay function $\Delta(\phi)$ for all formula $\phi$:
+
+\[
+\Delta(\phi) = \left\lbrace
+\begin{aligned}[l l]
+0 & \quad \text{ iff } \psi \equiv p \\
+\Delta(\psi) & \quad \text{ iff } \phi \equiv \neg \psi \\
+max(\Delta(\psi_1),\Delta(\psi_2)) & \quad \text{ iff } \phi \equiv \psi_1 \wedge \psi_2 \\
+max(\Delta(\psi_1),\Delta(\psi_2)) & \quad \text{ iff } \phi \equiv \psi_1 \vee \psi_2 \\
+max(\Delta(\psi_1),\Delta(\psi_2)) & \quad \text{ iff } \phi \equiv \psi_1 \rightarrow \psi_2 \\
+H + \Delta(\psi) & \quad \text{ iff } \phi \equiv \square_{l,H} \psi \\
+h + \Delta(\psi) & \quad \text{ iff } \phi \equiv \lozenge_{l,h} \psi \\
+h + max(\Delta(\psi_1),\Delta(\psi_2)) & \quad \text{ iff } \phi \equiv \psi_1 \mathcal{U}_{l,h} \psi_2 \\
+\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacksquare_{l,H} \psi \\
+\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacklozenge_{l,h} \psi \\
+max(\Delta(\psi_1),\Delta(\psi_2)) & \quad \text{ iff } \phi \equiv \psi_1 \mathcal{S}_{l,h} \psi_2 \\
+\end{aligned} \right. \]
+
+where $\Delta(\phi)$ is the delay function of formula $\phi$, returning the amount of future history we need to be able to decide $\phi$. I'm not sure what the best way to handle $H \equiv \infty$ is. That's going to take some magic.
+
+We also define the history delay function $\Delta^{-1}(\phi)$ which returns the amount of history required to evaluate formula $\phi$. That is, information from greater than $\Delta^{-1}(\phi)$ isn't needed to evaluate $\phi$ at the current time. Note that we actually need to keep the most recent event before $\Delta^{-1}(\phi)$ to ensure we have the state defined at $\Delta^{-1}$
+
+\[
+\Delta^{-1}(\phi) = \left\lbrace
+\begin{aligned}[l l]
+0 & \quad \text{ iff } \psi \equiv p \\
+\Delta^{-1}(\psi) & \quad \text{ iff } \phi \equiv \neg \psi \\
+max(\Delta^{-1}(\psi_1),\Delta^{-1}(\psi_2)) & \quad \text{ iff } \phi \equiv \psi_1 \wedge \psi_2 \\
+max(\Delta^{-1}(\psi_1),\Delta^{-1}(\psi_2)) & \quad \text{ iff } \phi \equiv \psi_1 \vee \psi_2 \\
+max(\Delta^{-1}(\psi_1),\Delta^{-1}(\psi_2)) & \quad \text{ iff } \phi \equiv \psi_1 \rightarrow \psi_2 \\
+\Delta^{-1}(\psi) & \quad \text{ iff } \phi \equiv \square_{l,H} \psi \\
+\Delta^{-1}(\psi) & \quad \text{ iff } \phi \equiv \lozenge_{l,h} \psi \\
+max(\Delta^{-1}(\psi_1),\Delta^{-1}(\psi_2)) & \quad \text{ iff } \phi \equiv \psi_1 \mathcal{U}_{l,h} \psi_2 \\
+H + \Delta^{-1}(\psi) & \quad \text{ iff } \phi \equiv \blacksquare_{l,H} \psi \\
+h + \Delta^{-1}(\psi) & \quad \text{ iff } \phi \equiv \blacklozenge_{l,h} \psi \\
+h + max(\Delta^{-1}(\psi_1),\Delta^{-1}(\psi_2)) & \quad \text{ iff } \phi \equiv \psi_1 \mathcal{S}_{l,h} \psi_2 \\
+\end{aligned} \right. \]
+
+%First we define a function $P_{\phi}(\tau)$ for all past time subformulas $\phi$ of $\psi$:
+%
+%\[ P_{\phi}(\tau) \leftarrow \left\lbrace
+%\begin{aligned}[l l]
+%	\top & \quad\text{ iff } smon(\sigma, \tau, f(\phi)) \\
+%	\perp & \quad \text{ otherwise}
+%\end{aligned} \right.\]
+%
+%where $f(\phi)$ returns the formula $\phi$ inside a temporal formula (i.e. $f(\blacksquare_{n,m} \psi) = \psi$)
+
+
+\subsection{The Single Time Satisfaction function}
+We define a function smon($\sigma, \tau, \psi$) which given a trace, a time, and a formula returns whether the formula is satisfied at that specific time inductively as follows:
+
+\[ 
+\begin{aligned}
+\smon{p} & \leftarrow \sigma_{\tau} ( p ) \\
+\smon{\neg \psi} & \leftarrow \neg \smon{\psi} \\
+\smon{\psi \wedge \phi} & \leftarrow \smon{\psi} \wedge \smon{\phi} \\
+\smon{\psi \vee \phi} & \leftarrow \smon{\psi} \vee  \smon{\phi} \\
+\smon{\psi \rightarrow \phi} & \leftarrow \smon{\psi} \rightarrow \smon{\phi} \\
+%%%%
+%%%% Past ALWAYS
+\smon{\blacksquare_{[l,H]}\psi} & \leftarrow \left\lbrace
+\begin{aligned}[l l]
+	\top & \quad \text{iff } \forall t \text{ s.t. } (\tau - t) \in [l, H]: smon(\sigma, t, \psi) = \top \\
+	\perp & \quad \text{otherwise}
+\end{aligned} \right. \\
+%%%%
+%%%% Happened
+\smon{\blacklozenge_{[l,h]}\psi} & \leftarrow \left\lbrace
+\begin{aligned}[l l]
+	\top & \quad \text{iff } \exists t \text{ s.t. } (\tau - t) \in [l, h]: smon(\sigma, t, \psi) = \top \\
+	\perp & \quad \text{otherwise}
+\end{aligned} \right. \\
+%%%%
+%%%% Since
+\smon{\psi_1 \mathcal{S}_{[l,h]} \psi_2} & \leftarrow \left\lbrace
+\begin{aligned}[l l]
+	\top & \quad \text{iff } \exists t \text{ s.t. } (\tau - t) \in [l, h]: smon(\sigma, t, \psi) = \top \\
+	& \quad \quad \text{and } \forall t' \in [t, \tau]: smon(\sigma, t', \psi) = \top \\
+	\perp & \quad \text{otherwise}
+\end{aligned} \right. \\
+%%%%
+%%%% Always
+\smon{\square_{[l,H]} \psi} & \leftarrow \left\lbrace
+\begin{aligned}[l l]
+	\top & \quad \text{iff } \forall t \text{ s.t. } (t - \tau) \in [l, H]: smon(\sigma, t, \psi) = \top \\
+	\perp & \quad \text{otherwise}
+\end{aligned} \right. \\
+%%%%%
+%%%%% Eventually
+\smon{\lozenge_{[l,h]} \psi} & \leftarrow \left\lbrace
+\begin{aligned}[l l]
+	\top & \quad \text{iff } \exists t \text{ s.t. } (t - \tau) \in [l, h]: smon(\sigma, t, \psi) = \top \\
+	\perp & \quad \text{otherwise}
+\end{aligned} \right. \\
+%%%%%
+%%%%% Until
+\smon{\psi_1 \mathcal{U}_{[l,h]} \psi_2} & \leftarrow \left\lbrace
+\begin{aligned}[l l]
+	\top & \quad \text{iff } \exists t \text{ s.t. } (t - \tau) \in [l, h]: smon(\sigma, t, \psi) = \top \\
+	& \quad \quad \text{and } \forall t' \in [0,t]: smon(\sigma, t', \psi) = \top \\
+	\perp & \quad \text{otherwise}
+\end{aligned} \right. \\
+%%%%%End def of smon
+\end{aligned}
+\]
+
+It may be preferable to use set builder notation for the temporal operators, e.g.:
+
+$\smon{\square_{[l,H]} \psi} \leftarrow \bigcup_{\{t | t \in [\tau+l, \tau + H]\}} smon(\sigma, t, \psi)$
+
+We also define the single-time satisfaction function $smon\_st(\sigma, \tau, \pi, \psi)$ which utilizes history structures to evaluate past-time subformulas. $smon\_st$ is equivalent to $smon$ except for the past time subformulas as follows:
+
+\[
+\begin{aligned}
+%%%% Past ALWAYS
+smon\_st(\sigma, \tau, \pi, \blacksquare_{[l,H]} \psi) & \leftarrow \left\lbrace
+\begin{aligned}[l l]
+	\top & \quad \text{iff } \exists [l',H'] \in \mathbb{H}_{\psi} \colon [\tau - H, \tau-l] \subseteq [l',H']  \\
+	\perp & \quad \text{otherwise}
+\end{aligned} \right. \\
+%%%%
+%%%% Happened
+smon\_st(\sigma, \tau, \pi,\blacklozenge_{[l,h]} \psi) & \leftarrow \left\lbrace
+\begin{aligned}[l l]
+	\top & \quad \text{iff } \exists [l',h'] \in \mathbb{H}_{\psi} \colon [\tau - h, \tau-l] \cap [l',h'] \neq \emptyset \\
+	\perp & \quad \text{otherwise}
+\end{aligned} \right. \\
+%%%%
+%%%% Since
+smon\_st(\sigma, \tau, \pi, \psi_1 \mathcal{S}_{[l,h]} \psi_2) & \leftarrow \left\lbrace
+\begin{aligned}[l l]
+	\top & \quad \text{iff }\exists [l',h'] \in \mathbb{H}_{\psi_2} \colon [\tau - H, \tau-l] \cap [l',h'] \neq \emptyset \\
+	& \quad \quad \text{and } \exists [l'', H''] \in \mathbb{H}_{\psi_1} \colon [max(\tau-h, l'), \tau] \subseteq [l'',H''] \\
+	\perp & \quad \text{otherwise}
+\end{aligned} \right. \\
+\end{aligned}
+\]
+
+We define the single-time satisfaction function $smon\_ag(\sigma, \tau, \pi \psi)$ which utilizes the future time structures to aggresively decide satisfaction of a formula. $smon\_ag$ is equivalent to $smon\_st$ except for the future time subformulas as follows:
+
+\[
+\begin{aligned}
+%%%% ALWAYS
+smon\_ag(\sigma, \tau, \pi, \square_{[l,H]} \psi) & \leftarrow \left\lbrace
+%\begin{algorithmic}
+%\STATE $\mathbb{I}^{A}_{\psi} \leftarrow [\tau+l, \tau+H]$
+%\IF{ $smon\_ag(\sigma, \tau, \pi, \psi) = \top$}
+%\STATE $\mathbb{A}_{\psi} &\leftarrow [\tau+l, \infty]$
+%\ENDIF
+%\RETURN \top
+%\end{algorithmic}
+\begin{aligned}
+	&\mathbb{I}^{A}_{\psi} \leftarrow [\tau+l, \tau+H]  \\
+	&\text{if } smon\_ag(\sigma, \tau, \pi, \psi) \colon \mathbb{A}_{\psi} \leftarrow [\tau+l, \infty] \\
+	&\textbf{return } \top 
+\end{aligned} \right. \\
+%%%%
+%%%% Eventually
+smon\_ag(\sigma, \tau, \pi,\lozenge_{[l,h]} \psi) & \leftarrow \left\lbrace
+\begin{aligned}
+	&\mathbb{I}^{E}_{\psi} \leftarrow [\tau+l, \tau+h] \\
+	&\text{if } smon\_ag(\sigma, \tau, \pi, \psi) \colon \mathbb{E}_{\psi} \leftarrow [\tau+l, \infty] \\
+	&\textbf{return } \top 
+\end{aligned} \right. \\
+%%%%
+%%%% Until
+smon\_ag(\sigma, \tau, \pi, \psi_1 \mathcal{S}_{[l,h]} \psi_2) & \leftarrow \left\lbrace
+\begin{aligned}
+	 &\mathbb{I}^{A}_{\psi_1,\psi_2} \leftarrow [\tau+l, \tau+h] \\
+	 &\mathbb{I}^{E}_{\psi_1,\psi_2} \leftarrow [\tau+l, \tau+h] \\
+	&\text{if } smon\_ag(\sigma, \tau, \pi, \psi_2) \colon \mathbb{E}_{\psi_2} \leftarrow [\tau+l, \infty] \\
+	&\text{if } smon\_ag(\sigma, \tau, \pi, \psi_1) \colon \mathbb{A}_{\psi_1} \leftarrow [\tau+l, \infty] \\
+	& \textbf{return } \top 
+\end{aligned} \right. \\
+\end{aligned}
+\]
+
+
+\subsection{Formula judgements}
+
+We define three judgements, $\vdash_p, \vdash_F, \vdash_{NT}$ shown in Figure \ref{fig:judgements} (They aren't completed). These are just used to define the restricted semantics (no future nested in past, etc) as needed.
+
+\begin{figure}
+\caption{Language Judgements}
+\label{fig:judgements}
+%\begin{prooftree}
+\AxiomC{}
+\UnaryInfC{$\vdash_{NT} \top$}
+\DisplayProof
+%\end{prooftree}
+%
+\AxiomC{}
+\UnaryInfC{$\vdash_{NT} \bot$}
+\DisplayProof
+%
+\AxiomC{}
+\UnaryInfC{$\vdash_{NT} p$}
+\DisplayProof
+%\end{prooftree}
+\AxiomC{$\vdash_P \psi$}
+\UnaryInfC{$\vdash_P \neg \psi$}
+\DisplayProof
+%
+\AxiomC{$\vdash_P \psi_1$}
+\AxiomC{$\vdash_P \psi_2$}
+\BinaryInfC{$\vdash_{P}  \psi_1 \land \psi_2$}
+\DisplayProof
+%
+\AxiomC{$\vdash_P \psi_1$}
+\AxiomC{$\vdash_P \psi_2$}
+\BinaryInfC{$\vdash_{P}  \psi_1 \lor \psi_2$}
+\DisplayProof
+%
+\AxiomC{$\vdash_P \psi_1$}
+\AxiomC{$\vdash_P \psi_2$}
+\BinaryInfC{$\vdash_{P}  \psi_1 \rightarrow \psi_2$}
+\DisplayProof
+\end{figure}
+
+\subsection{History Structures}
+We use history structures containing the intervals that past-time subformula are valid to compact system state and avoid requiring storing the entire execution trace. The history structure $\pi$ contains entries of type $\mathbb{H}_{\phi}$ which are a set of intervals on which $\phi$ has been true. We use $\delta(\phi)$ to denote the total past time delay required to evaluate $\phi$.
+
+For each past time subformula of $\psi$, we create an entry $\mathbb{H}_{\phi}$ as follows:
+%
+\\ \textbf{Algorithm $build(\psi)$}:
+\begin{algorithmic}
+\STATE $\pi \leftarrow \emptyset$
+\FOR{all past time subformula $\Phi$ of $\psi$}
+\IF{$\Phi \equiv \blacksquare_{[l,H]} \phi$}
+\STATE $\pi \leftarrow \mathbb{H}_{\phi}$
+\ENDIF
+\IF{$\Phi \equiv \blacklozenge_{[l,h]} \phi$}
+\STATE $\pi \leftarrow \mathbb{H}_{\phi}$
+\ENDIF
+\IF{$\Phi \equiv \phi_1 \mathcal{S}_{[l,h]} \phi_2$}
+\STATE $\pi \leftarrow \mathbb{H}_{\phi_2}$
+\STATE $\pi \leftarrow \mathbb{H}_{\phi_1}$
+\ENDIF
+\ENDFOR
+\RETURN $\pi$
+\end{algorithmic}
+
+This leaves us with an structure $\pi$ filled with empty entries $\mathbb{H}_{\phi}$. The $update(\sigma, \tau, \pi)$ function returns a new updated structure $\pi$ at for time $\tau$:
+%
+\\ \textbf{Algorithm $update(\sigma, \tau, \pi)$:}
+\begin{algorithmic}
+\STATE $\pi' \leftarrow \emptyset$
+\FOR{all $\mathbb{H}_{\psi} \in \pi$ (from latest to earliest subformula)}
+\STATE $S_{close} \leftarrow \{ [l, \tau] \mid  [l,\infty] \in \mathbb{H}_{\psi} \wedge smon\_st(\sigma, \tau, \pi, \psi) = \perp \}$
+\STATE $S_{open} \leftarrow \{ [\tau, \infty] \mid \not\exists [l,h] \in \mathbb{H}_{\psi} \colon \tau \in [l,h] \wedge smon\_st(\sigma, \tau,\pi,\psi) = \top \}$
+\STATE $S_{carry} \leftarrow \{ [l, h] \mid \forall [l,h] \in \mathbb{H}_{\psi} \colon h \geq (\tau - \delta(\psi)) \}$
+\STATE $\mathbb{H}'_{\psi} \leftarrow S_{close} \cup S_{open} \cup S_{carry}$
+\STATE $\pi' \leftarrow \mathbb{H}'_{\psi}$
+\ENDFOR
+\RETURN $\pi'$
+\end{algorithmic}
+
+We also have a set of future history structures $\mathbb{A}$,$\mathbb{E}$,$\mathbb{U}$, and $\mathbb{I}$ which are used for the aggressive monitoring algorithm. These structures are built and updated as follows:
+%
+\\ \textbf{Algorithm $build\_ag(\psi)$}:
+\begin{algorithmic}
+\STATE $\pi \leftarrow build(\psi)$
+\FOR{all future time subformula $\Phi$ of $\psi$}
+\IF{$\Psi \equiv \square_{[l,H]} \phi$}
+\STATE $\pi \leftarrow \mathbb{A}_{\phi}$
+\ENDIF
+\IF{$\Psi \equiv \lozenge_{[l,h]} \phi$}
+\STATE $\pi \leftarrow \mathbb{E}_{\phi}$
+\ENDIF
+\IF{$\Psi \equiv \phi_1 \mathcal{U}_{[l,h]} \phi_2$}
+\STATE $\mathbb{U}_{\phi_1,\phi_2} \leftarrow (\mathbb{E}_{\phi_2}, \mathbb{A}_{\phi_1})$
+\STATE $\pi \leftarrow \mathbb{U}_{\phi_1,\phi_2}$
+\ENDIF
+\ENDFOR
+\RETURN $\pi$
+\end{algorithmic}
+\textbf{Algorithm $update\_ag(\sigma, \tau, \pi)$:}
+\begin{algorithmic}
+\STATE \COMMENT{Update $\mathbb{A}$}
+\FOR{all $\mathbb{A}_{\phi} \in \pi$}
+\STATE $S_{open} \leftarrow \{ [l, \infty] \mid [l,h] \in \mathbb{A}_{\phi} \wedge h = \tau \wedge smon\_ag(\sigma, \tau, \pi, \phi) = \top \}$
+\STATE $S_{carry} \leftarrow \{ [l, h] \mid [l,h] \in \mathbb{A}_{\phi} \wedge \forall i \in S_{open} \colon [l,h] \not\subseteq i \wedge \tau-h < \Delta(\psi) \}$
+\STATE $\mathbb{A}'_{\phi} \leftarrow S_{open} \cup S_{close}$
+\STATE $\pi' \leftarrow \{ \mathbb{A}_{\phi}' \}$
+\ENDFOR
+\STATE \COMMENT{Update $\mathbb{E}$ the same as $\mathbb{A}$\dots}
+\STATE \COMMENT{Update $\mathbb{U}$ by updating all A's and deleting U if E occurs\dots}
+\RETURN $\pi'$
+\end{algorithmic}
+\textbf{Algorithm $close(\pi, \tau)$:}
+\begin{algorithmic}
+\FOR{all $\mathbb{A}_{\phi} \in \pi$}
+\STATE $S_{close} = \{ [l, \tau] \mid [l, \infty] \in \mathbb{A}_{\phi} \}$
+\STATE $S_{carry} = \{ [l, h] \mid [l, h] \in \mathbb{A}_{\phi} \}$
+\STATE $\mathbb{A}'_{\phi} \leftarrow S_{close} \cup S_{carry}$
+\STATE $\pi' \leftarrow \mathbb{A}_{\phi}$
+\ENDFOR
+\RETURN $\pi'$
+\STATE \COMMENT{Same for E/U/etc}
+\end{algorithmic}
+\section{Monitoring algorithms}
+Here we define a few different monitor algorithms. First, a straightforward conservative algorithm utilizing the delay function $\Delta(\phi)$ basically mimicking the semantics:
+\\
+%\begin{algorithm}[h!]
+%\caption{MON-1($\sigma, \psi$) Monitor Algorithm}
+\textbf{MON-1($\sigma, \psi$) Algorithm:}
+\begin{algorithmic}[1]
+\STATE $\mathcal{D} \leftarrow \Delta(\psi) \quad \quad \mathcal{D}^{-1} \leftarrow \Delta^{-1}(\psi)$
+\STATE $\sigma \leftarrow \{\}$
+\STATE $\ep \leftarrow 0 \quad \quad \cp \leftarrow 0$
+\LOOP
+\STATE Wait for new event
+\STATE extend $\sigma$ with new event
+\WHILE{$\tau_{\cp} - \tau_{\ep} \geq \mathcal{D}$}
+\STATE $csat \leftarrow smon(\sigma, \tau, \psi)$
+\IF{$csat = \perp$}
+\STATE report violation at $\tau_{\ep}$
+\ENDIF
+\STATE $\ep \leftarrow \ep + 1$
+\ENDWHILE
+\STATE $S_{rm} \leftarrow \{ s | s \in \sigma \wedge (\tau_{\ep} - s.\tau) > \mathcal{D}^{-1} \}$
+\STATE $\sigma \leftarrow \sigma \setminus S_{rm}$
+\STATE $\cp \leftarrow \cp + 1$
+\ENDLOOP
+\end{algorithmic}
+%\end{algorithm}
+
+Next we build a monitor algorithm MON-ST($\sigma, \psi$) which carries the required state history in history structures rather than keeping the entire trace.
+
+\textbf{MON-ST($\sigma, \psi$) Algorithm:}
+\begin{algorithmic}[1]
+\STATE $\mathcal{D} \leftarrow \Delta(\psi) \quad \quad \mathcal{D}^{-1} \leftarrow \Delta^{-1}(\psi)$
+\STATE $\sigma \leftarrow \emptyset$
+\STATE $\ep \leftarrow 0 \quad \quad \cp \leftarrow 0$
+\STATE $\pi \leftarrow build(\psi)$
+\LOOP
+\STATE Wait for new event
+\STATE extend $\sigma$ with new event
+\STATE $\pi \leftarrow update(\sigma, \tau_{cp}, \pi)$
+\WHILE{$\tau_{\cp} - \tau_{\ep} \geq \mathcal{D}$}
+\STATE $csat \leftarrow smon\_st(\sigma, \tau, \pi, \psi)$
+\IF{$csat = \perp$}
+\STATE report violation at $\tau_{\ep}$
+\ENDIF
+\STATE $\ep \leftarrow \ep + 1$
+\ENDWHILE
+\STATE $\sigma_{rm} \leftarrow \{ s | s \in \sigma \wedge (\tau_{\ep} - s.\tau) > \mathcal{D}^{-1} \}$
+\STATE $\sigma \leftarrow \sigma \setminus \sigma_{rm}$
+\STATE $\cp \leftarrow \cp + 1$
+\ENDLOOP
+\end{algorithmic}
+
+
+Next, an aggressive monitor algorithm MON-AG($\sigma, \psi$) which can return formula violations without waiting for the delay, but which cannot check formulas with future temporal operators nested within past temporal operators.
+
+Still figuring out how to do aggressive for this, it's much harder for the asynchronous interval case then the periodic, need to deal with checking the right interval and handling dependence on sibling subformulas...
+
+
+\textbf{MON-AG($\sigma, \psi$) Algorithm:}
+\begin{algorithmic}[1]
+\STATE $\mathcal{D} \leftarrow \Delta(\psi) \quad \quad \mathcal{D}^{-1} \leftarrow \Delta^{-1}(\psi)$
+\STATE $\sigma \leftarrow \emptyset$
+\STATE $\pi \leftarrow build(\psi)$
+\LOOP
+\STATE Wait for new event
+\STATE $\pi \leftarrow close(\pi, \tau)$ \COMMENT{close all future time structs}
+\STATE extend $\sigma$ with new event
+\STATE $\pi \leftarrow update\_ag(\sigma, \tau_{cp}, \pi)$
+\STATE $csat \leftarrow smon\_st(\sigma, \tau, \pi, \psi)$
+\IF{$csat = \perp$}
+\STATE report violation at $\tau_{\ep}$
+\ENDIF
+%%% check structures
+%% ALWAYS
+\FOR{all $i \in \mathbb{I}^{A}_{\phi}$}
+\IF{$\not\exists a \in \mathbb{A}_{\phi} \colon i \subseteq a$}
+\STATE report invariant violation
+\ENDIF
+\ENDFOR
+%% EVENTUALLY
+\FOR{all $i \in \mathbb{I}^{E}_{\phi}$}
+\IF{$\exists e \in \mathbb{E}_{\phi} \colon i \cup e \neq \emptyset$}
+\STATE $\mathbb{I}^{E}_{\phi} \leftarrow \mathbb{I}^{E}_{\phi} \setminus i$
+\ENDIF
+\ENDFOR
+%% UNTIL
+\FOR{all $i \in \mathbb{I}^{U}_{\phi_1,\phi_2}$}
+\IF{$\exists e \in \mathbb{E}_{\phi_2} \colon i \cup e \neq \emptyset$}
+\STATE $\mathbb{I}^{E}_{\phi_1,\phi_2} \leftarrow \mathbb{I}^{U}_{\phi_1,\phi_2} \setminus i$
+\STATE $\mathbb{I}^{A}_{\phi_1,\phi_2} \leftarrow \mathbb{I}^{U}_{\phi_1,\phi_2} \setminus i$
+\ENDIF
+\IF{$\not\exists a \in \mathbb{A}_{\phi} \colon i \subseteq a$}
+\STATE report invariant violation
+\ENDIF
+\ENDFOR
+\STATE $\sigma_{rm} \leftarrow \{ s | s \in \sigma \wedge (\tau_{\ep} - s.\tau) > \mathcal{D}^{-1} \}$
+\STATE $\sigma \leftarrow \sigma \setminus \sigma_{rm}$
+\STATE Remove finished ranges from $\mathbb{I}$
+\ENDLOOP
+\end{algorithmic}
+
+
+\end{document}

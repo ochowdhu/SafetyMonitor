@@ -1,0 +1,104 @@
+%% writing up the residual monitoring algorithm
+%% for aggressive monitoring
+
+\documentclass[10pt,a4paper]{article}
+\usepackage[noend]{algorithmic}
+\usepackage{algorithm}
+\usepackage[latin1]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{bussproofs}
+
+
+\begin{document}
+
+\section{Algorithm}
+
+The aggressive monitor algorithm is as follows:
+
+\begin{algorithmic}
+\STATE $\pi \leftarrow build(\psi)$
+\STATE $\mathcal{F} \leftarrow \emptyset$
+\LOOP
+\STATE wait for event $\sigma',\tau'$
+\STATE $\pi \leftarrow update(\sigma', \tau', \pi, \psi)$
+\STATE $\psi' \leftarrow sub(\tau', \pi, \psi)$
+\STATE $\mathcal{F} \Leftarrow \psi'$
+\STATE $\mathcal{F}' \leftarrow \emptyset$
+\FOR{all $f \in \mathcal{F}$}
+\STATE $\phi \leftarrow sub(\tau', \pi, f)$
+\STATE $\phi' \leftarrow reduce(\phi)$
+\IF{$\phi' \equiv \perp$}
+\STATE report violation
+\ELSIF{$\phi' \not\equiv \top$}
+\STATE $\mathcal{F}' \Leftarrow \phi'$
+\ENDIF
+\ENDFOR
+\STATE $\mathcal{F} \leftarrow \mathcal{F}'$
+\ENDLOOP
+\end{algorithmic}
+
+where substitute replaces all propositions and past time formulas with their truth value and attempts to resolve future time formulas. Future time formulas that can't be resolved yet are left as pointers to future structures for resolving later. Reduce takes a formula and returns a reduced formula (reducing disjunctions of true or conjunctions with false, etc)
+
+\subsection{History structures}
+We use two sets of history structures. Each past time subformula of $\psi$ we create a past time structure $\mathbb{H}_{\phi}$ which contains the time intervals that $\phi$ is true over.
+
+The future time structures are more complicated. First we have similar $\mathbb{F}_{\phi}$ future history structures which carry the time intervals that $\phi$ is true over.
+
+We also have the obligation and timing structs $\mathbb{I}_{\phi}^{A},\mathbb{I}_{\phi}^{E},$ and $\mathbb{I}_{\phi}^{U}$
+
+
+For each past time subformula of $\psi$, we create an entry $\mathbb{H}_{\phi}$ as follows:
+%
+\\ \textbf{Algorithm $build(\psi)$}:
+\begin{algorithmic}
+\STATE $\pi \leftarrow \emptyset$
+\FOR{all past time subformula $\Phi$ of $\psi$}
+\IF{$\Phi \equiv \blacksquare_{[l,H]} \phi$}
+\STATE $\pi \leftarrow \mathbb{H}_{\phi}$
+\ENDIF
+\IF{$\Phi \equiv \blacklozenge_{[l,h]} \phi$}
+\STATE $\pi \leftarrow \mathbb{H}_{\phi}$
+\ENDIF
+\IF{$\Phi \equiv \phi_1 \mathcal{S}_{[l,h]} \phi_2$}
+\STATE $\pi \leftarrow \mathbb{H}_{\phi_2}$
+\STATE $\pi \leftarrow \mathbb{H}_{\phi_1}$
+\ENDIF
+\ENDFOR
+\FOR{all future time subformulas $\Phi$ of $\psi$}
+\IF{$\Phi \equiv \square_{[l,H]} \phi$}
+\STATE $\pi \leftarrow \mathbb{F}_{\phi}$
+\STATE $\pi \leftarrow \mathbb{I}_{\phi}^{A}$
+\ENDIF
+\IF{$\Phi \equiv \lozenge_{[l,h]} \phi$}
+\STATE $\pi \leftarrow \mathbb{F}_{\phi}$
+\STATE $\pi \leftarrow \mathbb{I}_{\phi}^{E}$
+\ENDIF
+\IF{$\Phi \equiv \phi_1 \mathcal{U}_{[l,h]} \phi_2$}
+\STATE $\pi \leftarrow \mathbb{F}_{\phi_2}$
+\STATE $\pi \leftarrow \mathbb{F}_{\phi_1}$
+\STATE $\pi \leftarrow \mathbb{I}_{\phi_1}^{A}$
+\STATE $\pi \leftarrow \mathbb{I}_{\phi_2}^{E}$
+\ENDIF
+\ENDFOR
+\RETURN $\pi$
+\end{algorithmic}
+
+
+\noindent \textbf{Algorithm $update(\tau, \pi, \psi)$}:
+\begin{algorithmic}
+\STATE $\pi' \leftarrow \emptyset$
+\FOR{all $\mathbb{H}_{\psi} \in \pi$ (from latest to earliest subformula)}
+\STATE $S_{close} \leftarrow \{ [l, \tau] \mid  [l,\infty] \in \mathbb{H}_{\psi} \wedge smon\_st(\sigma, \tau, \pi, \psi) = \perp \}$
+\STATE $S_{open} \leftarrow \{ [\tau, \infty] \mid \not\exists [l,h] \in \mathbb{H}_{\psi} \colon \tau \in [l,h] \wedge smon\_st(\sigma, \tau,\pi,\psi) = \top \}$
+\STATE $S_{carry} \leftarrow \{ [l, h] \mid \forall [l,h] \in \mathbb{H}_{\psi} \colon h \geq (\tau - \delta(\psi)) \}$
+\STATE $\mathbb{H}'_{\psi} \leftarrow S_{close} \cup S_{open} \cup S_{carry}$
+\STATE $\pi' \leftarrow \mathbb{H}'_{\psi}$
+\ENDFOR
+\RETURN $\pi'$
+\end{algorithmic}
+
+
+\end{document}
