@@ -25,9 +25,12 @@ cstate = {}
 cHistory = []
 traceOrder = []
 delim = ','
+Struct = {}
+sTag = 0
 
+pphead = ""
 
-def main()
+def main():
 	# do setup
 	#### Handle input parameters
 	##############################
@@ -52,10 +55,18 @@ def main()
 		print n
 	print "TraceOrder is: %s" % (traceOrder,)
 
+	build_structure(inFormula)
 
+	for s in Struct:
+		print "Struct: %s -- %s" % (s,Struct[s])
+	
 	for line in inFile:
 			updateState(line)
 			cHistory.append(cstate.copy())
+			print "AT STATE %s" % (cstate,)
+			incr_struct(cstate["time"])
+			for s in Struct:
+				print "Struct: %s" % (Struct[s],)
 
 	for h in cHistory:
 		print h
@@ -65,9 +76,152 @@ def main()
 	#nFormula = substitute(inFormula)
 	#print "substituted: %s" % (nFormula,)
 
-
 ############# END MAIN ############
 ##################################
+
+############# MONITOR ALGOS #######
+###################################
+
+
+###### CONSERVATIVE, DELAY WAIT WITH STRUCTURES
+def mon_cons(formula):
+	pass
+def smon_cons_ST(ctime, formula):
+	if (ftype(formula) == EXP_T):
+		dprint("got an exp, returning")
+		return smon_cons_ST(ctime, rchild(formula))
+	elif (ftype(formula) == PROP_T):
+		dprint("got a prop, returning")
+		return cstate[rchild(formula)]
+	elif (ftype(formula) == NPROP_T):
+		dprint("got an nprop")
+		return not cstate[rchild(formula)]
+	elif (ftype(formula) == NOT_T):
+		dprint("got a notprop")
+		return not smon_cons_ST(ctime, rchild(formula))
+	elif (ftype(formula) == AND_T):
+		dprint("got an and, returning both")
+		return smon_cons_ST(ctime, lchild(formula)) and smon_cons_ST(ctime, rchild(formula))
+	elif (ftype(formula) == OR_T):
+		dprint("got an or, returning both")
+		return smon_cons_ST(ctime, lchild(formula)) or smon_cons_ST(ctime, rchild(formula))
+	elif (ftype(formula) == IMPLIES_T):
+		dprint("got an implies, returning both")
+		return not smon_cons_ST(ctime, lchild(formula)) or smon_cons_ST(ctime, rchild(formula))
+	elif (ftype(formula) == EVENT_T): 
+		dprint("got an eventually, ADDING OBLIGATION")
+		l = ctime + formula[1]
+		h = ctime + formula[2]
+
+		dprint("checking range: [%d, %d]" % (l,h))
+		intlist = Struct[get_tags(formula)][-1]
+		for i in intlist:
+			if int_intersect_exists((l,h), i):
+				return True
+		# didn't find the event in the bounds
+		return False
+	elif (ftype(formula) == ALWAYS_T):
+		dprint("got an always, ADDING INVARIANT")
+		l = ctime + formula[1]
+		h = ctime + formula[2]
+		intlist = Struct[get_tags(formula)][-1]
+		for i in intlist:
+			if int_subset((l,h), i):
+				return True
+		# no interval contains invar
+		return False
+		pass
+	elif (ftype(formula) == UNTIL_T): 
+		dprint("got an always, ADDING OBLIGATION AND INVAR")
+		l = ctime + formula[1]
+		h = ctime + formula[2]
+		dprint("checking range: %d - %d" % (l, h))
+		tags = get_tags(formula)
+
+		# First check P2 occured (and save when it did)
+		intlist = Struct[tags[1]][-1]
+		end = None
+		for i in intlist:
+			# check intersection of intervals (including possibly unfinished right bound)
+			if (int_intersect_exists((l,h), i)):
+				end = max(l, i[0])
+		if (end is None):
+			return False		## TODO: return true if weak Since, need to decide
+		dprint("Got Until end %s" % (end,))
+		# Now check P1
+		l = ctime
+		h = end
+		intlist = Struct[tags[0]][-1]						# get list for P1
+		# and check P1 as a PALWAYS since P2 occured
+		for i in intlist:
+			if (int_subset((l,h), i)):
+				return True
+		dprint("Until invariant not satisfied for [%d,%d]" % (l, h))
+		return False
+	elif (ftype(formula) == PEVENT_T):
+		dprint("got a pevent, checking structure")
+		checkStart = ctime-formula[2]
+		checkEnd = ctime-formula[1]
+
+		dprint("checking range: [%d, %d]" % (checkStart, checkEnd))
+		intlist = Struct[get_tags(formula)][-1]
+		for i in intlist:
+			# check intersection of intervals (including possibly unfinished right bound)
+			# saved intervals need to be [l,h) so we don't return <<h,x>> satisfied by [l,h)
+			if ((isopen_interval(i) or checkStart < i[1]) 
+				and i[0] <= checkEnd):
+				return True
+		# didn't find the event in the bounds
+		return False
+	elif (ftype(formula) == PALWAYS_T):
+		dprint("got a palways, checking structure")
+		checkStart = ctime-formula[2]
+		checkEnd = ctime-formula[1]
+
+		dprint("checking range: %d - %d" % (checkStart, checkEnd))
+		#dprint("Checking range: %s" % (checkRange,))
+		intlist = Struct[get_tags(formula)][-1]
+		for i in intlist:
+			if (i[0] <= checkStart and 
+				(isopen_interval(i) or checkEnd < i[1])):
+				# start is in interval, and either open or interval contains end
+				return True
+		# no interval containing invariant
+		return False
+	elif (ftype(formula) == SINCE_T):
+		dprint("got a since, checking structure")
+		checkStart = ctime-formula[2]
+		checkEnd = ctime-formula[1]
+		dprint("checking range: %d - %d" % (checkStart, checkEnd))
+		tags = get_tags(formula)
+		# First, check that P2 did occur (and find when it first did)
+		intlist = Struct[tags[1]][-1]
+		start = None
+		for i in intlist:
+			# check intersection of intervals (including possibly unfinished right bound)
+			if ((isopen_interval(i) or checkStart < i[1]) 
+				and i[0] <= checkEnd):
+				start = max(checkStart, i[0])
+		if (start is None):
+			return False		## TODO: return true if weak Since, need to decide
+		dprint("Got Since start %s" % (start,))
+		# Now check P1
+		checkStart = start
+		checkEnd = ctime
+		intlist = Struct[tags[0]][-1]						# get list for P1
+		# and check P1 as a PALWAYS since P2 occured
+		for i in intlist:
+			if (i[0] <= checkStart and 
+				(isopen_interval(i) or checkEnd < i[1])):
+				# start is in interval, and either open or interval contains end
+				return True
+		dprint("Since invariant not satisfied for [%d,%d]" % (checkStart, checkEnd))
+		return False
+	else:
+		return INVALID_T
+
+############ Main/Monitor helpers ####
+######################################
 def updateState(line):
 	vals = line.strip().split(delim)
 	for i in range(0, len(vals)):
@@ -114,6 +268,8 @@ def substitute(formula):
 		return cstate[formula[1]]
 	elif (ftype(formula) == NPROP_T):
 		return not cstate[formula[1]]
+	elif (ftype(formula) == NOT_T):
+		return ['notprop', substitute(formula[1])]
 	elif (ftype(formula) == AND_T):
 		return ['andprop', substitute(formula[1]), substitute(formula[2])]
 	elif (ftype(formula) == OR_T):
@@ -152,6 +308,8 @@ def delay(formula):
 		return 0
 	elif (ftype(formula) == NPROP_T):
 		return 0
+	elif (ftype(formula) == NOT_T):
+		return delay(rchild(formula))
 	elif (ftype(formula) == AND_T):
 		return max(delay(lchild(formula)),delay(rchild(formula)))
 	elif (ftype(formula) == OR_T):
@@ -184,6 +342,8 @@ def past_delay(formula):
 		return 0
 	elif (ftype(formula) == NPROP_T):
 		return 0
+	elif (ftype(formula) == NOT_T):
+		return delay(rchild(formula))
 	elif (ftype(formula) == AND_T):
 		return max(delay(lchild(formula)),delay(rchild(formula)))
 	elif (ftype(formula) == OR_T):
@@ -221,21 +381,25 @@ def build_structure(formula, extbound=(0,0)):
 	elif (ftype(formula) == NPROP_T):
 		dprint("BUILDING: got an nprop, returning")
 		return True
+	elif (ftype(formula) == NOT_T):
+		dprint("BUILDING: got a not, recursing")
+		build_structure(rchild(formula))
+		return True
 	elif (ftype(formula) == AND_T):
 		dprint("BUILDING: got an and, recursing both")
 		build_structure(lchild(formula)) 
 		build_structure(rchild(formula))
-		return
+		return True
 	elif (ftype(formula) == OR_T):
 		dprint("BUILDING: got an or, recursing both")
 		build_structure(lchild(formula))
 		build_structure(rchild(formula))
-		return
+		return True
 	elif (ftype(formula) == IMPLIES_T):
 		dprint("BUILDING: got an implies, recursing both")
 		build_structure(lchild(formula)) 
 		build_structure(rchild(formula))
-		return
+		return True
 	elif (ftype(formula) == EVENT_T): 
 		dprint("BUILDING: got an eventually, ADDING STRUCT and recursing")
 		cTag = tag_formula(formula)
@@ -324,7 +488,7 @@ def incr_struct(time):
 			last_int = cStruct[-1][-1]	# get most recent interval from interval list
 			cIntervalOpen = isopen_interval(last_int)	
 		# else cIntervalOpen stays false
-		if safety_monitor(time, cStruct[1]):
+		if smon_cons_ST(time, cStruct[1]):
 			# if not in an open interval, start a new one
 			# if we are in an existing open interval, then we don't need to do anything
 			if (not cIntervalOpen):
@@ -374,13 +538,13 @@ def int_intersect_exists(test_i, history_i):
 		return False
 # is test subset of history
 def int_subset(test_i, history_i):
-	if ((iStart(history_i) < iStart(test_i) and
+	if ((iStart(history_i) <= iStart(test_i)) and
 		(isopen_interval(history_i) or iEnd(test_i) < iEnd(history_i))):
 		return True
 	return False
 #### Utilities
 ######################################
-def dprint(string)
+def dprint(string):
 	if DEBUG:
 		print string
 
