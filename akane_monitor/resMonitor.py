@@ -64,6 +64,202 @@ def main():
 
 ############# MONITOR ALGOS #######
 ###################################
+def mon_cons(inFile, inFormula, traceOrder):
+	# some algorithm local variables
+	cstate = {}
+	cHistory = {}
+	eptr = 0
+	cptr = 0
+	# build struct and save delay
+	D = delay(inFormula)
+	# wait for new data...
+	for line in inFile:
+			dprint("###### New event received")
+			updateState(cstate, traceOrder, line)
+			cHistory[cptr] = cstate.copy()
+			print "AT STATE %s" % (cstate,)
+			while (tau(cHistory, cptr) - tau(cHistory, eptr) >= D):
+				dprint("@@@@ evaluating step: %d" % (eptr,))
+				mon = smon_cons(cHistory, cstate, inFormula)
+				if (not mon):
+					print "VIOLATION FOUND"
+					sys.exit(1)
+				print "==== formula value at %d: %s" % (eptr, mon)
+				eptr = eptr + 1
+			## clean old history out
+			## structs are cleaned automatically at update
+			for i in cHistory.copy():
+				if (tau(cHistory, cptr) - tau(cHistory, i) > D):
+					cHistory.pop(i)
+					print "removed %d from History" % (i,)
+			cptr = cptr + 1
+## END mon_cons
+
+def smon_cons(hist, cstate, formula):
+	ctime = cstate["time"]
+	if (ftype(formula) == EXP_T):
+		dprint("got an exp, returning", DBG_SMON)
+		return smon_cons(hist, cstate, rchild(formula))
+	elif (ftype(formula) == PROP_T):
+		dprint("got a prop, returning", DBG_SMON)
+		return cstate[rchild(formula)]
+	elif (ftype(formula) == NPROP_T):
+		dprint("got an nprop", DBG_SMON)
+		return not cstate[rchild(formula)]
+	elif (ftype(formula) == NOT_T):
+		dprint("got a notprop", DBG_SMON)
+		return not smon_cons(hist, cstate, rchild(formula))
+	elif (ftype(formula) == AND_T):
+		dprint("got an and, returning both", DBG_SMON)
+		return smon_cons(hist, cstate, lchild(formula)) and smon_cons(hist, cstate, rchild(formula))
+	elif (ftype(formula) == OR_T):
+		dprint("got an or, returning both", DBG_SMON)
+		return smon_cons(hist, cstate, lchild(formula)) or smon_cons(hist, cstate, rchild(formula))
+	elif (ftype(formula) == IMPLIES_T):
+		dprint("got an implies, returning both", DBG_SMON)
+		return not smon_cons(hist, cstate, lchild(formula)) or smon_cons(hist, cstate, rchild(formula))
+	elif (ftype(formula) == EVENT_T): 
+		dprint("got an eventually, checking structure", DBG_SMON)
+		l = ctime + formula[1]
+		h = ctime + formula[2]
+
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		end = None
+		for i in sorted(hist, reverse=True):
+			#if (tau(i) < l and before is None):
+			if (int_intersect_exists((l,h), (tau(i),end)) 
+				and smon_cons(hist, hist[i], rchild(formula))):
+				return True
+			end = tau(i)
+		# didn't find the event in the bounds
+		return False
+	elif (ftype(formula) == ALWAYS_T):
+		dprint("got an always, checking structure", DBG_SMON)
+		l = ctime + formula[1]
+		h = ctime + formula[2]
+
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		histIntE = None
+		histIntS = None
+		for i in sorted(hist, reverse=True):
+			if (smon_cons(hist, hist[i], rchild(formula))):
+				histIntS = tau(i)
+			else:
+				histIntE = tau(i)
+			if (histIntS <= histIntE and int_subset((l,h), (histIntS, histIntE))):
+				return True
+		# didn't find the event in the bounds
+		return False
+	elif (ftype(formula) == UNTIL_T): 
+		dprint("got an always, checking structure", DBG_SMON)
+		l = ctime + formula[1]
+		h = ctime + formula[2]
+		dprint("checking range: %d - %d" % (l, h), DBG_SMON)
+
+		# First check P2 occured (and save when it did)
+		end = None
+		untilend = None
+		for i in sorted(hist, reverse=True):
+			#if (tau(i) < l and before is None):
+			if (int_intersect_exists((l,h), (tau(i),end)) 
+				and smon_cons(hist, hist[i], rchild(formula))):
+				untilend = tau(i)
+			end = tau(i)
+		if untilend is None
+			return False
+		dprint("Got Until end %s" % (end,), DBG_SMON)
+		# Now check P1
+		l = ctime
+		h = untilend
+		histIntE = None
+		histIntS = None
+		for i in sorted(hist, reverse=True):
+			if (smon_cons(hist, hist[i], rchild(formula))):
+				histIntS = tau(i)
+			else:
+				histIntE = tau(i)
+			if (histIntS <= histIntE and int_subset((l,h), (histIntS, histIntE))):
+				return True
+		# didn't find the event in the bounds
+		dprint("Until invariant not satisfied for [%d,%d]" % (l, h), DBG_SMON)
+		return False
+	elif (ftype(formula) == PEVENT_T):
+		dprint("got a pevent, checking structure", DBG_SMON)
+		l = ctime-formula[2]
+		h = ctime-formula[1]
+
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		end = None
+		for i in sorted(hist, reverse=True):
+			#if (tau(i) < l and before is None):
+			if (int_intersect_exists((l,h), (tau(i),end)) 
+				and smon_cons(hist, hist[i], rchild(formula))):
+				return True
+			end = tau(i)
+		# didn't find the event in the bounds
+		return False
+	elif (ftype(formula) == PALWAYS_T):
+		dprint("got a palways, checking structure", DBG_SMON)
+		l = ctime-formula[2]
+		h = ctime-formula[1]
+
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		histIntE = None
+		histIntS = None
+		for i in sorted(hist, reverse=True):
+			if (smon_cons(hist, hist[i], rchild(formula))):
+				histIntS = tau(i)
+			else:
+				histIntE = tau(i)
+			if (histIntS <= histIntE and int_subset((l,h), (histIntS, histIntE))):
+				return True
+		# didn't find the event in the bounds
+		return False
+	elif (ftype(formula) == SINCE_T):
+		dprint("got a since, checking structure", DBG_SMON)
+		l = ctime-formula[2]
+		h = ctime-formula[1]
+		dprint("checking range: %d - %d" % (checkStart, checkEnd), DBG_SMON)
+
+
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		end = None
+		sinceend = None
+		for i in sorted(hist, reverse=True):
+			#if (tau(i) < l and before is None):
+			if (int_intersect_exists((l,h), (tau(i),end)) 
+				and smon_cons(hist, hist[i], rchild(formula))):
+				sinceend = tau(i)
+			end = tau(i)
+
+
+		tags = get_tags(formula)
+		# First, check that P2 did occur (and find when it first did)
+		intlist = Struct[tags[1]][-1]
+		start = None
+		for i in intlist:
+			# check intersection of intervals (including possibly unfinished right bound)
+			if ((isopen_interval(i) or checkStart < i[1]) 
+				and i[0] <= checkEnd):
+				start = max(checkStart, i[0])
+		if (start is None):
+			return False		## TODO: return true if weak Since, need to decide
+		dprint("Got Since start %s" % (start,), DBG_SMON)
+		# Now check P1
+		checkStart = start
+		checkEnd = ctime
+		intlist = Struct[tags[0]][-1]						# get list for P1
+		# and check P1 as a PALWAYS since P2 occured
+		for i in intlist:
+			if (i[0] <= checkStart and 
+				(isopen_interval(i) or checkEnd < i[1])):
+				# start is in interval, and either open or interval contains end
+				return True
+		dprint("Since invariant not satisfied for [%d,%d]" % (checkStart, checkEnd), DBG_SMON)
+		return False
+	else:
+		return INVALID_T
+## END smon_cons
 
 def mon_cons_ST(inFile, inFormula, traceOrder):
 	# some algorithm local variables
@@ -98,7 +294,7 @@ def mon_cons_ST(inFile, inFormula, traceOrder):
 					cHistory.pop(i)
 					print "removed %d from History" % (i,)
 			cptr = cptr + 1
-## END mon_cons()
+## END mon_cons_ST()
 
 
 def smon_cons_ST(Struct, cstate, formula):
@@ -235,6 +431,7 @@ def smon_cons_ST(Struct, cstate, formula):
 		return False
 	else:
 		return INVALID_T
+## END smon_cons_ST
 
 ############ Main/Monitor helpers ####
 ######################################
@@ -605,7 +802,7 @@ def in_interval(i, interval):
 	if (interval[1] is None):
 		return i >= interval[0]
 	else:
-		return i >= interval[0] and i <= interval[1]
+		return i >= interval[0] and i < interval[1]
 # make access to intervals a little more clear
 def iEnd(interval):
 	return interval[1]
