@@ -24,7 +24,7 @@ DBG_STRUCT = 0x01
 DBG_SMON = 0x02
 DBG_HISTORY = 0x04
 DBG_LEVEL = 0xFF
-DBG_MASK = DBG_STRUCT | DBG_HISTORY
+DBG_MASK = DBG_STRUCT | DBG_HISTORY | DBG_SMON
 DEBUG = True
 # fill some propositional values, and keep a history buffer
 delim = ','
@@ -56,7 +56,8 @@ def main():
 	###### All set up, call one of the monitoring algorithms	
 	print "############## Finished setting up"
 	print "############## Beginning monitor algorithm: mon_cons_ST"
-	mon_cons_ST(inFile, inFormula, traceOrder)
+	#mon_cons_ST(inFile, inFormula, traceOrder)
+	mon_cons(inFile, inFormula, traceOrder)
 
 
 ############# END MAIN ############
@@ -72,15 +73,16 @@ def mon_cons(inFile, inFormula, traceOrder):
 	cptr = 0
 	# build struct and save delay
 	D = delay(inFormula)
+	dprint("Formula delay is %d" % (D,))
 	# wait for new data...
 	for line in inFile:
 			dprint("###### New event received")
 			updateState(cstate, traceOrder, line)
 			cHistory[cptr] = cstate.copy()
 			print "AT STATE %s" % (cstate,)
-			while (tau(cHistory, cptr) - tau(cHistory, eptr) >= D):
+			while (eptr <= cptr and tau(cHistory, cptr) - tau(cHistory, eptr) >= D):
 				dprint("@@@@ evaluating step: %d" % (eptr,))
-				mon = smon_cons(cHistory, cstate, inFormula)
+				mon = smon_cons(cHistory, tau(cHistory,eptr), inFormula)
 				if (not mon):
 					print "VIOLATION FOUND"
 					sys.exit(1)
@@ -95,11 +97,11 @@ def mon_cons(inFile, inFormula, traceOrder):
 			cptr = cptr + 1
 ## END mon_cons
 
-def smon_cons(hist, cstate, formula):
-	ctime = cstate["time"]
+def smon_cons(hist, ctime, formula):
+	(sid,cstate) = getState(hist, ctime)
 	if (ftype(formula) == EXP_T):
 		dprint("got an exp, returning", DBG_SMON)
-		return smon_cons(hist, cstate, rchild(formula))
+		return smon_cons(hist, ctime, rchild(formula))
 	elif (ftype(formula) == PROP_T):
 		dprint("got a prop, returning", DBG_SMON)
 		return cstate[rchild(formula)]
@@ -108,33 +110,37 @@ def smon_cons(hist, cstate, formula):
 		return not cstate[rchild(formula)]
 	elif (ftype(formula) == NOT_T):
 		dprint("got a notprop", DBG_SMON)
-		return not smon_cons(hist, cstate, rchild(formula))
+		return not smon_cons(hist, ctime, rchild(formula))
 	elif (ftype(formula) == AND_T):
 		dprint("got an and, returning both", DBG_SMON)
-		return smon_cons(hist, cstate, lchild(formula)) and smon_cons(hist, cstate, rchild(formula))
+		return smon_cons(hist, ctime, lchild(formula)) and smon_cons(hist, ctime, rchild(formula))
 	elif (ftype(formula) == OR_T):
 		dprint("got an or, returning both", DBG_SMON)
-		return smon_cons(hist, cstate, lchild(formula)) or smon_cons(hist, cstate, rchild(formula))
+		return smon_cons(hist, ctime, lchild(formula)) or smon_cons(hist, ctime, rchild(formula))
 	elif (ftype(formula) == IMPLIES_T):
 		dprint("got an implies, returning both", DBG_SMON)
-		return not smon_cons(hist, cstate, lchild(formula)) or smon_cons(hist, cstate, rchild(formula))
+		return not smon_cons(hist, ctime, lchild(formula)) or smon_cons(hist, ctime, rchild(formula))
 	elif (ftype(formula) == EVENT_T): 
-		dprint("got an eventually, checking structure", DBG_SMON)
+		dprint("got an eventually at %d, checking structure" % (ctime,), DBG_SMON)
 		l = ctime + formula[1]
 		h = ctime + formula[2]
 
 		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
 		end = None
 		for i in sorted(hist, reverse=True):
-			#if (tau(i) < l and before is None):
-			if (int_intersect_exists((l,h), (tau(i),end)) 
-				and smon_cons(hist, hist[i], rchild(formula))):
+			itime = tau(hist,i)
+			dprint("eventually checking %d" % (i,), DBG_SMON)
+			dprint("checking intersection of (%d,%d) and (%s,%s)"%(l,h,itime,end), DBG_SMON)
+			isect_start = int_intersect_start((l,h), (itime, end))
+			dprint("int_start is %s" % (isect_start,), DBG_SMON)
+			if (int_intersect_exists((l,h), (itime,end)) 
+				and smon_cons(hist, isect_start, rchild(formula))):
 				return True
-			end = tau(i)
+			end = tau(hist, i)
 		# didn't find the event in the bounds
 		return False
 	elif (ftype(formula) == ALWAYS_T):
-		dprint("got an always, checking structure", DBG_SMON)
+		dprint("got an always at %d, checking structure" %(ctime,), DBG_SMON)
 		l = ctime + formula[1]
 		h = ctime + formula[2]
 
@@ -142,13 +148,18 @@ def smon_cons(hist, cstate, formula):
 		histIntE = None
 		histIntS = None
 		for i in sorted(hist, reverse=True):
-			if (smon_cons(hist, hist[i], rchild(formula))):
-				histIntS = tau(i)
+			dprint("always checking %d" % (i,), DBG_SMON)
+			dprint("updating always intervals: (%s, %s)" % (histIntS, histIntE), DBG_SMON)
+			if (smon_cons(hist, tau(hist,i), rchild(formula))):
+				histIntS = tau(hist, i)
 			else:
-				histIntE = tau(i)
-			if (histIntS <= histIntE and int_subset((l,h), (histIntS, histIntE))):
+				histIntE = tau(hist, i)
+			dprint("checking always intervals: (%s, %s)" % (histIntS, histIntE), DBG_SMON)
+			if (histIntS is not None and (histIntS <= histIntE or histIntE is None) 
+				and int_subset((l,h), (histIntS, histIntE))):
 				return True
 		# didn't find the event in the bounds
+		dprint("FINISHED ALWAYS, DIDN'T FIND ANYTHING", DBG_SMON)
 		return False
 	elif (ftype(formula) == UNTIL_T): 
 		dprint("got an always, checking structure", DBG_SMON)
@@ -161,11 +172,11 @@ def smon_cons(hist, cstate, formula):
 		untilend = None
 		for i in sorted(hist, reverse=True):
 			#if (tau(i) < l and before is None):
-			if (int_intersect_exists((l,h), (tau(i),end)) 
+			if (int_intersect_exists((l,h), (tau(hist, i),end)) 
 				and smon_cons(hist, hist[i], rchild(formula))):
-				untilend = tau(i)
-			end = tau(i)
-		if untilend is None
+				untilend = tau(hist, i)
+			end = tau(hist, i)
+		if untilend is None:
 			return False
 		dprint("Got Until end %s" % (end,), DBG_SMON)
 		# Now check P1
@@ -175,9 +186,9 @@ def smon_cons(hist, cstate, formula):
 		histIntS = None
 		for i in sorted(hist, reverse=True):
 			if (smon_cons(hist, hist[i], rchild(formula))):
-				histIntS = tau(i)
+				histIntS = tau(hist, i)
 			else:
-				histIntE = tau(i)
+				histIntE = tau(hist, i)
 			if (histIntS <= histIntE and int_subset((l,h), (histIntS, histIntE))):
 				return True
 		# didn't find the event in the bounds
@@ -192,10 +203,10 @@ def smon_cons(hist, cstate, formula):
 		end = None
 		for i in sorted(hist, reverse=True):
 			#if (tau(i) < l and before is None):
-			if (int_intersect_exists((l,h), (tau(i),end)) 
+			if (int_intersect_exists((l,h), (tau(hist, i),end)) 
 				and smon_cons(hist, hist[i], rchild(formula))):
 				return True
-			end = tau(i)
+			end = tau(hist, i)
 		# didn't find the event in the bounds
 		return False
 	elif (ftype(formula) == PALWAYS_T):
@@ -208,9 +219,9 @@ def smon_cons(hist, cstate, formula):
 		histIntS = None
 		for i in sorted(hist, reverse=True):
 			if (smon_cons(hist, hist[i], rchild(formula))):
-				histIntS = tau(i)
+				histIntS = tau(hist, i)
 			else:
-				histIntE = tau(i)
+				histIntE = tau(hist, i)
 			if (histIntS <= histIntE and int_subset((l,h), (histIntS, histIntE))):
 				return True
 		# didn't find the event in the bounds
@@ -219,44 +230,37 @@ def smon_cons(hist, cstate, formula):
 		dprint("got a since, checking structure", DBG_SMON)
 		l = ctime-formula[2]
 		h = ctime-formula[1]
-		dprint("checking range: %d - %d" % (checkStart, checkEnd), DBG_SMON)
-
-
+		# check if P2 happened
 		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
 		end = None
 		sinceend = None
 		for i in sorted(hist, reverse=True):
-			#if (tau(i) < l and before is None):
-			if (int_intersect_exists((l,h), (tau(i),end)) 
+			#if (tau(hist, i) < l and before is None):
+			if (int_intersect_exists((l,h), (tau(hist, i),end)) 
 				and smon_cons(hist, hist[i], rchild(formula))):
-				sinceend = tau(i)
-			end = tau(i)
-
-
-		tags = get_tags(formula)
-		# First, check that P2 did occur (and find when it first did)
-		intlist = Struct[tags[1]][-1]
-		start = None
-		for i in intlist:
-			# check intersection of intervals (including possibly unfinished right bound)
-			if ((isopen_interval(i) or checkStart < i[1]) 
-				and i[0] <= checkEnd):
-				start = max(checkStart, i[0])
-		if (start is None):
-			return False		## TODO: return true if weak Since, need to decide
+				sinceend = tau(hist, i)
+			end = tau(hist, i)
+		if sinceend is None:
+			return False
 		dprint("Got Since start %s" % (start,), DBG_SMON)
 		# Now check P1
-		checkStart = start
-		checkEnd = ctime
-		intlist = Struct[tags[0]][-1]						# get list for P1
-		# and check P1 as a PALWAYS since P2 occured
-		for i in intlist:
-			if (i[0] <= checkStart and 
-				(isopen_interval(i) or checkEnd < i[1])):
-				# start is in interval, and either open or interval contains end
+		l = sinceend
+		h = ctime
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		histIntE = None
+		histIntS = None
+		for i in sorted(hist, reverse=True):
+			if (smon_cons(hist, hist[i], rchild(formula))):
+				histIntS = tau(hist, i)
+			else:
+				histIntE = tau(hist, i)
+			if (histIntS <= histIntE 
+				and int_subset((l,h), (histIntS, histIntE))):
 				return True
+		# didn't find the event in the bounds
 		dprint("Since invariant not satisfied for [%d,%d]" % (checkStart, checkEnd), DBG_SMON)
 		return False
+	# bad/unknown formula type
 	else:
 		return INVALID_T
 ## END smon_cons
@@ -281,7 +285,7 @@ def mon_cons_ST(inFile, inFormula, traceOrder):
 
 			while (tau(cHistory, cptr) - tau(cHistory, eptr) >= D):
 				dprint("@@@@ evaluating step: %d" % (eptr,))
-				mon = smon_cons_ST(Struct, cstate, inFormula)
+				mon = smon_cons_ST(Struct, cHistory[eptr], inFormula)
 				if (not mon):
 					print "VIOLATION FOUND"
 					sys.exit(1)
@@ -444,6 +448,11 @@ def updateState(cstate, traceOrder, line):
 def tau(hist, i):
 	return hist[i]["time"]
 		
+def getState(hist, time):
+	for i in sorted(hist, reverse=True):
+		if (tau(hist,i) <= time):
+			return (i,hist[i])
+
 def ftype(formula):
 	cNode = formula[0]
 	if (cNode == "exp"):
@@ -811,11 +820,16 @@ def iStart(interval):
 # order of intervals matters, only checking infinite on history
 # do the intervals intersect?
 def int_intersect_exists(test_i, history_i):
-	if ((isopen_interval(history_i) or iStart(test_i) < iEnd(history_i)) 
-		and iStart(history_i) <= iEnd(test_i)):
+	if ((isopen_interval(history_i) or iStart(test_i) <= iEnd(history_i)) 
+		and iStart(history_i) < iEnd(test_i)):
 		return True
 	else:
 		return False
+# get start point of intersection
+def int_intersect_start(test_i, history_i):
+	if int_intersect_exists(test_i, history_i):
+		return max(iStart(test_i), iStart(history_i))
+	return None
 # is test subset of history
 def int_subset(test_i, history_i):
 	if ((iStart(history_i) <= iStart(test_i)) and
