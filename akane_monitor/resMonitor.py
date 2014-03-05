@@ -57,7 +57,7 @@ def main():
 	print "############## Finished setting up"
 	print "############## Beginning monitor algorithm: mon_cons_ST"
 	#mon_cons_ST(inFile, inFormula, traceOrder)
-	mon_cons(inFile, inFormula, traceOrder)
+	mon_cons_per(inFile, inFormula, traceOrder)
 
 
 ############# END MAIN ############
@@ -65,6 +65,75 @@ def main():
 
 ############# MONITOR ALGOS #######
 ###################################
+# Periodic data conservative monitor
+def mon_cons_per(inFile, inFormula, traceOrder):
+	# some algorithm local variables
+	cstate = {}
+	cHistory = {}
+	eptr = 0
+	cptr = 0
+	# build struct and save delay
+	D = delay(inFormula)
+	DP = past_delay(inFormula)
+	dprint("Formula delay is %d, %d" % (D,DP))
+	# wait for new data...
+	for line in inFile:
+			dprint("###### New event received")
+			updateState(cstate, traceOrder, line)
+			cHistory[cptr] = cstate.copy()
+			print "AT STATE %s" % (cstate,)
+			while (eptr <= cptr and tau(cHistory, cptr) - tau(cHistory, eptr) >= D):
+				dprint("@@@@ evaluating step: %d" % (eptr,))
+				mon = smon_cons_per(cHistory, tau(cHistory,eptr), inFormula)
+				if (not mon):
+					print "VIOLATION FOUND AT TIME %s" % (tau(cHistory, eptr),)
+					sys.exit(1)
+				print "==== formula value at %d: %s" % (eptr, mon)
+				eptr = eptr + 1
+			## clean old history out
+			## structs are cleaned automatically at update
+			for i in cHistory.copy():
+				if (tau(cHistory, cptr) - tau(cHistory, i) > max(DP,D)):
+					cHistory.pop(i)
+					print "removed %d from History" % (i,)
+			cptr = cptr + 1
+## END mon_cons_periodic
+	
+def mon_cons_ST(inFile, inFormula, traceOrder):
+	# some algorithm local variables
+	cstate = {}
+	Struct = {}
+	cHistory = {}
+	eptr = 0
+	cptr = 0
+	# build struct and save delay
+	build_structure(Struct, inFormula)
+	D = delay(inFormula)
+	# wait for new data...
+	for line in inFile:
+			dprint("###### New event received")
+			updateState(cstate, traceOrder, line)
+			cHistory[cptr] = cstate.copy()
+			print "AT STATE %s" % (cstate,)
+			incr_struct(Struct, cstate)
+
+			while (tau(cHistory, cptr) - tau(cHistory, eptr) >= D):
+				dprint("@@@@ evaluating step: %d" % (eptr,))
+				mon = smon_cons_ST(Struct, cHistory[eptr], inFormula)
+				if (not mon):
+					print "VIOLATION FOUND"
+					sys.exit(1)
+				print "==== formula value at %d: %s" % (eptr, mon)
+				eptr = eptr + 1
+			## clean old history out
+			## structs are cleaned automatically at update
+			for i in cHistory.copy():
+				if (tau(cHistory, cptr) - tau(cHistory, i) > D):
+					cHistory.pop(i)
+					print "removed %d from History" % (i,)
+			cptr = cptr + 1
+## END mon_cons_ST()
+
 def mon_cons(inFile, inFormula, traceOrder):
 	# some algorithm local variables
 	cstate = {}
@@ -84,7 +153,7 @@ def mon_cons(inFile, inFormula, traceOrder):
 				dprint("@@@@ evaluating step: %d" % (eptr,))
 				mon = smon_cons(cHistory, tau(cHistory,eptr), inFormula)
 				if (not mon):
-					print "VIOLATION FOUND"
+					print "VIOLATION FOUND AT TIME %d" % (tau(cHistory, eptr))
 					sys.exit(1)
 				print "==== formula value at %d: %s" % (eptr, mon)
 				eptr = eptr + 1
@@ -96,6 +165,148 @@ def mon_cons(inFile, inFormula, traceOrder):
 					print "removed %d from History" % (i,)
 			cptr = cptr + 1
 ## END mon_cons
+
+def smon_cons_per(hist, ctime, formula):
+	(sid,cstate) = getState(hist, ctime)
+	if (ftype(formula) == EXP_T):
+		dprint("got an exp, returning", DBG_SMON)
+		return smon_cons_per(hist, ctime, rchild(formula))
+	elif (ftype(formula) == PROP_T):
+		dprint("got a prop, returning", DBG_SMON)
+		return cstate[rchild(formula)]
+	elif (ftype(formula) == NPROP_T):
+		dprint("got an nprop", DBG_SMON)
+		return not cstate[rchild(formula)]
+	elif (ftype(formula) == NOT_T):
+		dprint("got a notprop", DBG_SMON)
+		return not smon_cons_per(hist, ctime, rchild(formula))
+	elif (ftype(formula) == AND_T):
+		dprint("got an and, returning both", DBG_SMON)
+		return smon_cons_per(hist, ctime, lchild(formula)) and smon_cons_per(hist, ctime, rchild(formula))
+	elif (ftype(formula) == OR_T):
+		dprint("got an or, returning both", DBG_SMON)
+		return smon_cons_per(hist, ctime, lchild(formula)) or smon_cons_per(hist, ctime, rchild(formula))
+	elif (ftype(formula) == IMPLIES_T):
+		dprint("got an implies, returning both", DBG_SMON)
+		return not smon_cons_per(hist, ctime, lchild(formula)) or smon_cons_per(hist, ctime, rchild(formula))
+	elif (ftype(formula) == EVENT_T): 
+		dprint("got an eventually at %d, checking structure" % (ctime,), DBG_SMON)
+		l = ctime + formula[1]
+		h = ctime + formula[2]
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		# loop through history, if tau in [l,h] and smon(tau) true then true
+		for i in sorted(hist, reverse=True):
+			itime = tau(hist,i)
+			dprint("eventually checking %d" % (i,), DBG_SMON)
+			if (in_closed_int(itime, (l,h))
+				and smon_cons_per(hist, itime, rchild(formula))):
+				return True
+		# didn't find the event in the bounds
+		return False
+	elif (ftype(formula) == ALWAYS_T):
+		dprint("got an always at %d, checking structure" %(ctime,), DBG_SMON)
+		l = ctime + formula[1]
+		h = ctime + formula[2]
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		# loop through history, if tau in [l,h] and smon(tau) false then false
+		for i in sorted(hist, reverse=True):
+			itime = tau(hist, i)
+			if (in_closed_int(itime, (l,h))):
+				if (not smon_cons(hist, itime, rchild(formula))):
+					return False
+		# formula was true throughout
+		return True
+	elif (ftype(formula) == UNTIL_T): 
+		dprint("got an always, checking structure", DBG_SMON)
+		l = ctime + formula[1]
+		h = ctime + formula[2]
+		dprint("checking range: %d - %d" % (l, h), DBG_SMON)
+		# First check P2 occured (and save when it did)
+		untilend = None
+		# loop through history, if tau in [l,h] and smon(tau) true then true
+		for i in sorted(hist, reverse=True):
+			itime = tau(hist,i)
+			dprint("eventually checking %d" % (i,), DBG_SMON)
+			if (in_closed_int(itime, (l,h))
+				and smon_cons_per(hist, itime, untilP2(formula))):
+				untilend = itime
+		# didn't find P2 in bounds
+		if untilend is None:
+			return False
+		dprint("Got Until end %s" % (untilend,), DBG_SMON)
+		# Now check P1
+		l = ctime
+		h = untilend
+		for i in sorted(hist, reverse=True):
+			itime = tau(hist, i)
+			if (in_closed_int(itime, (l,h))):
+				if (not smon_cons(hist, itime, untilP1(formula))):
+					return False
+					dprint("Until invariant not satisfied for [%d,%d]" 
+						% (l, h), DBG_SMON)
+		# formula was true throughout
+		return True
+	elif (ftype(formula) == PEVENT_T):
+		dprint("got a pevent, checking structure", DBG_SMON)
+		l = ctime-formula[2]
+		h = ctime-formula[1]
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		# loop through history, if tau in [l,h] and smon(tau) true then true
+		for i in sorted(hist, reverse=True):
+			itime = tau(hist,i)
+			dprint("eventually checking %d" % (i,), DBG_SMON)
+			if (in_closed_int(itime, (l,h))
+				and smon_cons_per(hist, itime, rchild(formula))):
+				return True
+		# didn't find the event in the bounds
+		return False
+	elif (ftype(formula) == PALWAYS_T):
+		dprint("got a palways, checking structure", DBG_SMON)
+		l = ctime-formula[2]
+		h = ctime-formula[1]
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		# loop through history, if tau in [l,h] and smon(tau) false then false
+		for i in sorted(hist, reverse=True):
+			itime = tau(hist, i)
+			if (in_closed_int(itime, (l,h))):
+				if (not smon_cons(hist, itime, rchild(formula))):
+					return False
+		# formula was true throughout
+		return True
+	elif (ftype(formula) == SINCE_T):
+		dprint("got a since, checking structure", DBG_SMON)
+		l = ctime-formula[2]
+		h = ctime-formula[1]
+		# check if P2 happened
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		sinceend = None
+		# loop through history, if tau in [l,h] and smon(tau) true then true
+		for i in sorted(hist, reverse=True):
+			itime = tau(hist,i)
+			dprint("eventually checking %d" % (i,), DBG_SMON)
+			if (in_closed_int(itime, (l,h))
+				and smon_cons_per(hist, itime, untilP2(formula))):
+				sinceend = itime
+		# didn't find P2 in bounds
+		if sinceend is None:
+			return False
+		dprint("Got Since start %s" % (sinceend,), DBG_SMON)
+		# Now check P1
+		l = sinceend
+		h = ctime
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		# loop through history, if tau in [l,h] and smon(tau) false then false
+		for i in sorted(hist, reverse=True):
+			itime = tau(hist, i)
+			if (in_closed_int(itime, (l,h))):
+				if (not smon_cons(hist, itime, untilP1(formula))):
+					return False
+		# formula was true throughout
+		return True
+	# bad/unknown formula type
+	else:
+		return INVALID_T
+## END smon_cons_per
 
 def smon_cons(hist, ctime, formula):
 	(sid,cstate) = getState(hist, ctime)
@@ -625,31 +836,31 @@ def delay(formula):
 
 def past_delay(formula):
 	if (ftype(formula) == EXP_T):
-		return delay(rchild(formula))
+		return past_delay(rchild(formula))
 	elif (ftype(formula) == PROP_T):
 		return 0
 	elif (ftype(formula) == NPROP_T):
 		return 0
 	elif (ftype(formula) == NOT_T):
-		return delay(rchild(formula))
+		return past_delay(rchild(formula))
 	elif (ftype(formula) == AND_T):
-		return max(delay(lchild(formula)),delay(rchild(formula)))
+		return max(past_delay(lchild(formula)),past_delay(rchild(formula)))
 	elif (ftype(formula) == OR_T):
-		return max(delay(lchild(formula)),delay(rchild(formula)))
+		return max(past_delay(lchild(formula)),past_delay(rchild(formula)))
 	elif (ftype(formula) == IMPLIES_T):
-		return max(delay(lchild(formula)),delay(rchild(formula)))
+		return max(past_delay(lchild(formula)),past_delay(rchild(formula)))
 	elif (ftype(formula) == EVENT_T): 
-		return delay(rchild(formula))
+		return past_delay(rchild(formula))
 	elif (ftype(formula) == ALWAYS_T):
-		return delay(rchild(formula))
+		return past_delay(rchild(formula))
 	elif (ftype(formula) == UNTIL_T): 
-		return max(delay(untilP1(formula)),delay(untilP2(formula)))
+		return max(past_delay(untilP1(formula)),past_delay(untilP2(formula)))
 	elif (ftype(formula) == PALWAYS_T):
-		return hbound(formula) + delay(rchild(formula))
+		return hbound(formula) + past_delay(rchild(formula))
 	elif (ftype(formula) == PEVENT_T):
-		return hbound(formula) + delay(rchild(formula))
+		return hbound(formula) + past_delay(rchild(formula))
 	elif (ftype(formula) == SINCE_T):
-		return hbound(formula) + max(delay(untilP1(formula)),delay(untilP2(formula)))
+		return hbound(formula) + max(past_delay(untilP1(formula)),past_delay(untilP2(formula)))
 	else:
 		dprint("PAST-DELAY ERROR: Got unmatched AST node while building");
 		return None
@@ -805,7 +1016,10 @@ def close_interval(interval, end):
 # check if interval is open (infinite)
 def isopen_interval(interval):
 	return interval[1] is None
-# check if a value is in the interval
+# check if i in [l,h]
+def in_closed_int(i, interval):
+	return (i >= interval[0] and i <= interval[1])
+# check if i in [l,h) 
 def in_interval(i, interval):
 	# could cut down to i>=i[0] and (i[1] is None or i <= i[1])
 	if (interval[1] is None):
