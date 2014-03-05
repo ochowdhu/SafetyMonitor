@@ -809,20 +809,30 @@ def mon_cons_residue(inFile, inFormula, traceOrder):
 			incr_struct_res(Struct, cstate)
 			#incr_struct(Struct, cstate)
 
-			print "First we play around:"
-			formulas.append((cstate["time"]+D, inFormula))
+			print "Adding current formula"
+			formulas.append((cstate["time"]+D, future_tag(cstate["time"], inFormula)))
+			dprint(formulas)
+			print "reducing all formulas"
 			for i,f in enumerate(formulas[:]):
-				formulas[i] = (f[0], substitute(Struct, cstate, f[1]))
-			print formulas
-			print "Now we try reducing..."
+				formulas[i] = (f[0], reduce(substitute_per(Struct, cstate, f[1])))
+			dprint(formulas)
+			print "removing finished formulas and check violations..."
+			# remove any True formulas from the list
+			formulas[:] = [f for f in formulas if f[1] != True]
 			for i,f in enumerate(formulas[:]):
-				formulas[i] = (f[0], reduce(f[1]))
-			print formulas
+				if (f[1] == False):
+						print "VIOLATION DETECTED AT %s" % (cstate["time"],)
+						sys.exit(1)
+				else:	# eventually never satisfied
+					if (f[0] < cstate["time"]):
+						print "VIOLATION DETECTED AT %s" % (cstate["time"],)
+						sys.exit(1)
+	print "finished, trace satisfies formula"
 ## END mon_cons_residue
 
-def substitute(Struct, cstate, formula):
+def substitute_per(Struct, cstate, formula):
 	if (ftype(formula) == EXP_T):
-		return [formula[0], substitute(Struct, cstate, formula[1])]
+		return [formula[0], substitute_per(Struct, cstate, formula[1])]
 	elif (ftype(formula) == VALUE_T):
 		return formula
 	elif (ftype(formula) == PROP_T):
@@ -830,21 +840,47 @@ def substitute(Struct, cstate, formula):
 	elif (ftype(formula) == NPROP_T):
 		return not cstate[formula[1]]
 	elif (ftype(formula) == NOT_T):
-		return ['notprop', substitute(Struct, cstate, formula[1])]
+		return ['notprop', substitute_per(Struct, cstate, formula[1])]
 	elif (ftype(formula) == AND_T):
-		return ['andprop', substitute(Struct, cstate, formula[1]), substitute(Struct, cstate, formula[2])]
+		return ['andprop', substitute_per(Struct, cstate, formula[1]), substitute_per(Struct, cstate, formula[2])]
 	elif (ftype(formula) == OR_T):
-		return ['orprop', substitute(Struct, cstate, formula[1]), substitute(Struct, cstate, formula[2])]
+		return ['orprop', substitute_per(Struct, cstate, formula[1]), substitute_per(Struct, cstate, formula[2])]
 	elif (ftype(formula) == IMPLIES_T):
-		return ['impprop', substitute(Struct, cstate, formula[1]), substitute(Struct, cstate, formula[2])]
+		return ['impprop', substitute_per(Struct, cstate, formula[1]), substitute_per(Struct, cstate, formula[2])]
 	elif (ftype(formula) == EVENT_T): 
 		## Fill in with check and return formula if not sure yet
+		if (in_closed_int(cstate["time"], (formula[1], formula[2]))):
+			subform = substitute_per(Struct, cstate, rchild(formula))
+			if subform == True:
+				return True
+		elif (cstate["time"] > formula[2]):
+			return False
+		# didn't happen, and not past time, so just leave formula
 		return formula
 	elif (ftype(formula) == ALWAYS_T):
 		## Fill in with check and return formula if not sure yet
+		if (in_closed_int(cstate["time"], (formula[1], formula[2]))):
+			subform = substitute_per(Struct, cstate, rchild(formula))
+			if subform == False:
+				return False 
+			elif subform == True and cstate["time"] == formula[2]:
+				return True
+		elif (cstate["time"] > formula[2]):
+			return True
+		# didn't happen, and not past time, so just leave formula
 		return formula
 	elif (ftype(formula) == UNTIL_T): 
 		## Fill in with check and return formula if not sure yet
+		if (in_closed_int(cstate["time"], (formula[1], formula[2]))):
+			subform = substitute_per(Struct, cstate, untilP2(formula))
+			if subform == True:
+				return True
+		elif (cstate["time"] > formula[2]):
+			return False	# this is strong until, return True for weak
+		# didn't happen yet and not past time, is P1 still going?
+		subform = substitute_per(Struct, cstate, untilP1(formula))
+		if subform == False:
+			return False 
 		return formula
 	elif (ftype(formula) == PEVENT_T):
 		ctime = cstate["time"]
@@ -894,7 +930,8 @@ def substitute(Struct, cstate, formula):
 
 def reduce(formula):
 	if (ftype(formula) == EXP_T):
-		return [formula[0], reduce(formula[1])]
+		#return [formula[0], reduce(formula[1])]
+		return reduce(formula[1])
 	elif (ftype(formula) == VALUE_T):
 		return formula
 	elif (ftype(formula) == PROP_T):
@@ -947,6 +984,38 @@ def reduce(formula):
 	elif (ftype(formula) == SINCE_T):
 		dprint("Can't get here, should've been removed by sub()")
 		return INVALID_T
+	else:
+		return INVALID_T
+
+def future_tag(ctime, formula, extb=(0,0)):
+	if (ftype(formula) == EXP_T):
+		return [formula[0], future_tag(ctime, formula[1])]
+	elif (ftype(formula) == VALUE_T):
+		return formula
+	elif (ftype(formula) == PROP_T):
+		return formula
+	elif (ftype(formula) == NPROP_T):
+		return formula
+	elif (ftype(formula) == NOT_T):
+		return [formula[0], future_tag(ctime, formula[1])]
+	elif (ftype(formula) == AND_T):
+		return [formula[0], future_tag(ctime, formula[1]), future_tag(ctime, formula[2])]
+	elif (ftype(formula) == OR_T):
+		return [formula[0], future_tag(ctime, formula[1]), future_tag(ctime, formula[2])]
+	elif (ftype(formula) == IMPLIES_T):
+		return [formula[0], future_tag(ctime, formula[1]), future_tag(ctime, formula[2])]
+	elif (ftype(formula) == EVENT_T): 
+		return [formula[0], formula[1]+ctime, formula[2]+ctime, formula[3], future_tag(ctime, formula[4], extb=(formula[1]+ctime, formula[2]+ctime))]
+	elif (ftype(formula) == ALWAYS_T):
+		return [formula[0], formula[1]+ctime, formula[2]+ctime, formula[3], future_tag(ctime, formula[4], extb=(formula[1]+ctime, formula[2]+ctime))]
+	elif (ftype(formula) == UNTIL_T): 
+		return [formula[0], formula[1]+ctime, formula[2]+ctime, formula[3], future_tag(ctime, formula[4]), future_tag(ctime, formula[5],extb=(formula[1]+ctime, formula[2]+ctime))]
+	elif (ftype(formula) == PEVENT_T):
+		return [formula[0], formula[1], formula[2], formula[3], future_tag(ctime, formula[4])]
+	elif (ftype(formula) == PALWAYS_T):
+		return [formula[0], formula[1], formula[2], formula[3], future_tag(ctime, formula[4])]
+	elif (ftype(formula) == SINCE_T):
+		return [formula[0], formula[1], formula[2], formula[3], future_tag(ctime, formula[4]), future_tag(ctime, formula[5])]
 	else:
 		return INVALID_T
 ############ Main/Monitor helpers ####
@@ -1303,7 +1372,7 @@ def incr_struct_res(Struct, cstate):
 			last_int = cStruct[-1][-1]	# get most recent interval from interval list
 			cIntervalOpen = isopen_interval(last_int)	
 		# else cIntervalOpen stays false
-		subform = substitute(Struct, cstate, cStruct[1])
+		subform = substitute_per(Struct, cstate, cStruct[1])
 		if (checkRes(reduce(subform)) == True):
 			# if not in an open interval, start a new one
 			# if we are in an existing open interval, then we don't need to do anything
