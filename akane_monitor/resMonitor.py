@@ -372,11 +372,11 @@ def smon_cons_per(hist, ctime, formula):
 ## END smon_cons_per
 
 def smon_cons_ST_per(Struct, hist, ctime, formula):
-	print "debug:"
-	print Struct
-	print "hist"
-	print hist
-	print "at time %s" % (ctime,)
+	#print "debug:"
+	#print Struct
+	#print "hist"
+	#print hist
+	#print "at time %s" % (ctime,)
 	(sid,cstate) = getState(hist, ctime)
 	if (ftype(formula) == EXP_T):
 		dprint("got an exp, returning", DBG_SMON)
@@ -1211,12 +1211,12 @@ def build_structure(Struct, formula, extbound=(0,0)):
 	elif (ftype(formula) == PALWAYS_T):
 		dprint("BUILDING: got a past always, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
-		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), 0, rchild(formula))
+		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), rchild(formula))
 		return build_structure(Struct, rchild(formula), extbound=(formula[1], formula[2]))
 	elif (ftype(formula) == PEVENT_T):
 		dprint("BUILDING: got a past eventually, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
-		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), 0, rchild(formula))
+		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), rchild(formula))
 		return build_structure(Struct, rchild(formula), extbound=(formula[1], formula[2]))
 	elif (ftype(formula) == SINCE_T):
 		dprint("BUILDING: got a since, ADDING BOTH STRUCTS and recursing both", DBG_STRUCT)
@@ -1224,10 +1224,10 @@ def build_structure(Struct, formula, extbound=(0,0)):
 		# [bound, bound, tagP1, tagP2, P1, P2]
 		# do P2
 		cTag = tag_formula(formula)
-		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), 0, untilP2(formula))
+		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), untilP2(formula))
 		# do P1
 		cTag = tag_formula(formula)
-		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), 0, untilP1(formula))
+		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), untilP1(formula))
 		build_structure(Struct, untilP1(formula), extbound=(formula[1],formula[2]))
 		build_structure(Struct, untilP2(formula), extbound=(formula[1],formula[2]))
 		return True
