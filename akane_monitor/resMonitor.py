@@ -38,7 +38,7 @@ DBG_STRUCT = 0x01
 DBG_SMON = 0x02
 DBG_HISTORY = 0x04
 DBG_LEVEL = 0xFF
-DBG_MASK = DBG_STRUCT | DBG_HISTORY | DBG_SMON
+DBG_MASK = DBG_STRUCT | DBG_HISTORY | DBG_SMON | DBG_HISTORY
 DEBUG = True
 # global constants
 delim = ','
@@ -132,6 +132,7 @@ def mon_cons_ST_per(inFile, inFormula, traceOrder):
 	cptr = 0
 	# build struct and save delay
 	build_structure(Struct, inFormula)
+	print "Using Struct %s" % (Struct,)
 	D = delay(inFormula)
 	DP = past_delay(inFormula)
 	# wait for new data...
@@ -140,9 +141,9 @@ def mon_cons_ST_per(inFile, inFormula, traceOrder):
 			updateState(cstate, traceOrder, line)
 			cHistory[cptr] = cstate.copy()
 			print "AT STATE %s" % (cstate,)
-			incr_struct(Struct, cstate)
+			incr_struct_per(Struct, cHistory, tau(cHistory, cptr))
 
-			while (tau(cHistory, cptr) - tau(cHistory, eptr) >= D):
+			while (eptr <= cptr and tau(cHistory, cptr) - tau(cHistory, eptr) >= D):
 				dprint("@@@@ evaluating step: %d" % (eptr,))
 				mon = smon_cons_ST_per(Struct, cHistory, tau(cHistory, eptr), inFormula)
 				if (not mon):
@@ -371,16 +372,21 @@ def smon_cons_per(hist, ctime, formula):
 ## END smon_cons_per
 
 def smon_cons_ST_per(Struct, hist, ctime, formula):
-	#(sid,cstate) = getState(Struct, ctime)
+	print "debug:"
+	print Struct
+	print "hist"
+	print hist
+	print "at time %s" % (ctime,)
+	(sid,cstate) = getState(hist, ctime)
 	if (ftype(formula) == EXP_T):
 		dprint("got an exp, returning", DBG_SMON)
 		return smon_cons_ST_per(Struct, hist, ctime, rchild(formula))
 	elif (ftype(formula) == PROP_T):
 		dprint("got a prop, returning", DBG_SMON)
-		return ctime[rchild(formula)]
+		return cstate[rchild(formula)]
 	elif (ftype(formula) == NPROP_T):
 		dprint("got an nprop", DBG_SMON)
-		return not ctime[rchild(formula)]
+		return not cstate[rchild(formula)]
 	elif (ftype(formula) == NOT_T):
 		dprint("got a notprop", DBG_SMON)
 		return not smon_cons_ST_per(Struct, hist, ctime, rchild(formula))
@@ -395,61 +401,52 @@ def smon_cons_ST_per(Struct, hist, ctime, formula):
 		return not smon_cons_ST_per(Struct, hist, ctime, lchild(formula)) or smon_cons_ST_per(Struct, hist, ctime, rchild(formula))
 	elif (ftype(formula) == EVENT_T): 
 		dprint("got an eventually at %d, checking structure" % (ctime,), DBG_SMON)
-		l = ctime + formula[1]
-		h = ctime + formula[2]
+		l = ctime + lbound(formula)
+		h = ctime + hbound(formula)
 		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
-		# loop through history, if tau in [l,h] and smon(tau) true then true
-		for i in sorted(hist, reverse=True):
-			itime = tau(hist,i)
-			dprint("eventually checking %d" % (i,), DBG_SMON)
-			if (in_closed_int(itime, (l,h))
-				and smon_cons_per(hist, itime, rchild(formula))):
+		# check structure for existance
+		intlist = Struct[get_tags(formula)][-1]
+		for i in intlist:
+			if (int_intersect_exists((l,h),i)):
 				return True
-		# didn't find the event in the bounds
+		# didn't find formula
 		return False
 	elif (ftype(formula) == ALWAYS_T):
 		dprint("got an always at %d, checking structure" %(ctime,), DBG_SMON)
-		l = ctime + formula[1]
-		h = ctime + formula[2]
+		l = ctime + lbound(formula)
+		h = ctime + hbound(formula)
 		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
-		# loop through history, if tau in [l,h] and smon(tau) false then false
-		for i in sorted(hist, reverse=True):
-			itime = tau(hist, i)
-			if (in_closed_int(itime, (l,h))):
-				if (not smon_cons(hist, itime, rchild(formula))):
-					return False
-		# formula was true throughout
-		return True
+		# check structure for interval
+		intlist = Struct[get_tags(formula)][-1]
+		for i in intlist:
+			if (int_subset((l,h),i)):
+				return True
+		# no existing interval, so fails
+		return False
 	elif (ftype(formula) == UNTIL_T): 
 		dprint("got an always, checking structure", DBG_SMON)
-		l = ctime + formula[1]
-		h = ctime + formula[2]
+		l = ctime + lbound(formula)
+		h = ctime + hbound(formula)
+		tags = get_tags(formula)
 		dprint("checking range: %d - %d" % (l, h), DBG_SMON)
-		# First check P2 occured (and save when it did)
-		untilend = None
-		# loop through history, if tau in [l,h] and smon(tau) true then true
-		for i in sorted(hist, reverse=True):
-			itime = tau(hist,i)
-			dprint("eventually checking %d" % (i,), DBG_SMON)
-			if (in_closed_int(itime, (l,h))
-				and smon_cons_per(hist, itime, untilP2(formula))):
-				untilend = itime
-		# didn't find P2 in bounds
-		if untilend is None:
+
+		# Check for P2
+		end = None
+		intlist = Struct[tags[1]][-1]
+		for i in intlist:
+			if (int_intersect_exists((l,h),i)):
+				end = int_intersect_start((l,h),i)
+		# no P2 found, so Since is False
+		if (end is None):
 			return False
-		dprint("Got Until end %s" % (untilend,), DBG_SMON)
-		# Now check P1
-		l = ctime
-		h = untilend
-		for i in sorted(hist, reverse=True):
-			itime = tau(hist, i)
-			if (in_closed_int(itime, (l,h))):
-				if (not smon_cons(hist, itime, untilP1(formula))):
-					return False
-					dprint("Until invariant not satisfied for [%d,%d]" 
-						% (l, h), DBG_SMON)
-		# formula was true throughout
-		return True
+		# Now check for P1
+		l = ctime 
+		h = end
+		intlist = Struct[tags[0]][-1]
+		for i in intlist:
+			if (int_subset((l,h),i)):
+				return True
+		return False
 	elif (ftype(formula) == PEVENT_T):
 		l = ctime - hbound(formula)
 		h = ctime - lbound(formula)
@@ -1084,73 +1081,6 @@ def ftype(formula):
 		return INVALID_T
 
 
-def history_lookup_PE(Struct, cstate, formula):
-	dprint("history lookup for pevent, checking structure", DBG_HISTORY)
-	ctime = cstate["time"]
-	checkStart = ctime-formula[2]
-	checkEnd = ctime-formula[1]
-
-	dprint("checking range: [%d, %d]" % (checkStart, checkEnd), DBG_HISTORY)
-	intlist = Struct[get_tags(formula)][-1]
-	for i in intlist:
-		# check intersection of intervals (including possibly unfinished right bound)
-		# saved intervals need to be [l,h) so we don't return <<h,x>> satisfied by [l,h)
-		if ((isopen_interval(i) or checkStart < i[1]) 
-			and i[0] <= checkEnd):
-			return True
-	# didn't find the event in the bounds
-	return False
-
-def history_lookup_PA(Struct, cstate, formula):
-	dprint("history lookup for palways, checking structure", DBG_HISTORY)
-	ctime = cstate["time"]
-	checkStart = ctime-formula[2]
-	checkEnd = ctime-formula[1]
-
-	dprint("checking range: %d - %d" % (checkStart, checkEnd), DBG_HISTORY)
-	#dprint("Checking range: %s" % (checkRange,))
-	intlist = Struct[get_tags(formula)][-1]
-	for i in intlist:
-		if (i[0] <= checkStart and 
-			(isopen_interval(i) or checkEnd < i[1])):
-			# start is in interval, and either open or interval contains end
-			return True
-	# no interval containing invariant
-	return False
-
-def history_lookup_S(Struct, cstate, formula):
-	dprint("history lookup for since, checking structure", DBG_HISTORY)
-	ctime = cstate["time"]
-	checkStart = ctime-formula[2]
-	checkEnd = ctime-formula[1]
-	dprint("checking range: %d - %d" % (checkStart, checkEnd), DBG_HISTORY)
-	tags = get_tags(formula)
-	# First, check that P2 did occur (and find when it first did)
-	intlist = Struct[tags[1]][-1]
-	start = None
-	for i in intlist:
-		# check intersection of intervals (including possibly unfinished right bound)
-		if ((isopen_interval(i) or checkStart < i[1]) 
-			and i[0] <= checkEnd):
-			start = max(checkStart, i[0])
-	if (start is None):
-		return False		## TODO: return true if weak Since, need to decide
-	dprint("Got Since start %s" % (start,), DBG_HISTORY)
-	# Now check P1
-	checkStart = start
-	checkEnd = ctime
-	intlist = Struct[tags[0]][-1]						# get list for P1
-	# and check P1 as a PALWAYS since P2 occured
-	for i in intlist:
-		if (i[0] <= checkStart and 
-			(isopen_interval(i) or checkEnd < i[1])):
-			# start is in interval, and either open or interval contains end
-			return True
-	dprint("Since invariant not satisfied for [%d,%d]" % (checkStart, checkEnd), DBG_HISTORY)
-	return False
-
-def history_lookup(tag1, tag2):
-	return 'history2'
 
 #######################################
 ##### Delay Functions
@@ -1226,6 +1156,7 @@ def past_delay(formula):
 #######################################
 
 def build_structure(Struct, formula, extbound=(0,0)):
+	print "current struct is %s" % (Struct,)
 	if (ftype(formula) == EXP_T):
 		dprint("BUILDING: got an exp, recursing", DBG_STRUCT)
 		return build_structure(Struct, rchild(formula))
@@ -1280,12 +1211,12 @@ def build_structure(Struct, formula, extbound=(0,0)):
 	elif (ftype(formula) == PALWAYS_T):
 		dprint("BUILDING: got a past always, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
-		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), rchild(formula))
+		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), 0, rchild(formula))
 		return build_structure(Struct, rchild(formula), extbound=(formula[1], formula[2]))
 	elif (ftype(formula) == PEVENT_T):
 		dprint("BUILDING: got a past eventually, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
-		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), rchild(formula))
+		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), 0, rchild(formula))
 		return build_structure(Struct, rchild(formula), extbound=(formula[1], formula[2]))
 	elif (ftype(formula) == SINCE_T):
 		dprint("BUILDING: got a since, ADDING BOTH STRUCTS and recursing both", DBG_STRUCT)
@@ -1293,10 +1224,10 @@ def build_structure(Struct, formula, extbound=(0,0)):
 		# [bound, bound, tagP1, tagP2, P1, P2]
 		# do P2
 		cTag = tag_formula(formula)
-		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), untilP2(formula))
+		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), 0, untilP2(formula))
 		# do P1
 		cTag = tag_formula(formula)
-		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), untilP1(formula))
+		add_struct(Struct, cTag, (formula[1], formula[2]+extbound[1]), 0, untilP1(formula))
 		build_structure(Struct, untilP1(formula), extbound=(formula[1],formula[2]))
 		build_structure(Struct, untilP2(formula), extbound=(formula[1],formula[2]))
 		return True
@@ -1362,21 +1293,25 @@ def incr_struct(Struct, cstate):
 		print "Incremented and cleaned: %s" % (cStruct,)
 	return
 
-def incr_struct_per(Struct, cstate):
-	ctime = cstate["time"]
+def incr_struct_per(Struct, hist, ctime):
 	taglist = list(Struct.keys())
 	taglist.sort()
 	taglist.reverse()
 	# must check in order due to nested dependencies
 	for t in taglist:
 		cStruct = Struct[t]
+		if ctime > delay(cStruct[1]):
+			ctime = ctime - delay(cStruct[1])
+		else:
+			continue
 		#print "Incrementing %s" % (cStruct,)
 		cIntervalOpen = False
 		if (len(cStruct[-1]) > 0):
 			last_int = cStruct[-1][-1]	# get most recent interval from interval list
 			cIntervalOpen = isopen_interval(last_int)	
 		# else cIntervalOpen stays false
-		if smon_cons_ST_per(Struct, cstate, cStruct[1]):
+		if smon_cons_ST_per(Struct, hist, ctime, cStruct[1]):
+			print "smon is true inside incr_struct for %s" % (cStruct[1],)
 			# if not in an open interval, start a new one
 			# if we are in an existing open interval, then we don't need to do anything
 			if (not cIntervalOpen):
@@ -1481,7 +1416,8 @@ def int_subset(test_i, history_i):
 		return True
 	return False
 #### Utilities
-######################################
+###################################################################
+##################################################################
 def dprint(string, lvl=0xFF):
 #	print "DPRINT %s %d" % (string, lvl)
 	if (DBG_MASK & lvl):
