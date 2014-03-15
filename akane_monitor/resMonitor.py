@@ -372,11 +372,6 @@ def smon_cons_per(hist, ctime, formula):
 ## END smon_cons_per
 
 def smon_cons_ST_per(Struct, hist, ctime, formula):
-	#print "debug:"
-	#print Struct
-	#print "hist"
-	#print hist
-	#print "at time %s" % (ctime,)
 	(sid,cstate) = getState(hist, ctime)
 	if (ftype(formula) == EXP_T):
 		dprint("got an exp, returning", DBG_SMON)
