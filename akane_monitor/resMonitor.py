@@ -80,6 +80,8 @@ def main():
 		mon_cons_ST_per(inFile, inFormula, traceOrder)
 	elif algChoose == "cons_residue":
 		mon_cons_residue(inFile, inFormula, traceOrder)	
+	elif algChoose == "residue":
+		mon_residue(inFile, inFormula, traceOrder)
 	else:
 		# default monitor algorithm -- conservative for now
 		mon_cons_per(inFile, inFormula, traceOrder)
@@ -835,6 +837,154 @@ def mon_cons_residue(inFile, inFormula, traceOrder):
 	print "finished, trace satisfies formula"
 ## END mon_cons_residue
 
+
+def mon_residue(inFile, inFormula, traceOrder):
+	# some algorithm local variables
+	cstate = {}
+	cHistory = {}
+	formulas = []
+	Struct = {}
+	# build struct and save delay
+	D = delay(inFormula)
+	DP = past_delay(inFormula)
+	build_structure(Struct, inFormula)
+
+	dprint("Formula delay is %d, %d" % (D,DP))
+	# wait for new data...
+	for line in inFile:
+			dprint("###### New event received")
+			updateState(cstate, traceOrder, line)
+			incr_struct_res(Struct, cstate)
+			#incr_struct(Struct, cstate)
+
+			print "Adding current formula"
+			formulas.append((cstate["time"]+D, future_tag(cstate["time"], inFormula)))
+			dprint(formulas)
+			print "reducing all formulas"
+			for i,f in enumerate(formulas[:]):
+				formulas[i] = (f[0], reduce(substitute_per_ag(Struct, cstate, f[1])))
+			dprint(formulas)
+			print "removing finished formulas and check violations..."
+			# remove any True formulas from the list
+			formulas[:] = [f for f in formulas if f[1] != True]
+			for i,f in enumerate(formulas[:]):
+				if (f[1] == False):
+						print "VIOLATION DETECTED AT %s" % (cstate["time"],)
+						sys.exit(1)
+				else:	# eventually never satisfied
+					if (f[0] <= cstate["time"]):
+						print "VIOLATION DETECTED AT %s" % (cstate["time"],)
+						sys.exit(1)
+	print "finished, trace satisfies formula"
+## END mon_cons_residue
+
+def substitute_per_ag(Struct, cstate, formula):
+	if (ftype(formula) == EXP_T):
+		return [formula[0], substitute_per_ag(Struct, cstate, formula[1])]
+	elif (ftype(formula) == VALUE_T):
+		return formula
+	elif (ftype(formula) == PROP_T):
+		return cstate[formula[1]]
+	elif (ftype(formula) == NPROP_T):
+		return not cstate[formula[1]]
+	elif (ftype(formula) == NOT_T):
+		return ['notprop', substitute_per_ag(Struct, cstate, formula[1])]
+	elif (ftype(formula) == AND_T):
+		return ['andprop', substitute_per_ag(Struct, cstate, formula[1]), substitute_per(Struct, cstate, formula[2])]
+	elif (ftype(formula) == OR_T):
+		return ['orprop', substitute_per_ag(Struct, cstate, formula[1]), substitute_per(Struct, cstate, formula[2])]
+	elif (ftype(formula) == IMPLIES_T):
+		return ['impprop', substitute_per_ag(Struct, cstate, formula[1]), substitute_per(Struct, cstate, formula[2])]
+	elif (ftype(formula) == EVENT_T): 
+		## Fill in with check and return formula if not sure yet
+		l = formula[1]
+		h = formula[2]
+		intlist = Struct[get_tags(formula)][-1]
+		for i in intlist:
+				if (int_intersect_exists((l,h),i)):
+					return True
+		if (cstate["time"] > h):
+			return False
+		return formula
+	elif (ftype(formula) == ALWAYS_T):
+		l = formula[1]
+		h = formula[2]
+		intlist = Struct[get_tags(formula)][-1]
+		if (in_closed_int(cstate["time"], (l,h))):
+			for i in intlist:
+				if (int_subset((l,h),i)): 
+					if (cstate["time"] >= formula[2]):
+						return True
+					else:
+						return formula
+			return False
+		elif (cstate["time"] > h):
+			return True
+		return formula
+	elif (ftype(formula) == UNTIL_T): 
+		l = formula[1]
+		h = formula[2]
+		tags = get_tags(formula)
+
+		# check that P1 still going
+		P1 = substitute_per_ag(Struct, cstate, untilP1(formula)) 
+		if (not checkRes(reduce(P1))):
+			return False
+
+		# Check for P2
+		intlist = Struct[tags[1]][-1]
+		for i in intlist:
+			if (int_intersect_exists((l,h),i)):
+				return True
+		if (cstate["time"] > h):
+			return False
+		return formula
+	elif (ftype(formula) == PEVENT_T):
+		ctime = cstate["time"]
+		l = ctime - hbound(formula)
+		h = ctime - lbound(formula)
+		
+		intlist = Struct[get_tags(formula)][0]
+		for i in intlist:
+			if (int_intersect_exists((l,h),i)):
+				return True
+		return False
+	elif (ftype(formula) == PALWAYS_T):
+		ctime = cstate["time"]
+		l = ctime - hbound(formula)
+		h = ctime - lbound(formula)
+
+		intlist = Struct[get_tags(formula)][-1]
+		for i in intlist:
+			if (int_subset((l,h),i)):
+				return True
+		return False
+	elif (ftype(formula) == SINCE_T):
+		ctime = cstate["time"]
+		l = ctime - hbound(formula)
+		h = ctime - lbound(formula)
+		tags = get_tags(formula)
+
+		# Check for P2
+		start = None
+		intlist = Struct[tags[1]][-1]
+		for i in intlist:
+			if (int_intersect_exists((l,h),i)):
+				start = int_intersect_start((l,h),i)
+		# no P2 found, so Since is False
+		if (start is None):
+			return False
+		# Now check for P1
+		l = start
+		h = ctime
+		intlist = Struct[tags[0]][-1]
+		for i in intlist:
+			if (int_subset((l,h),i)):
+				return True
+		return False
+	else:
+		return INVALID_T
+
 def substitute_per(Struct, cstate, formula):
 	if (ftype(formula) == EXP_T):
 		return [formula[0], substitute_per(Struct, cstate, formula[1])]
@@ -1347,18 +1497,43 @@ def incr_struct_res(Struct, cstate):
 		if (len(cStruct[-1]) > 0):
 			last_int = cStruct[-1][-1]	# get most recent interval from interval list
 			cIntervalOpen = isopen_interval(last_int)	
-		# else cIntervalOpen stays false
-		subform = substitute_per(Struct, cstate, cStruct[1])
-		if (checkRes(reduce(subform)) == True):
-			# if not in an open interval, start a new one
-			# if we are in an existing open interval, then we don't need to do anything
-			if (not cIntervalOpen):
-				cStruct[-1].append(new_interval(ctime))
-		else: # Formula is not satisfied at current time
-			if (cIntervalOpen):
-				# close last interval in place
-				cStruct[-1][-1] = close_interval(last_int, ctime)	
 
+		subform = substitute_per(Struct, cstate, cStruct[1])
+		######################################################
+		################ Increment structure depending on type
+		if (ftype(cStruct[1] == "EVENT_T")):
+			if (checkRes(reduce(subform)) == True):
+				newint = (ctime - hbound(cStruct[1]), ctime-lbound(cStruct[1]))
+				addInterval(newint, cStruct[-1])
+		elif (ftype(cStruct[1] == "ALWAYS_T")):
+			# if false, close existing interval
+			if (cIntervalOpen and checkRes(reduce(subform)) == False):
+				cStruct[-1][-1] = close_interval(last_int, ctime-h)
+			# otherwise extend interval
+			else:
+				h = hbound(cStruct[1])
+				l = lbound(cStruct[1])
+				checkInt = (ctime - (h-l), ctime)
+				checklist = Struct[get_tags(cStruct[1])][-1]
+				for i in checklist:
+					if (int_subset(checkInt, i)):
+						if (not cIntervalOpen):
+							cStruct[-1].append(new_interval(ctime))
+		else:
+			# else cIntervalOpen stays false
+			subform = substitute_per(Struct, cstate, cStruct[1])
+			if (checkRes(reduce(subform)) == True):
+				# if not in an open interval, start a new one
+				# if we are in an existing open interval, then we don't need to do anything
+				if (not cIntervalOpen):
+					cStruct[-1].append(new_interval(ctime))
+			else: # Formula is not satisfied at current time
+				if (cIntervalOpen):
+					# close last interval in place
+					cStruct[-1][-1] = close_interval(last_int, ctime)	
+
+		#########################################
+		###################### Chopping
 		# remove unneeded values from struct list
 		intlist = cStruct[-1]
 		for i in (intlist[:]):
