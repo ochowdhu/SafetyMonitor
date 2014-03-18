@@ -69,6 +69,8 @@ def mon_residue(inFile, inFormula, traceOrder):
 	DP = past_delay(inFormula)
 	build_structure(Struct, inFormula)
 
+	for s in Struct:
+		print "%s" % (Struct[s],)
 	dprint("Formula delay is %d, %d" % (D,DP))
 	# wait for new data...
 	for line in inFile:
@@ -437,13 +439,13 @@ def build_structure(Struct, formula, extbound=0):
 	elif (ftype(formula) == EVENT_T): 
 		dprint("BUILDING: got an eventually, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
-		d = hbound(formula) + delay(rchild(formula))
+		d = delay(formula) + extbound
 		add_struct(Struct, cTag, d, rchild(formula))
 		return build_structure(Struct, rchild(formula), extbound=d)
 	elif (ftype(formula) == ALWAYS_T):
 		dprint("BUILDING: got an always, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
-		d = hbound(formula) + delay(rchild(formula))
+		d = delay(formula) + extbound
 		add_struct(Struct, cTag, d, rchild(formula))
 		return build_structure(Struct, rchild(formula), extbound=d)
 	elif (ftype(formula) == UNTIL_T): 
@@ -452,11 +454,11 @@ def build_structure(Struct, formula, extbound=0):
 		# [bound, bound, tagP1, tagP2, P1, P2]
 		# do P2
 		cTag = tag_formula(formula)
-		d2 = hbound(formula) + delay(untilP2(formula))
+		d2 = delay(untilP2(formula)) + extbound
 		add_struct(Struct, cTag, d2, untilP2(formula))
 		# do P1
 		cTag = tag_formula(formula)
-		d1 = hbound(formula) + delay(untilP1(formula))
+		d1 = delay(untilP1(formula)) + extbound
 		add_struct(Struct, cTag, d1, untilP1(formula))
 		build_structure(Struct, untilP1(formula), extbound=d1)
 		build_structure(Struct, untilP2(formula), extbound=d2)
@@ -464,13 +466,13 @@ def build_structure(Struct, formula, extbound=0):
 	elif (ftype(formula) == PALWAYS_T):
 		dprint("BUILDING: got a past always, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
-		d = hbound(formula) + past_delay(rchild(formula))
+		d = past_delay(formula) + extbound
 		add_struct(Struct, cTag, d, rchild(formula))
 		return build_structure(Struct, rchild(formula), extbound=d)
 	elif (ftype(formula) == PEVENT_T):
 		dprint("BUILDING: got a past eventually, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
-		d = hbound(formula) + past_delay(rchild(formula))
+		d = past_delay(formula) + extbound
 		add_struct(Struct, cTag, d, rchild(formula))
 		return build_structure(Struct, rchild(formula), extbound=d)
 	elif (ftype(formula) == SINCE_T):
@@ -479,11 +481,11 @@ def build_structure(Struct, formula, extbound=0):
 		# [bound, bound, tagP1, tagP2, P1, P2]
 		# do P2
 		cTag = tag_formula(formula)
-		d2 = hbound(formula) + delay(untilP2(formula))
+		d2 = delay(untilP2(formula)) + extbound
 		add_struct(Struct, cTag, d2, untilP2(formula))
 		# do P1
 		cTag = tag_formula(formula)
-		d1 = hbound(formula) + delay(untilP1(formula))
+		d1 = delay(untilP1(formula)) + extbound
 		add_struct(Struct, cTag, d1, untilP1(formula))
 		build_structure(Struct, untilP1(formula), extbound=d1)
 		build_structure(Struct, untilP2(formula), extbound=d2)
@@ -542,7 +544,7 @@ def incr_struct_res(Struct, cstate):
 			checkInt = (ctime - (h-l), ctime)
 			checklist = Struct[get_tags(cStruct[1])][-1]
 			for i in checklist:
-				print "checking"
+				print "checking %s in %s" % (ctime, i)
 				#if (int_closed_intersect_exists(checkInt, i)):
 				#	print "intersection found %s ^ %s" % (checkInt, i)
 				if (in_closed_int(ctime, i)):
@@ -554,6 +556,7 @@ def incr_struct_res(Struct, cstate):
 			checkInt = (ctime - (h-l), ctime)
 			checklist = Struct[get_tags(cStruct[1])][-1]
 			for i in checklist:
+				print "checking %s in %s" % (checkInt, i)
 				if (int_closed_subset(checkInt, i)):
 					#if (not cIntervalOpen):
 					addInterval((ctime-h,ctime-h), cStruct[-1])
