@@ -860,7 +860,8 @@ def mon_residue(inFile, inFormula, traceOrder):
 
 			print "Adding current formula"
 			#formulas.append((cstate["time"]+D, future_tag(cstate["time"], inFormula)))
-			formulas.append((cstate["time"], future_tag(cstate["time"], inFormula)))
+			#formulas.append((cstate["time"], future_tag(cstate["time"], inFormula)))
+			formulas.append((cstate["time"], inFormula))
 			dprint(formulas)
 			print "reducing all formulas"
 			for i,f in enumerate(formulas[:]):
@@ -881,7 +882,6 @@ def mon_residue(inFile, inFormula, traceOrder):
 ## END mon_cons_residue
 
 def substitute_per_ag(Struct, cstate, formula_entry):
-	print "in sub: %s" % (formula_entry,)
 	formtime = formula_entry[0]
 	formula = formula_entry[1]
 	if (ftype(formula) == EXP_T):
@@ -910,7 +910,7 @@ def substitute_per_ag(Struct, cstate, formula_entry):
 				if (int_closed_intersect_exists((l,h),i)):
 					print "intersect found %s, (%s,%s)"% (i, l, h)
 					return True
-		if (cstate["time"] > h):
+		if (cstate["time"] > (h + delay(rchild(formula)))):
 			return False
 		return formula
 	elif (ftype(formula) == ALWAYS_T):
@@ -926,7 +926,7 @@ def substitute_per_ag(Struct, cstate, formula_entry):
 					else:
 						return formula
 			return False
-		elif (cstate["time"] > h):
+		elif (cstate["time"] > (h + delay(rchild(formula)))):
 			return True
 		return formula
 	elif (ftype(formula) == UNTIL_T): 
@@ -1513,19 +1513,21 @@ def incr_struct_res(Struct, cstate):
 			last_int = cStruct[-1][-1]	# get most recent interval from interval list
 		#	cIntervalOpen = isopen_interval(last_int)	
 
-		subform = substitute_per(Struct, cstate, cStruct[1])
+		subform = substitute_per_ag(Struct, cstate, cStruct[1])
 		######################################################
 		################ Increment structure depending on type
 		if (ftype(cStruct[1]) == EVENT_T):
-			if (checkRes(reduce(subform)) == True):
-				newint = (ctime - hbound(cStruct[1]), ctime-lbound(cStruct[1]))
-				addInterval(newint, cStruct[-1])
+			print "INC EVENT %s" % cStruct[1]
+			h = hbound(cStruct[1])
+			l = lbound(cStruct[1])
+			checkInt = (ctime - (h-l), ctime)
+			checklist = Struct[get_tags(cStruct[1])][-1]
+			for i in checklist:
+				if (int_closed_intersect_exists(checkInt, i)):
+				#if (in_closed_int(ctime, i)):
+					addInterval((ctime-h,ctime-l), cStruct[-1])
 		elif (ftype(cStruct[1]) == ALWAYS_T):
-			# if false, close existing interval
-			#if (cIntervalOpen and checkRes(reduce(subform)) == False):
-			#	cStruct[-1][-1] = close_interval(last_int, ctime-hbound(cStruct[1]))
-			# otherwise extend interval
-			#else:
+			print "INC ALWAYS"
 			h = hbound(cStruct[1])
 			l = lbound(cStruct[1])
 			checkInt = (ctime - (h-l), ctime)
@@ -1534,20 +1536,32 @@ def incr_struct_res(Struct, cstate):
 				if (int_closed_subset(checkInt, i)):
 					#if (not cIntervalOpen):
 					addInterval((ctime-h,ctime-h), cStruct[-1])
+		elif (ftype(cStruct[1]) == UNTIL_T):
+			print "INC UNTIL"
+			h = hbound(cStruct[1])
+		#	subform1 = substitute_per(Struct, cstate, untilP1(cStruct[1]))
+			subform2 = substitute_per_ag(Struct, cstate, (ctime, untilP2(cStruct[1])))
+			h = hbound(cStruct[1])
+			l = lbound(cStruct[1])
+			tags = get_tags(cStruct[1])
+			if (checkRes(reduce(subform2)) == True):
+				checkInt = (ctime-h, ctime-l)
+				checkSet = (ctime-h, ctime)
+				checklist = Struct[tags[0]][-1]
+				for i in checklist:
+					if (int_closed_subset(i, checkSet) 
+						and int_closed_intersect_exists(i,checkInt)):
+						ustart = max(iStart(i),iStart(checkInt))
+						addInterval((ustart, ctime), cStruct[-1])
 		else:
+			print "INC PROP"
 			# else cIntervalOpen stays false
-			subform = substitute_per(Struct, cstate, cStruct[1])
+			print cStruct[1]
+			subform = substitute_per_ag(Struct, cstate, (ctime, cStruct[1]))
+			print subform
 			if (checkRes(reduce(subform)) == True):
-				# if not in an open interval, start a new one
-				# if we are in an existing open interval, then we don't need to do anything
-				#if (not cIntervalOpen):
 				addInterval((ctime,ctime), cStruct[-1])
-				#cStruct[-1].append(new_interval(ctime))
-			else: # Formula is not satisfied at current time
-				pass
-			#	if (cIntervalOpen):
-					# close last interval in place
-			#		cStruct[-1][-1] = close_interval(last_int, ctime)	
+			# Else Formula is not satisfied at current time
 
 		#########################################
 		###################### Chopping
