@@ -8,5 +8,5 @@ formula=$(echo "$1" | java -cp ../../antlr/MonLogic/ MonTranslate | python parse
 echo "======================="
 echo "Using formula: $formula"
 
-python ./resMonitor.py "$formula" $2 $3
-
+#python ./resMonitor.py "$formula" $2 $3
+python ./nresMonitor.py "$formula" $2 $3
