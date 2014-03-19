@@ -21,7 +21,7 @@ DBG_LEVEL = 0xFF
 DBG_MASK = DBG_STRUCT | DBG_HISTORY 
 DEBUG = True
 # global constants
-PERIOD = 1
+PERIOD = 10
 delim = ','
 sTag = 0
 
@@ -32,11 +32,13 @@ def main():
 	#### Handle input parameters
 	##############################
 	algChoose = 0
+	if len(sys.argv) > 3:
+		PERIOD = int(sys.argv[3])
 	if len(sys.argv) > 2:
-		inFormula = eval(sys.argv[1])
+		inFormula = eval(sys.argv[1])	# DANGEROUS. DON'T PASS ME ARBITRARY CODE
 		inFile = open(sys.argv[2], "r")
 	else:
-		print "Bad Usage: python monitor.py <formula> <tracefile>"
+		print "Bad Usage: python monitor.py <formula> <tracefile> [period]"
 		sys.exit(1)
 	print "using %s" % (inFormula)
 
@@ -97,6 +99,7 @@ def mon_residue(inFile, inFormula, traceOrder):
 						sys.exit(1)
 				else:	# eventually never satisfied
 					if (f[0]+D <= cstate["time"]):
+						print "VIOLATOR: %s" % (f,)
 						print "VIOLATION DETECTED AT %s" % (cstate["time"],)
 						sys.exit(1)
 	print "finished, trace satisfies formula"
@@ -111,11 +114,19 @@ def substitute_per_ag(Struct, cstate, formula_entry):
 	elif (ftype(formula) == VALUE_T):
 		return formula
 	elif (ftype(formula) == PROP_T):
-		return cstate[formula[1]]
+		#return cstate[formula[1]]
+		if (cstate[formula[1]]):
+			return True
+		else:
+			return False
 	elif (ftype(formula) == NPROP_T):
-		return not cstate[formula[1]]
+		#return not cstate[formula[1]]
+		if (cstate[formula[1]]):
+			return False
+		else:
+			return True
 	elif (ftype(formula) == NOT_T):
-		return ['notprop', substitute_per_ag(Struct, cstate, (formtime, formula[2]))]
+		return ['notprop', substitute_per_ag(Struct, cstate, (formtime, formula[1]))]
 	elif (ftype(formula) == AND_T):
 		return ['andprop', substitute_per_ag(Struct, cstate, (formtime, formula[1])), substitute_per_ag(Struct, cstate, (formtime,formula[2]))]
 	elif (ftype(formula) == OR_T):
@@ -234,31 +245,38 @@ def reduce(formula):
 		dprint("shouldn't get here, already sub'd")
 		return not cstate[formula[1]]
 	elif (ftype(formula) == NOT_T):
-		if (ftype(formula[1] == VALUE_T)):
-			return not formula[1]
+		child = reduce(formula[1])
+		if (ftype(child) == VALUE_T):
+			return not child
 		else:
-			return ['notprop', reduce(formula[1])]
+			return ['notprop', child]
 	elif (ftype(formula) == AND_T):
-		if (formula[1] == False or formula[2] == False):
+		child1 = reduce(formula[1])
+		child2 = reduce(formula[2])
+		if (child1 == False or child == False):
 			return False
-		elif (formula[1] == True and formula[2] == True):
+		elif (child1 == True and child2 == True):
 			return True
 		else:
-			return ['andprop', reduce(formula[1]), reduce(formula[2])]
+			return ['andprop', child1, child2]
 	elif (ftype(formula) == OR_T):
-		if (formula[1] == True or formula[2] == True):
+		child1 = reduce(formula[1])
+		child2 = reduce(formula[2])
+		if (child1 == True or child2 == True):
 			return True
-		elif (formula[1] == False and formula[2] == False):
+		elif (child1 == False and child2 == False):
 			return False
 		else:
-			return ['orprop', reduce(formula[1]), reduce(formula[2])]
+			return ['orprop', child1, child2]
 	elif (ftype(formula) == IMPLIES_T):
-		if (formula[1] == False or formula[2] == True):
+		child1 = reduce(formula[1])
+		child2 = reduce(formula[2])
+		if (child1 == False or child2 == True):
 			return True
-		elif (formula[1] == True and formula[2] == False):
+		elif (child1 == True and child2 == False):
 			return False
 		else:
-			return ['impprop', reduce(formula[1]), reduce(formula[2])]
+			return ['impprop', child1, child2]
 	elif (ftype(formula) == EVENT_T): 
 		## Fill in with check and return formula if not sure yet
 		return formula
