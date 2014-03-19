@@ -541,25 +541,24 @@ def incr_struct_res(Struct, cstate):
 			#print "INC EVENT %s" % cStruct[1]
 			h = hbound(cStruct[1])
 			l = lbound(cStruct[1])
-			checkInt = (ctime - (h-l), ctime)
 			checklist = Struct[get_tags(cStruct[1])][-1]
-			for i in checklist:
-				print "checking %s in %s" % (ctime, i)
-				#if (int_closed_intersect_exists(checkInt, i)):
-				#	print "intersection found %s ^ %s" % (checkInt, i)
-				if (in_closed_int(ctime, i)):
-					addInterval((ctime-h,ctime-l), cStruct[-1])
+
+			if (len(checklist) > 0):
+				check = checklist[-1]
+				print "updating eventually based on %s" % (check,)
+				addInterval((iStart(check)-h, iEnd(check)-l), cStruct[-1])
 		elif (ftype(cStruct[1]) == ALWAYS_T):
 			print "INC ALWAYS"
 			h = hbound(cStruct[1])
 			l = lbound(cStruct[1])
 			checkInt = (ctime - (h-l), ctime)
 			checklist = Struct[get_tags(cStruct[1])][-1]
-			for i in checklist:
-				print "checking %s in %s" % (checkInt, i)
-				if (int_closed_subset(checkInt, i)):
-					#if (not cIntervalOpen):
-					addInterval((ctime-h,ctime-h), cStruct[-1])
+
+			if (len(checklist) > 0):
+				check = checklist[-1]
+				print "checking if %s can be an always %s" % (check, checkInt)
+				if (alCheck(check, checkInt)):
+					addInterval((iStart(check)-l, iEnd(check)-h), cStruct[-1])
 		elif (ftype(cStruct[1]) == UNTIL_T):
 			print "INC UNTIL"
 			h = hbound(cStruct[1])
@@ -568,17 +567,20 @@ def incr_struct_res(Struct, cstate):
 			h = hbound(cStruct[1])
 			l = lbound(cStruct[1])
 			tags = get_tags(cStruct[1])
-			if (checkRes(reduce(subform2)) == True):
-				checkInt = (ctime-h, ctime-l)
-				checkSet = (ctime-h, ctime)
-				checklist = Struct[tags[0]][-1]
-				for i in checklist:
-					if (int_closed_subset(i, checkSet) 
-						and int_closed_intersect_exists(i,checkInt)):
-						ustart = max(iStart(i),iStart(checkInt))
-						addInterval((ustart, ctime), cStruct[-1])
+
+			checkE = Struct[tags[1]][-1]
+			if (len(checkE) > 0):
+				lastE = checkE[-1]
+				print "until checking eventually %s" % (lastE,)
+				alList = Struct[tags[0]][-1]
+				for a in alList:
+					print "checking if %s can be an always %s" % (a, lastE)
+					if (int_closed_intersect_exists(a, lastE)):
+						start = iStart(a)
+						end = min(iEnd(a),iEnd(lastE))
+						addInterval((start,end), cStruct[-1])
 		else:
-			print "INC PROP"
+			print "INC PROP/PT"
 			# else cIntervalOpen stays false
 			subform = substitute_per_ag(Struct, cstate, (ctime, cStruct[1]))
 			if (checkRes(reduce(subform)) == True):
@@ -596,6 +598,10 @@ def incr_struct_res(Struct, cstate):
 		print "Incremented and cleaned: %s" % (cStruct,)
 	return
 
+def alCheck(hist, new):
+	lenHist = iEnd(hist) - iStart(hist)
+	lenNew = iEnd(new) - iStart(new)
+	return (lenHist >= lenNew)
 
 def dprint(string, lvl=0xFF):
 #	print "DPRINT %s %d" % (string, lvl)
