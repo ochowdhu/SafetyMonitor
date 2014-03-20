@@ -57,141 +57,128 @@ def main():
 	###### All set up, call one of the monitoring algorithms	
 	print "############## Finished setting up"
 	print "############## Beginning monitor algorithm: residue"
-	mon_residue(inFile, inFormula, traceOrder)
+	mon_cons_ST_per(inFile, inFormula, traceOrder)
 ############# END MAIN ############
 ##################################
 
-def mon_residue(inFile, inFormula, traceOrder):
+def mon_cons_ST_per(inFile, inFormula, traceOrder):
 	# some algorithm local variables
 	cstate = {}
-	cHistory = {}
-	formulas = []
 	Struct = {}
+	cHistory = {}
+	eptr = 0
+	cptr = 0
 	# build struct and save delay
+	build_structure(Struct, inFormula)
+	dprint("Using Struct %s" % (Struct,), DBG_STRUCT)
 	D = delay(inFormula)
 	DP = past_delay(inFormula)
-	build_structure(Struct, inFormula)
-
-	dprint("Struct is: ", DBG_STRUCT)
-	for s in Struct:
-		dprint("%s" % (Struct[s],), DBG_STRUCT)
-		
-	dprint("Formula delay is %d, %d" % (D,DP), DBG_SMON)
 	# wait for new data...
 	for line in inFile:
-			dprint("###### New event received",DBG_SMON)
+			dprint("###### New event received", DBG_SMON)
 			updateState(cstate, traceOrder, line)
-			incr_struct_res(Struct, cstate)
-			#incr_struct(Struct, cstate)
+			cHistory[cptr] = cstate.copy()
+			dprint("AT STATE %s" % (cstate,), DBG_SMON)
+			incr_struct_per(Struct, cHistory, tau(cHistory, cptr))
 
-			dprint("Adding current formula", DBG_SMON)
-			#formulas.append((cstate["time"]+D, future_tag(cstate["time"], inFormula)))
-			#formulas.append((cstate["time"], future_tag(cstate["time"], inFormula)))
-			formulas.append((cstate["time"], inFormula))
-			dprint(formulas, DBG_SMON)
-			dprint("reducing all formulas", DBG_SMON)
-			for i,f in enumerate(formulas[:]):
-				formulas[i] = (f[0], reduce(substitute_per_ag(Struct, cstate, f)))
-			dprint(formulas, DBG_SMON)
-			dprint("removing finished formulas and check violations...", DBG_SMON)
-			# remove any True formulas from the list
-			formulas[:] = [f for f in formulas if f[1] != True]
-			for i,f in enumerate(formulas[:]):
-				if (f[1] == False):
-						print "VIOLATION DETECTED AT %s" % (cstate["time"],)
-						sys.exit(1)
-				else:	# eventually never satisfied
-					if (f[0]+D <= cstate["time"]):
-						print "VIOLATOR: %s" % (f,)
-						print "VIOLATION DETECTED AT %s" % (cstate["time"],)
-						sys.exit(1)
-	print "finished, trace satisfies formula"
-## END mon_residue
+			while (eptr <= cptr and tau(cHistory, cptr) - tau(cHistory, eptr) >= D):
+				dprint("@@@@ evaluating step: %d" % (eptr,), DBG_SMON)
+				mon = smon_cons_ST_per(Struct, cHistory, tau(cHistory, eptr), inFormula)
+				if (not mon):
+					print "VIOLATION FOUND AT TIME %s@%s" % (tau(cHistory, eptr), tau(cHistory, cptr))
+					sys.exit(1)
+				dprint("==== formula value at %d: %s" % (eptr, mon), DBG_SMON)
+				eptr = eptr + 1
+			## clean old history out
+			## structs are cleaned automatically at update
+			for i in cHistory.copy():
+				if (tau(cHistory, cptr) - tau(cHistory, i) > max(D,DP)):
+					cHistory.pop(i)
+					dprint("removed %d from History" % (i,), DBG_SMON)
+			cptr = cptr + 1
+## END mon_cons_ST()
 
-
-def substitute_per_ag(Struct, cstate, formula_entry):
-	formtime = formula_entry[0]
-	formula = formula_entry[1]
+def smon_cons_ST_per(Struct, hist, ctime, formula):
+	(sid,cstate) = getState(hist, ctime)
 	if (ftype(formula) == EXP_T):
-		return [formula[0], substitute_per_ag(Struct, cstate, (formtime, formula[1]))]
-	elif (ftype(formula) == VALUE_T):
-		return formula
+		dprint("got an exp, returning", DBG_SMON)
+		return smon_cons_ST_per(Struct, hist, ctime, rchild(formula))
 	elif (ftype(formula) == PROP_T):
-		#return cstate[formula[1]]
-		if (cstate[formula[1]]):
+		dprint("got a prop, returning", DBG_SMON)
+		if (cstate[rchild(formula)]):
 			return True
 		else:
 			return False
 	elif (ftype(formula) == NPROP_T):
-		#return not cstate[formula[1]]
-		if (cstate[formula[1]]):
+		dprint("got an nprop", DBG_SMON)
+		if (cstate[rchild(formula)]):
 			return False
 		else:
 			return True
 	elif (ftype(formula) == NOT_T):
-		return ['notprop', substitute_per_ag(Struct, cstate, (formtime, formula[1]))]
+		dprint("got a notprop", DBG_SMON)
+		return not smon_cons_ST_per(Struct, hist, ctime, rchild(formula))
 	elif (ftype(formula) == AND_T):
-		return ['andprop', substitute_per_ag(Struct, cstate, (formtime, formula[1])), substitute_per_ag(Struct, cstate, (formtime,formula[2]))]
+		dprint("got an and, returning both", DBG_SMON)
+		return smon_cons_ST_per(Struct, hist, ctime, lchild(formula)) and smon_cons_ST_per(Struct, hist, ctime, rchild(formula))
 	elif (ftype(formula) == OR_T):
-		return ['orprop', substitute_per_ag(Struct, cstate, (formtime,formula[1])), substitute_per_ag(Struct, cstate, (formtime, formula[2]))]
+		dprint("got an or, returning both", DBG_SMON)
+		return smon_cons_ST_per(Struct, hist, ctime, lchild(formula)) or smon_cons_ST_per(Struct, hist, ctime, rchild(formula))
 	elif (ftype(formula) == IMPLIES_T):
-		return ['impprop', substitute_per_ag(Struct, cstate, (formtime,formula[1])), substitute_per_ag(Struct, cstate, (formtime, formula[2]))]
+		dprint("got an implies, returning both", DBG_SMON)
+		return not smon_cons_ST_per(Struct, hist, ctime, lchild(formula)) or smon_cons_ST_per(Struct, hist, ctime, rchild(formula))
 	elif (ftype(formula) == EVENT_T): 
-		## Fill in with check and return formula if not sure yet
-		l = formula[1] + formtime
-		h = formula[2] + formtime
+		dprint("got an eventually at %d, checking structure" % (ctime,), DBG_SMON)
+		l = ctime + lbound(formula)
+		h = ctime + hbound(formula)
+		# check structure for existance
 		intlist = Struct[get_tags(formula)][-1]
 		for i in intlist:
-				if (int_closed_intersect_exists((l,h),i)):
-					return True
-		if (cstate["time"] > (h + delay(rchild(formula)))):
-			return False
-		return formula
+			if (int_closed_intersect_exists((l,h),i)):
+				return True
+		# didn't find formula
+		return False
 	elif (ftype(formula) == ALWAYS_T):
-		l = formula[1] + formtime
-		h = formula[2] + formtime
+		dprint("got an always at %d, checking structure" %(ctime,), DBG_SMON)
+		l = ctime + lbound(formula)
+		h = ctime + hbound(formula)
+		dprint("checking range: [%d, %d]" % (l,h), DBG_SMON)
+		# check structure for interval
 		intlist = Struct[get_tags(formula)][-1]
-		if (in_closed_int(cstate["time"], (l,h))):
-			for i in intlist:
-				if (int_closed_subset((l,h),i)): 
-					if (cstate["time"] >= formula[2]):
-						return True
-					else:
-						return formula
-			return False
-		elif (cstate["time"] > (h + delay(rchild(formula)))):
-			return True
-		return formula
+		for i in intlist:
+			if (int_closed_subset((l,h),i)):
+				return True
+		# no existing interval, so fails
+		return False
 	elif (ftype(formula) == UNTIL_T): 
-		l = formula[1] + formtime
-		h = formula[2] + formtime
+		dprint("got an always, checking structure", DBG_SMON)
+		l = ctime + lbound(formula)
+		h = ctime + hbound(formula)
 		tags = get_tags(formula)
+		dprint("checking range: %d - %d" % (l, h), DBG_SMON)
 
-		# check for P2
+		# Check for P2
 		end = None
 		intlist = Struct[tags[1]][-1]
 		for i in intlist:
 			if (int_closed_intersect_exists((l,h),i)):
 				end = int_closed_intersect_start((l,h),i)
-		if (end is None and cstate["time"] > h):
+		# no P2 found, so Since is False
+		if (end is None):
 			return False
-		elif (end is None):
-			return formula
-
-		l = formtime
+		# Now check for P1
+		l = ctime 
 		h = end
-		# check that P1 still going
 		intlist = Struct[tags[0]][-1]
 		for i in intlist:
-			if (int_closed_subset((l,h),i)): 
-					return True
+			if (int_closed_subset((l,h),i)):
+				return True
 		return False
 	elif (ftype(formula) == PEVENT_T):
-		ctime = cstate["time"]
 		l = ctime - hbound(formula)
 		h = ctime - lbound(formula)
 		
-		intlist = Struct[get_tags(formula)][0]
+		intlist = Struct[get_tags(formula)][-1]
 		for i in intlist:
 			if (int_closed_intersect_exists((l,h),i)):
 				return True
@@ -231,81 +218,7 @@ def substitute_per_ag(Struct, cstate, formula_entry):
 		return False
 	else:
 		return INVALID_T
-
-def reduce(formula):
-	if (ftype(formula) == EXP_T):
-		#return [formula[0], reduce(formula[1])]
-		return reduce(formula[1])
-	elif (ftype(formula) == VALUE_T):
-		return formula
-	elif (ftype(formula) == PROP_T):
-		dprint("shouldn't get here, already sub'd", DBG_ERROR)
-		return cstate[formula[1]]
-	elif (ftype(formula) == NPROP_T):
-		dprint("shouldn't get here, already sub'd", DBG_ERROR)
-		return not cstate[formula[1]]
-	elif (ftype(formula) == NOT_T):
-		child = reduce(formula[1])
-		if (ftype(child) == VALUE_T):
-			return not child
-		else:
-			return ['notprop', child]
-	elif (ftype(formula) == AND_T):
-		child1 = reduce(formula[1])
-		child2 = reduce(formula[2])
-		if (child1 == False or child == False):
-			return False
-		elif (child1 == True and child2 == True):
-			return True
-		else:
-			return ['andprop', child1, child2]
-	elif (ftype(formula) == OR_T):
-		child1 = reduce(formula[1])
-		child2 = reduce(formula[2])
-		if (child1 == True or child2 == True):
-			return True
-		elif (child1 == False and child2 == False):
-			return False
-		else:
-			return ['orprop', child1, child2]
-	elif (ftype(formula) == IMPLIES_T):
-		child1 = reduce(formula[1])
-		child2 = reduce(formula[2])
-		if (child1 == False or child2 == True):
-			return True
-		elif (child1 == True and child2 == False):
-			return False
-		else:
-			return ['impprop', child1, child2]
-	elif (ftype(formula) == EVENT_T): 
-		## Fill in with check and return formula if not sure yet
-		return formula
-	elif (ftype(formula) == ALWAYS_T):
-		## Fill in with check and return formula if not sure yet
-		return formula
-	elif (ftype(formula) == UNTIL_T): 
-		## Fill in with check and return formula if not sure yet
-		return formula
-	elif (ftype(formula) == PEVENT_T):
-		dprint("Can't get here, should've been removed by sub()", DBG_ERROR)
-		return INVALID_T
-	elif (ftype(formula) == PALWAYS_T):
-		dprint("Can't get here, should've been removed by sub()", DBG_ERROR)
-		return INVALID_T
-	elif (ftype(formula) == SINCE_T):
-		dprint("Can't get here, should've been removed by sub()", DBG_ERROR)
-		return INVALID_T
-	else:
-		return INVALID_T
-
-def checkRes(formula):
-	if (ftype(formula) == EXP_T):
-		if (formula[1] == True):
-			return True
-	elif (formula == True):
-			return True
-	return False
-
+## END smon_cons_ST_per
 ######### Utilities
 ################################################
 def updateState(cstate, traceOrder, line):
@@ -536,8 +449,7 @@ def get_tags(formula):
 		return (formula[3], formula[4])
 	return -1
 
-def incr_struct_res(Struct, cstate):
-	ctime = cstate["time"]
+def incr_struct_per(Struct, hist, ctime):
 	taglist = list(Struct.keys())
 	taglist.sort()
 	taglist.reverse()
@@ -586,8 +498,7 @@ def incr_struct_res(Struct, cstate):
 						addInterval((start,end), cStruct[-1])
 		else:
 			# else cIntervalOpen stays false
-			subform = substitute_per_ag(Struct, cstate, (ctime, cStruct[1]))
-			if (checkRes(reduce(subform)) == True):
+			if (smon_cons_ST_per(Struct, hist, ctime, cStruct[1])):
 				addInterval((ctime,ctime), cStruct[-1])
 			# Else Formula is not satisfied at current time
 
@@ -698,6 +609,14 @@ def int_closed_subset(test_i, history_i):
 	return False
 
 ########## Formula Utilities
+def tau(hist, i):
+	return hist[i]["time"]
+		
+def getState(hist, time):
+	for i in sorted(hist, reverse=True):
+		if (tau(hist,i) <= time):
+			return (i,hist[i])
+
 # get leftmost child
 def lchild(formula): 
 	return formula[1]
