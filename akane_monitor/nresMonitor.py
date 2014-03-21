@@ -148,16 +148,33 @@ def substitute_per_ag(Struct, cstate, formula_entry):
 			return False
 		return formula
 	elif (ftype(formula) == ALWAYS_T):
+		ctime = cstate["time"]
 		l = formula[1] + formtime
 		h = formula[2] + formtime
 		intlist = Struct[get_tags(formula)][-1]
-		if (in_closed_int(cstate["time"], (l,h))):
+		evaltime = l + delay(rchild(formula))
+		#### TODO: fix this
+		#if (in_closed_int(ctime, (l,h))):
+		if (ctime >= evaltime):
 			for i in intlist:
-				if (int_closed_subset((l,h),i)): 
-					if (cstate["time"] >= formula[2]):
-						return True
-					else:
+				if (ctime < h):
+					if (int_closed_subset(l,ctime),i):
 						return formula
+				else:
+					if (int_closed_subset(l,h),i):
+						return True
+
+		if (ctime >= l):
+			for i in intlist:
+				#if (int_closed_subset((l,h),i)): 
+				if (ctime < h):
+					if (int_closed_subset((l,ctime),i)):
+						return formula
+				else:
+					if (int_closed_subset((l,h),i)): 
+						return True
+					#else:
+					#	return formula
 			return False
 		elif (cstate["time"] > (h + delay(rchild(formula)))):
 			return True
@@ -195,7 +212,10 @@ def substitute_per_ag(Struct, cstate, formula_entry):
 		for i in intlist:
 			if (int_closed_intersect_exists((l,h),i)):
 				return True
-		return False
+		if (ctime > (h + delay(rchild(formula)))):
+			return False
+		return formula
+		#return False
 	elif (ftype(formula) == PALWAYS_T):
 		ctime = cstate["time"]
 		l = ctime - hbound(formula)
