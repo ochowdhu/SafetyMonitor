@@ -22,7 +22,7 @@ DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE
 #DBG_MASK = DBG_ERROR
 DEBUG = True
 # global constants
-PERIOD = 10
+PERIOD = 1
 delim = ','
 sTag = 0
 
@@ -144,7 +144,7 @@ def substitute_per_ag(Struct, cstate, formula_entry):
 		for i in intlist:
 				if (int_closed_intersect_exists((l,h),i)):
 					return True
-		if (cstate["time"] > (h + delay(rchild(formula)))):
+		if (cstate["time"] > (h + wdelay(rchild(formula)))):
 			return False
 		return formula
 	elif (ftype(formula) == ALWAYS_T):
@@ -152,32 +152,24 @@ def substitute_per_ag(Struct, cstate, formula_entry):
 		l = formula[1] + formtime
 		h = formula[2] + formtime
 		intlist = Struct[get_tags(formula)][-1]
-		evaltime = l + delay(rchild(formula))
-		#### TODO: fix this
-		#if (in_closed_int(ctime, (l,h))):
-		if (ctime >= evaltime):
-			for i in intlist:
-				if (ctime < h):
-					if (int_closed_subset(l,ctime),i):
-						return formula
-				else:
-					if (int_closed_subset(l,h),i):
-						return True
+		validt = Struct[get_tags(formula)][3]
 
-		if (ctime >= l):
-			for i in intlist:
-				#if (int_closed_subset((l,h),i)): 
-				if (ctime < h):
-					if (int_closed_subset((l,ctime),i)):
-						return formula
+		evaltime = l + mwdelay(rchild(formula))
+		## aggressively check
+		if (ctime >= evaltime):
+			if (ctime < h + wdelay(rchild(formula))):
+				if (validt >= l):
+					for i in intlist:
+						if (int_closed_subset((l,validt),i)):
+							return formula
+					return False
 				else:
-					if (int_closed_subset((l,h),i)): 
+					return formula
+			else:
+				for i in intlist:
+					if (int_closed_subset((l,h),i)):
 						return True
-					#else:
-					#	return formula
 			return False
-		elif (cstate["time"] > (h + delay(rchild(formula)))):
-			return True
 		return formula
 	elif (ftype(formula) == UNTIL_T): 
 		l = formula[1] + formtime
@@ -190,41 +182,54 @@ def substitute_per_ag(Struct, cstate, formula_entry):
 		for i in intlist:
 			if (int_closed_intersect_exists((l,h),i)):
 				end = int_closed_intersect_start((l,h),i)
-		if (end is None and cstate["time"] > h):
+		if (end is None and cstate["time"] > h + wdelay(untilP2(formula))):
 			return False
 		elif (end is None):
 			return formula
 
 		l = formtime
 		h = end
-		# check that P1 still going
 		intlist = Struct[tags[0]][-1]
-		for i in intlist:
-			if (int_closed_subset((l,h),i)): 
-					return True
+		evaltime = l + wdelay(untilP1(formula))
+		## aggressively check
+		if (ctime >= l + mwdelay(untilP1(formula))):
+			if (ctime < h + wdelay(untilP1(formula))):
+				for i in intlist:
+					if (int_closed_subset((l,ctime),i)):
+						return formula
+			else:
+				for i in intlist:
+					if (int_closed_subset((l,h),i)):
+						return True
 		return False
 	elif (ftype(formula) == PEVENT_T):
 		ctime = cstate["time"]
-		l = ctime - hbound(formula)
-		h = ctime - lbound(formula)
+		l = formtime - hbound(formula)
+		h = formtime - lbound(formula)
 		
 		intlist = Struct[get_tags(formula)][0]
 		for i in intlist:
 			if (int_closed_intersect_exists((l,h),i)):
 				return True
-		if (ctime > (h + delay(rchild(formula)))):
+		if (ctime > (h + wdelay(rchild(formula)))):
 			return False
 		return formula
-		#return False
 	elif (ftype(formula) == PALWAYS_T):
 		ctime = cstate["time"]
-		l = ctime - hbound(formula)
-		h = ctime - lbound(formula)
+		l = formtime - hbound(formula)
+		h = formtime - lbound(formula)
 
-		intlist = Struct[get_tags(formula)][-1]
-		for i in intlist:
-			if (int_closed_subset((l,h),i)):
-				return True
+		evaltime = l + wdelay(rchild(formula))
+		## aggressively check
+		if (ctime >= l + mwdelay(rchild(formula))):
+			if (ctime < h + wdelay(rchild(formula))):
+				for i in intlist:
+					if (int_closed_subset((l,ctime),i)):
+						return formula
+			else:
+				for i in intlist:
+					if (int_closed_subset((l,h),i)):
+						return True
 		return False
 	elif (ftype(formula) == SINCE_T):
 		ctime = cstate["time"]
@@ -238,16 +243,26 @@ def substitute_per_ag(Struct, cstate, formula_entry):
 		for i in intlist:
 			if (int_closed_intersect_exists((l,h),i)):
 				start = int_intersect_start((l,h),i)
-		# no P2 found, so Since is False
-		if (start is None):
+		if (start is None and ctime > (h + wdelay(rchild(formula)))):
 			return False
+		elif (start is None):
+			return formula
+
 		# Now check for P1
 		l = start
-		h = ctime
+		h = formtime 
 		intlist = Struct[tags[0]][-1]
-		for i in intlist:
-			if (int_closed_subset((l,h),i)):
-				return True
+		evaltime = l + wdelay(rchild(formula))
+		## aggressively check
+		if (ctime >= l + mwdelay(rchild(formula))):
+			if (ctime < h + wdelay(rchild(formula))):
+				for i in intlist:
+					if (int_closed_subset((l,ctime),i)):
+						return formula
+			else:
+				for i in intlist:
+					if (int_closed_subset((l,h),i)):
+						return True
 		return False
 	else:
 		return INVALID_T
@@ -438,6 +453,70 @@ def past_delay(formula):
 		return None
 	# shouldn't get here
 	return None
+def wdelay(formula):
+	if (ftype(formula) == EXP_T):
+		return wdelay(rchild(formula))
+	elif (ftype(formula) == PROP_T):
+		return 0
+	elif (ftype(formula) == NPROP_T):
+		return 0
+	elif (ftype(formula) == NOT_T):
+		return wdelay(rchild(formula))
+	elif (ftype(formula) == AND_T):
+		return max(wdelay(lchild(formula)),wdelay(rchild(formula)))
+	elif (ftype(formula) == OR_T):
+		return max(wdelay(lchild(formula)),wdelay(rchild(formula)))
+	elif (ftype(formula) == IMPLIES_T):
+		return max(wdelay(lchild(formula)),wdelay(rchild(formula)))
+	elif (ftype(formula) == EVENT_T): 
+		return hbound(formula) + wdelay(rchild(formula))
+	elif (ftype(formula) == ALWAYS_T):
+		return hbound(formula) + wdelay(rchild(formula))
+	elif (ftype(formula) == UNTIL_T): 
+		return hbound(formula) + max(wdelay(untilP1(formula)),wdelay(untilP2(formula)))
+	elif (ftype(formula) == PALWAYS_T):
+		return -1*lbound(formula) + wdelay(rchild(formula))
+	elif (ftype(formula) == PEVENT_T):
+		return -1*lbound(formula) + wdelay(rchild(formula))
+	elif (ftype(formula) == SINCE_T):
+		return -1*lbound(formula) + max(wdelay(untilP1(formula)),wdelay(untilP2(formula)))
+	else:
+		dprint("DELAY ERROR: Got unmatched AST node while building", DBG_ERROR);
+		return None
+	# shouldn't get here
+	return None
+def mwdelay(formula):
+	if (ftype(formula) == EXP_T):
+		return wdelay(rchild(formula))
+	elif (ftype(formula) == PROP_T):
+		return 0
+	elif (ftype(formula) == NPROP_T):
+		return 0
+	elif (ftype(formula) == NOT_T):
+		return wdelay(rchild(formula))
+	elif (ftype(formula) == AND_T):
+		return max(wdelay(lchild(formula)),wdelay(rchild(formula)))
+	elif (ftype(formula) == OR_T):
+		return max(wdelay(lchild(formula)),wdelay(rchild(formula)))
+	elif (ftype(formula) == IMPLIES_T):
+		return max(wdelay(lchild(formula)),wdelay(rchild(formula)))
+	elif (ftype(formula) == EVENT_T): 
+		return hbound(formula) + wdelay(rchild(formula))
+	elif (ftype(formula) == ALWAYS_T):
+		return lbound(formula) + wdelay(rchild(formula))
+	elif (ftype(formula) == UNTIL_T): 
+		return hbound(formula) + max(wdelay(untilP1(formula)),wdelay(untilP2(formula)))
+	elif (ftype(formula) == PALWAYS_T):
+		return -1*hbound(formula) + wdelay(rchild(formula))
+	elif (ftype(formula) == PEVENT_T):
+		return -1*lbound(formula) + wdelay(rchild(formula))
+	elif (ftype(formula) == SINCE_T):
+		return -1*lbound(formula) + max(wdelay(untilP1(formula)),wdelay(untilP2(formula)))
+	else:
+		dprint("DELAY ERROR: Got unmatched AST node while building", DBG_ERROR);
+		return None
+	# shouldn't get here
+	return None
 
 ########################################
 ##### History Structures
@@ -533,7 +612,7 @@ def build_structure(Struct, formula, extbound=0):
 	return False
 
 def add_struct(Struct, tag, delay, formula):
-	newItem = [tag, formula, delay, []]
+	newItem = [tag, formula, delay, 0, []]
 	# Add interval that fills entire past bound 
 	#newItem[-1].append(new_interval(0-bounds[1]))
 	newItem[-1].append((0-delay, 0))
@@ -572,6 +651,7 @@ def incr_struct_res(Struct, cstate):
 			h = hbound(cStruct[1])
 			l = lbound(cStruct[1])
 			checklist = Struct[get_tags(cStruct[1])][-1]
+			cStruct[3] = Struct[get_tags(cStruct[1])][3] - h
 
 			if (len(checklist) > 0):
 				check = checklist[-1]
@@ -582,16 +662,23 @@ def incr_struct_res(Struct, cstate):
 			l = lbound(cStruct[1])
 			checkInt = (ctime - (h-l), ctime)
 			checklist = Struct[get_tags(cStruct[1])][-1]
+			subval = Struct[get_tags(cStruct[1])][3]
 
 			if (len(checklist) > 0):
 				check = checklist[-1]
 				#print "checking if %s can be an always %s" % (check, checkInt)
 				if (alCheck(check, checkInt)):
 					addInterval((iStart(check)-l, iEnd(check)-h), cStruct[-1])
+					cStruct[3] = iEnd(check)-h
+				elif (not in_closed_int(subval, check)):
+					cStruct[3] = subval - l
 		elif (ftype(cStruct[1]) == UNTIL_T):
 			h = hbound(cStruct[1])
 			l = lbound(cStruct[1])
 			tags = get_tags(cStruct[1])
+			# only valid up to closest sub-validity
+			maxback = max(Struct[tags[0]][3],Struct[tags[1]][3])
+			cStruct[3] = maxback - h
 
 			checkE = Struct[tags[1]][-1]
 			if (len(checkE) > 0):
@@ -605,12 +692,21 @@ def incr_struct_res(Struct, cstate):
 						end = min(iEnd(a),iEnd(lastE))
 						addInterval((start,end), cStruct[-1])
 		else:
-			# else cIntervalOpen stays false
 			subform = substitute_per_ag(Struct, cstate, (ctime, cStruct[1]))
-			if (checkRes(reduce(subform)) == True):
+			ans = checkRes(reduce(subform))
+			dprint("incrementing prop, val=%s" % ans)
+			if (ans == True):
 				addInterval((ctime,ctime), cStruct[-1])
+				cStruct[3] = ctime
 			# Else Formula is not satisfied at current time
-
+			# still update validity if we know the answer
+			elif (ans == False):
+				# update validity time
+				cStruct[3] = ctime
+			# otherwise nested future in past, still waiting...
+			else:
+				#TODO this has to depend on validity of subform -- need to split out PT
+				cStruct[3] = ctime - mwdelay(cStruct[1])
 		#########################################
 		###################### Chopping
 		# remove unneeded values from struct list
