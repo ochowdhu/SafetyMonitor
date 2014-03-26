@@ -57,7 +57,8 @@ def main():
 	###### All set up, call one of the monitoring algorithms	
 	print "############## Finished setting up"
 	print "############## Beginning monitor algorithm: residue"
-	mon_residue(inFile, inFormula, traceOrder)
+	#mon_residue(inFile, inFormula, traceOrder)
+	mon_residuep(inFile, inFormula, traceOrder)
 ############# END MAIN ############
 ##################################
 
@@ -108,49 +109,6 @@ def mon_residue(inFile, inFormula, traceOrder):
 	print "finished, trace satisfies formula"
 ## END mon_residue
 
-def mon_residuep(inFile, inFormula, traceOrder):
-	# some algorithm local variables
-	cstate = {}
-	cHistory = {}
-	formulas = []
-	Struct = {}
-	# build struct and save delay
-	D = delay(inFormula)
-	DP = past_delay(inFormula)
-	build_structurep(Struct, inFormula)
-
-	dprint("Struct is: ", DBG_STRUCT)
-	for s in Struct:
-		dprint("%s" % (Struct[s],), DBG_STRUCT)
-		
-	dprint("Formula delay is %d, %d" % (D,DP), DBG_SMON)
-	# wait for new data...
-	for line in inFile:
-			dprint("###### New event received",DBG_SMON)
-			updateState(cstate, traceOrder, line)
-			incr_struct_resp(Struct, cstate)
-
-			dprint("Adding current formula", DBG_SMON)
-			formulas.append((cstate["time"], inFormula))
-			dprint(formulas, DBG_SMON)
-			dprint("reducing all formulas", DBG_SMON)
-			for i,f in enumerate(formulas[:]):
-				formulas[i] = (f[0], reduce(substitute_per_ag(Struct, cstate, f)))
-			dprint(formulas, DBG_SMON)
-			dprint("removing finished formulas and check violations...", DBG_SMON)
-			# remove any True formulas from the list
-			formulas[:] = [f for f in formulas if f[1] != True]
-			for i,f in enumerate(formulas[:]):
-				if (f[1] == False):
-						print "VIOLATION DETECTED AT %s" % (cstate["time"],)
-						sys.exit(1)
-				else:	# eventually never satisfied
-					if (f[0]+D <= cstate["time"]):
-						print "VIOLATOR: %s" % (f,)
-						print "VIOLATION DETECTED AT %s" % (cstate["time"],)
-						sys.exit(1)
-	print "finished, trace satisfies formula"
-## END mon_residue
 
 def substitute_per_ag(Struct, cstate, formula_entry):
 	formtime = formula_entry[0]
@@ -656,10 +614,213 @@ def build_structure(Struct, formula, extbound=0):
 
 ############### periodic stuff
 #########################################################
+TAGi, FORMULAi, DELAYi, VALIDi, LISTi, FLISTi = range(0,6) 
+def mon_residuep(inFile, inFormula, traceOrder):
+	# some algorithm local variables
+	cstate = {}
+	cHistory = {}
+	formulas = []
+	Struct = {}
+	# build struct and save delay
+	D = delay(inFormula)
+	DP = past_delay(inFormula)
+	build_structurep(Struct, inFormula)
+
+	dprint("Struct is: ", DBG_STRUCT)
+	for s in Struct:
+		dprint("%s" % (Struct[s],), DBG_STRUCT)
+		
+	dprint("Formula delay is %d, %d" % (D,DP), DBG_SMON)
+	# wait for new data...
+	for line in inFile:
+			dprint("###### New event received",DBG_SMON)
+			updateState(cstate, traceOrder, line)
+			incr_struct_resp(Struct, cstate)
+
+			dprint("Adding current formula", DBG_SMON)
+			formulas.append((cstate["time"], inFormula))
+			dprint(formulas, DBG_SMON)
+			dprint("reducing all formulas", DBG_SMON)
+			for i,f in enumerate(formulas[:]):
+				formulas[i] = (f[0], reduce(substitute_per_agp(Struct, cstate, f)))
+			dprint(formulas, DBG_SMON)
+			dprint("removing finished formulas and check violations...", DBG_SMON)
+			# remove any True formulas from the list
+			formulas[:] = [f for f in formulas if f[1] != True]
+			for i,f in enumerate(formulas[:]):
+				if (f[1] == False):
+						print "VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+						sys.exit(1)
+				else:	# eventually never satisfied
+					if (f[0]+D <= cstate["time"]):
+						print "VIOLATOR: %s" % (f,)
+						print "VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+						sys.exit(1)
+	print "finished, trace satisfies formula"
+## END mon_residue
+def substitute_per_agp(Struct, cstate, formula_entry):
+	formtime = formula_entry[0]
+	formula = formula_entry[1]
+	if (ftype(formula) == EXP_T):
+		return [formula[0], substitute_per_agp(Struct, cstate, (formtime, formula[1]))]
+	elif (ftype(formula) == VALUE_T):
+		return formula
+	elif (ftype(formula) == PROP_T):
+		#return cstate[formula[1]]
+		if (cstate[formula[1]]):
+			return True
+		else:
+			return False
+	elif (ftype(formula) == NPROP_T):
+		#return not cstate[formula[1]]
+		if (cstate[formula[1]]):
+			return False
+		else:
+			return True
+	elif (ftype(formula) == NOT_T):
+		return ['notprop', substitute_per_agp(Struct, cstate, (formtime, formula[1]))]
+	elif (ftype(formula) == AND_T):
+		return ['andprop', substitute_per_agp(Struct, cstate, (formtime, formula[1])), substitute_per_agp(Struct, cstate, (formtime,formula[2]))]
+	elif (ftype(formula) == OR_T):
+		return ['orprop', substitute_per_agp(Struct, cstate, (formtime,formula[1])), substitute_per_agp(Struct, cstate, (formtime, formula[2]))]
+	elif (ftype(formula) == IMPLIES_T):
+		return ['impprop', substitute_per_agp(Struct, cstate, (formtime,formula[1])), substitute_per_agp(Struct, cstate, (formtime, formula[2]))]
+	elif (ftype(formula) == EVENT_T): 
+		## Fill in with check and return formula if not sure yet
+		l = formula[1] + formtime
+		h = formula[2] + formtime
+		intlist = Struct[get_tags(formula)][LISTi]
+		for i in intlist:
+				if (int_intersect_exists((l,h),i)):
+					return True
+		if (cstate["time"] > (h + wdelay(rchild(formula)))):
+			return False
+		return formula
+	elif (ftype(formula) == ALWAYS_T):
+		ctime = cstate["time"]
+		l = formula[1] + formtime
+		h = formula[2] + formtime
+		intlist = Struct[get_tags(formula)][LISTi]
+		validt = Struct[get_tags(formula)][VALIDi]
+
+		#evaltime = l + mwdelay(rchild(formula))
+		## aggressively check
+		#if (ctime >= evaltime):
+		print "checking always:"
+		print "%s %s %s %s" % (ctime, h, l,validt)
+		if (ctime < h + wdelay(rchild(formula))):
+			if (validt >= l):
+				for i in intlist:
+					if (int_subset((l,validt),i)):
+						return formula
+				return False
+			else:
+				return formula
+		else:
+			for i in intlist:
+				if (int_subset((l,h),i)):
+					return True
+			return False
+		#return formula
+	elif (ftype(formula) == UNTIL_T): 
+		l = formula[1] + formtime
+		h = formula[2] + formtime
+		tags = get_tags(formula)
+
+		# check for P2
+		end = None
+		intlist = Struct[tags[1]][-1]
+		for i in intlist:
+			if (int_closed_intersect_exists((l,h),i)):
+				end = int_closed_intersect_start((l,h),i)
+		if (end is None and cstate["time"] > h + wdelay(untilP2(formula))):
+			return False
+		elif (end is None):
+			return formula
+
+		l = formtime
+		h = end
+		intlist = Struct[tags[0]][-1]
+		evaltime = l + wdelay(untilP1(formula))
+		## aggressively check
+		if (ctime >= l + mwdelay(untilP1(formula))):
+			if (ctime < h + wdelay(untilP1(formula))):
+				for i in intlist:
+					if (int_closed_subset((l,ctime),i)):
+						return formula
+			else:
+				for i in intlist:
+					if (int_closed_subset((l,h),i)):
+						return True
+		return False
+	elif (ftype(formula) == PEVENT_T):
+		ctime = cstate["time"]
+		l = formtime - hbound(formula)
+		h = formtime - lbound(formula)
+		
+		intlist = Struct[get_tags(formula)][0]
+		for i in intlist:
+			if (int_closed_intersect_exists((l,h),i)):
+				return True
+		if (ctime > (h + wdelay(rchild(formula)))):
+			return False
+		return formula
+	elif (ftype(formula) == PALWAYS_T):
+		ctime = cstate["time"]
+		l = formtime - hbound(formula)
+		h = formtime - lbound(formula)
+
+		evaltime = l + wdelay(rchild(formula))
+		## aggressively check
+		if (ctime >= l + mwdelay(rchild(formula))):
+			if (ctime < h + wdelay(rchild(formula))):
+				for i in intlist:
+					if (int_closed_subset((l,ctime),i)):
+						return formula
+			else:
+				for i in intlist:
+					if (int_closed_subset((l,h),i)):
+						return True
+		return False
+	elif (ftype(formula) == SINCE_T):
+		ctime = cstate["time"]
+		l = ctime - hbound(formula)
+		h = ctime - lbound(formula)
+		tags = get_tags(formula)
+
+		# Check for P2
+		start = None
+		intlist = Struct[tags[1]][-1]
+		for i in intlist:
+			if (int_closed_intersect_exists((l,h),i)):
+				start = int_intersect_start((l,h),i)
+		if (start is None and ctime > (h + wdelay(rchild(formula)))):
+			return False
+		elif (start is None):
+			return formula
+
+		# Now check for P1
+		l = start
+		h = formtime 
+		intlist = Struct[tags[0]][-1]
+		evaltime = l + wdelay(rchild(formula))
+		## aggressively check
+		if (ctime >= l + mwdelay(rchild(formula))):
+			if (ctime < h + wdelay(rchild(formula))):
+				for i in intlist:
+					if (int_closed_subset((l,ctime),i)):
+						return formula
+			else:
+				for i in intlist:
+					if (int_closed_subset((l,h),i)):
+						return True
+		return False
+	else:
+		return INVALID_T
 def build_structurep(Struct, formula, extbound=0):
 	if (ftype(formula) == EXP_T):
 		dprint("BUILDING: got an exp, recursing", DBG_STRUCT)
-		return build_structure(Struct, rchild(formula))
+		return build_structurep(Struct, rchild(formula))
 	elif (ftype(formula) == PROP_T):
 		dprint("BUILDING: got a prop, returning", DBG_STRUCT)
 		return True
@@ -668,35 +829,35 @@ def build_structurep(Struct, formula, extbound=0):
 		return True
 	elif (ftype(formula) == NOT_T):
 		dprint("BUILDING: got a not, recursing", DBG_STRUCT)
-		build_structure(Struct, rchild(formula))
+		build_structurep(Struct, rchild(formula))
 		return True
 	elif (ftype(formula) == AND_T):
 		dprint("BUILDING: got an and, recursing both", DBG_STRUCT)
-		build_structure(Struct, lchild(formula)) 
-		build_structure(Struct, rchild(formula))
+		build_structurep(Struct, lchild(formula)) 
+		build_structurep(Struct, rchild(formula))
 		return True
 	elif (ftype(formula) == OR_T):
 		dprint("BUILDING: got an or, recursing both", DBG_STRUCT)
-		build_structure(Struct, lchild(formula))
-		build_structure(Struct, rchild(formula))
+		build_structurep(Struct, lchild(formula))
+		build_structurep(Struct, rchild(formula))
 		return True
 	elif (ftype(formula) == IMPLIES_T):
 		dprint("BUILDING: got an implies, recursing both", DBG_STRUCT)
-		build_structure(Struct, lchild(formula)) 
-		build_structure(Struct, rchild(formula))
+		build_structurep(Struct, lchild(formula)) 
+		build_structurep(Struct, rchild(formula))
 		return True
 	elif (ftype(formula) == EVENT_T): 
 		dprint("BUILDING: got an eventually, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
 		d = delay(formula) + extbound
 		add_structp(Struct, cTag, d, rchild(formula))
-		return build_structure(Struct, rchild(formula), extbound=d)
+		return build_structurep(Struct, rchild(formula), extbound=d)
 	elif (ftype(formula) == ALWAYS_T):
 		dprint("BUILDING: got an always, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
 		d = delay(formula) + extbound
 		add_structp(Struct, cTag, d, rchild(formula))
-		return build_structure(Struct, rchild(formula), extbound=d)
+		return build_structurep(Struct, rchild(formula), extbound=d)
 	elif (ftype(formula) == UNTIL_T): 
 		dprint("BUILDING: got an until, ADDING STRUCT and recursing both", DBG_STRUCT)
 		# Tags get put into formula[2] so tagging P2 then P1 makes formula into
@@ -709,21 +870,21 @@ def build_structurep(Struct, formula, extbound=0):
 		cTag = tag_formula(formula)
 		d1 = delay(untilP1(formula)) + extbound
 		add_structp(Struct, cTag, d1, untilP1(formula))
-		build_structure(Struct, untilP1(formula), extbound=d1)
-		build_structure(Struct, untilP2(formula), extbound=d2)
+		build_structurep(Struct, untilP1(formula), extbound=d1)
+		build_structurep(Struct, untilP2(formula), extbound=d2)
 		return True
 	elif (ftype(formula) == PALWAYS_T):
 		dprint("BUILDING: got a past always, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
 		d = past_delay(formula) + extbound
 		add_structp(Struct, cTag, d, rchild(formula))
-		return build_structure(Struct, rchild(formula), extbound=d)
+		return build_structurep(Struct, rchild(formula), extbound=d)
 	elif (ftype(formula) == PEVENT_T):
 		dprint("BUILDING: got a past eventually, ADDING STRUCT and recursing", DBG_STRUCT)
 		cTag = tag_formula(formula)
 		d = past_delay(formula) + extbound
 		add_structp(Struct, cTag, d, rchild(formula))
-		return build_structure(Struct, rchild(formula), extbound=d)
+		return build_structurep(Struct, rchild(formula), extbound=d)
 	elif (ftype(formula) == SINCE_T):
 		dprint("BUILDING: got a since, ADDING BOTH STRUCTS and recursing both", DBG_STRUCT)
 		# Tags get put into formula[2] so tagging P2 then P1 makes formula into
@@ -736,22 +897,23 @@ def build_structurep(Struct, formula, extbound=0):
 		cTag = tag_formula(formula)
 		d1 = delay(untilP1(formula)) + extbound
 		add_structp(Struct, cTag, d1, untilP1(formula))
-		build_structure(Struct, untilP1(formula), extbound=d1)
-		build_structure(Struct, untilP2(formula), extbound=d2)
+		build_structurep(Struct, untilP1(formula), extbound=d1)
+		build_structurep(Struct, untilP2(formula), extbound=d2)
 		return True
 	else:
 		dprint("BUILDING ERROR: Got unmatched AST node while building", DBG_STRUCT);
 		return False
 	# shouldn't get here
 	return False
+
 def add_structp(Struct, tag, delay, formula):
-	newItem = [tag, formula, delay, 0, {}]
+	newItem = [tag, formula, delay, 0, [], []]
 	# Add interval that fills entire past bound 
-	#newItem[-1].append(new_interval(0-bounds[1]))
-	for i in range(0-delay, 0, PERIOD):
-		newItem[-1][i] = True
+	newItem[LISTi].append((0-delay, 0-PERIOD))
 	Struct[tag] = newItem
+	print "Added %s to %s" % (newItem, Struct)
 	return
+
 def incr_struct_resp(Struct, cstate):
 	ctime = cstate["time"]
 	taglist = list(Struct.keys())
@@ -764,68 +926,73 @@ def incr_struct_resp(Struct, cstate):
 		######################################################
 		################ Increment structure depending on type
 		if (ftype(cStruct[1]) == EVENT_T):
-			#print "INC EVENT %s" % cStruct[1]
-			h = hbound(cStruct[1])
-			l = lbound(cStruct[1])
-			checklist = Struct[get_tags(cStruct[1])][-1]
-			subLastUp = Struct[get_tags(cStruct[1])][3]
-			lastUp = cStruct[3]
-			# get T vals in subform that we haven't added here yet
-			newvals = [i for i in checklist if i > lastUp]
-			for i in newvals
-					addIntervalp((i-h, i-l), cStruct[-1])
-			# last valid in eventually is last valid in sub - l
-			cStruct[3] = subLastUp - l
+			pass
+			##print "INC EVENT %s" % cStruct[1]
+			#h = hbound(cStruct[1])
+			#l = lbound(cStruct[1])
+			#checklist = Struct[get_tags(cStruct[1])][-1]
+			#subLastUp = Struct[get_tags(cStruct[1])][3]
+			#lastUp = cStruct[3]
+			## get T vals in subform that we haven't added here yet
+			#newvals = [i for i in checklist if i > lastUp]
+			#for i in newvals:
+			#		addIntervalp((i-h, i-l), cStruct[-1])
+			## last valid in eventually is last valid in sub - l
+			#cStruct[3] = subLastUp - l
 		elif (ftype(cStruct[1]) == ALWAYS_T):
-			h = hbound(cStruct[1])
-			l = lbound(cStruct[1])
-			checklist = Struct[get_tags(cStruct[1])][-1]
-			subLastUp = Struct[get_tags(cStruct[1])][3]
-			lastUp = cStruct[3]
-			checkInt = (ctime - (h-l), ctime)
+			pass
+			#h = hbound(cStruct[1])
+			#l = lbound(cStruct[1])
+			#checklist = Struct[get_tags(cStruct[1])][-1]
+			#subLastUp = Struct[get_tags(cStruct[1])][3]
+			#lastUp = cStruct[3]
+			#checkInt = (ctime - (h-l), ctime)
 
-			for i in range(lastUp, ctime, PERIOD):
-				if (alCheckp(i, cStruct[-1], Struct)):
-					cStruct[-1][i] = True
-			cStruct[3] = subLastUp - h
+			#for i in range(lastUp, ctime, PERIOD):
+			#	if (alCheckp(i, cStruct[-1], Struct)):
+			#		cStruct[-1][i] = True
+			#cStruct[3] = subLastUp - h
 		elif (ftype(cStruct[1]) == UNTIL_T):
-			h = hbound(cStruct[1])
-			l = lbound(cStruct[1])
-			tags = get_tags(cStruct[1])
-			# only valid up to closest sub-validity
-			checklist = Struct[tags[1])][-1]
-			lastUp = cStruct[3]
+			pass
+			#h = hbound(cStruct[1])
+			#l = lbound(cStruct[1])
+			#tags = get_tags(cStruct[1])
+			## only valid up to closest sub-validity
+			#checklist = Struct[tags[1])][-1]
+			#lastUp = cStruct[3]
 
-			newvals = [i for i in checklist if i > lastUp]
-			for i in newvals
-				if (alCheckRp(i, untilP1(cStruct[1]), Struct)):
-					cStruct[-1][i] = True
+			#newvals = [i for i in checklist if i > lastUp]
+			#for i in newvals
+			#	if (alCheckRp(i, untilP1(cStruct[1]), Struct)):
+			#		cStruct[-1][i] = True
 
-		elif (ftype(cStruct[1]) == PROP_T):
-			subform = substitute_per_ag(Struct, cstate, (ctime, cStruct[1]))
-			ans = checkRes(reduce(subform))
-			dprint("incrementing prop, val=%s" % ans)
-			if (ans == True):
-				cStruct[-1][ctime] = True
-				cStruct[3] = ctime
-			elif (ans == False):
-				pass
-		else:
-			subform = substitute_per_ag(Struct, cstate, (ctime, cStruct[1]))
-			ans = checkRes(reduce(subform))
-			dprint("incrementing prop, val=%s" % ans)
-			if (ans == True):
-				addInterval((ctime,ctime), cStruct[-1])
-				cStruct[3] = ctime
-			# Else Formula is not satisfied at current time
-			# still update validity if we know the answer
-			elif (ans == False):
-				# update validity time
-				cStruct[3] = ctime
-			# otherwise nested future in past, still waiting...
-			else:
-				#TODO this has to depend on validity of subform -- need to split out PT
-				cStruct[3] = ctime - mwdelay(cStruct[1])
+		elif (ftype(cStruct[FORMULAi]) == PEVENT_T):
+			pass
+		elif (ftype(cStruct[FORMULAi]) == PALWAYS_T):
+			pass
+		elif (ftype(cStruct[FORMULAi]) == SINCE_T):
+			pass
+		else:	# non-temporal, just check it
+			subform = substitute_per_agp(Struct, cstate, (ctime, cStruct[FORMULAi]))
+			cStruct[FLISTi].append((ctime, subform))
+
+			# update everything
+			for i,f in enumerate(cStruct[FLISTi][:]):
+				cStruct[FLISTi][i] = (f[0], reduce(substitute_per_agp(Struct, cstate, f)))
+				form = cStruct[FLISTi][i]
+				if (checkRes(form[1]) == True):
+					addInterval((form[0], form[0]+PERIOD), cStruct[LISTi])
+					#addInterval((form[0],form[0]+PERIOD), cStruct[VALIDi])
+					cStruct[VALIDi] = max(form[0],cStruct[VALIDi])
+				elif (checkRes(form[1]) == False):
+					cStruct[VALIDi] = max(form[0],cStruct[VALIDi])
+				else: # couldn't reduce formula yet
+					pass
+
+			# grab finished formulas
+			# remove finished formulas
+			cStruct[FLISTi] = [f for f in cStruct[FLISTi] if (f[1] != True and f[1] != False)]
+
 		#########################################
 		###################### Chopping
 		# remove unneeded values from struct list
@@ -847,9 +1014,9 @@ def alCheckp(i, formula, Struct):
 	l = lbound(formula)
 	cStruct = Struct[get_tags(formula)]
 	
-	for v in range(i+l, i+h, PERIOD):
-		if (v not in cStruct[-1] or cStruct[-1][v] == False)
-			return False
+	#for v in range(i+l, i+h, PERIOD):
+	#	if (v not in cStruct[LISTi] or cStruct[LISTi][v] == False)
+	#		return False
 	return True
 
 ############### periodic cheat stuff
@@ -975,17 +1142,17 @@ def dprint(string, lvl=0xFF):
 ############ INTERVAL UTILITIES
 
 # add interval to list
-def addInterval(int, structlist):
+def addInterval(intv, structlist):
 	if (len(structlist) > 0):
 		last = structlist[-1]
 	else:
 		last = (None, None)
 	#if (iEnd(last) >= iStart(int)):
-	if (iStart(int)-PERIOD <= iEnd(last)):
+	if (iStart(intv)-PERIOD <= iEnd(last)):
 	#if (iEnd(last)+PERIOD >= iStart(int)):
-		structlist[-1] = (iStart(last), iEnd(int))
+		structlist[-1] = (iStart(last), iEnd(intv))
 	else:
-		structlist.append(int)
+		structlist.append(intv)
 # start a new interval tuple
 def new_interval(start):
 	return (start, None)
