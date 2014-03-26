@@ -703,13 +703,10 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 		intlist = Struct[get_tags(formula)][LISTi]
 		validt = Struct[get_tags(formula)][VALIDi]
 
-		#evaltime = l + mwdelay(rchild(formula))
-		## aggressively check
-		#if (ctime >= evaltime):
-		print "checking always:"
-		print "%s %s %s %s" % (ctime, h, l,validt)
+		#print "checking always: %s" % (formula,)
+		#print "%s %s %s %s" % (ctime, h, l,validt)
 		if (ctime < h + wdelay(rchild(formula))):
-			if (validt >= l):
+			if (validt > l):
 				for i in intlist:
 					if (int_subset((l,validt),i)):
 						return formula
@@ -926,32 +923,56 @@ def incr_struct_resp(Struct, cstate):
 		######################################################
 		################ Increment structure depending on type
 		if (ftype(cStruct[1]) == EVENT_T):
-			pass
-			##print "INC EVENT %s" % cStruct[1]
-			#h = hbound(cStruct[1])
-			#l = lbound(cStruct[1])
-			#checklist = Struct[get_tags(cStruct[1])][-1]
-			#subLastUp = Struct[get_tags(cStruct[1])][3]
-			#lastUp = cStruct[3]
-			## get T vals in subform that we haven't added here yet
-			#newvals = [i for i in checklist if i > lastUp]
-			#for i in newvals:
-			#		addIntervalp((i-h, i-l), cStruct[-1])
-			## last valid in eventually is last valid in sub - l
-			#cStruct[3] = subLastUp - l
-		elif (ftype(cStruct[1]) == ALWAYS_T):
-			pass
-			#h = hbound(cStruct[1])
-			#l = lbound(cStruct[1])
-			#checklist = Struct[get_tags(cStruct[1])][-1]
-			#subLastUp = Struct[get_tags(cStruct[1])][3]
-			#lastUp = cStruct[3]
-			#checkInt = (ctime - (h-l), ctime)
+			subform = substitute_per_agp(Struct, cstate, (ctime, cStruct[FORMULAi]))
+			cStruct[FLISTi].append((ctime, subform))
 
-			#for i in range(lastUp, ctime, PERIOD):
-			#	if (alCheckp(i, cStruct[-1], Struct)):
-			#		cStruct[-1][i] = True
-			#cStruct[3] = subLastUp - h
+			# update everything
+			for i,f in enumerate(cStruct[FLISTi][:]):
+				cStruct[FLISTi][i] = (f[0], reduce(substitute_per_agp(Struct, cstate, f)))
+				form = cStruct[FLISTi][i]
+				h = hbound(cStruct[FORMULAi])
+				l = lbound(cStruct[FORMULAi])
+				s = form[0] - h
+				e = form[0] - l
+				if (checkRes(form[1]) == True):
+					addInterval((s, e+PERIOD), cStruct[LISTi])
+					#addInterval((form[0],form[0]+PERIOD), cStruct[VALIDi])
+					cStruct[VALIDi] = max(e+PERIOD,cStruct[VALIDi])
+				elif (checkRes(form[1]) == False):
+					cStruct[VALIDi] = max(s+PERIOD,cStruct[VALIDi])
+				else: # couldn't reduce formula yet
+					pass
+
+			# grab finished formulas
+			# remove finished formulas
+			cStruct[FLISTi] = [f for f in cStruct[FLISTi] if (f[1] != True and f[1] != False)]
+		elif (ftype(cStruct[1]) == ALWAYS_T):
+			subform = substitute_per_agp(Struct, cstate, (ctime, cStruct[FORMULAi]))
+			cStruct[FLISTi].append((ctime, subform))
+
+			# update everything
+			for i,f in enumerate(cStruct[FLISTi][:]):
+				cStruct[FLISTi][i] = (f[0], reduce(substitute_per_agp(Struct, cstate, f)))
+				form = cStruct[FLISTi][i]
+				h = hbound(cStruct[FORMULAi])
+				l = lbound(cStruct[FORMULAi])
+				s = form[0] - l
+				e = form[0] - h
+				print "incr always, form is %d| %s" % (form[0],form[1])
+				if (checkRes(form[1]) == True):
+					addInterval((s, e+PERIOD), cStruct[LISTi])
+					#addInterval((form[0],form[0]+PERIOD), cStruct[VALIDi])
+					cStruct[VALIDi] = max(e+PERIOD,cStruct[VALIDi])
+				elif (checkRes(form[1]) == False):
+					print "updating validity in false"
+					print "max %s || %s" % (form[0], cStruct[VALIDi])
+					cStruct[VALIDi] = max(form[0]+PERIOD,cStruct[VALIDi])
+				else: # couldn't reduce formula yet
+					pass
+			# grab finished formulas
+			# remove finished formulas
+			cStruct[FLISTi] = [f for f in cStruct[FLISTi] if (f[1] != True and f[1] != False)]
+
 		elif (ftype(cStruct[1]) == UNTIL_T):
 			pass
 			#h = hbound(cStruct[1])
@@ -983,9 +1004,9 @@ def incr_struct_resp(Struct, cstate):
 				if (checkRes(form[1]) == True):
 					addInterval((form[0], form[0]+PERIOD), cStruct[LISTi])
 					#addInterval((form[0],form[0]+PERIOD), cStruct[VALIDi])
-					cStruct[VALIDi] = max(form[0],cStruct[VALIDi])
+					cStruct[VALIDi] = max(form[0]+PERIOD,cStruct[VALIDi])
 				elif (checkRes(form[1]) == False):
-					cStruct[VALIDi] = max(form[0],cStruct[VALIDi])
+					cStruct[VALIDi] = max(form[0]+PERIOD,cStruct[VALIDi])
 				else: # couldn't reduce formula yet
 					pass
 
