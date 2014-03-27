@@ -201,36 +201,35 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 		return formula
 	elif (ftype(formula) == UNTIL_T): 
 		tags = get_tags(formula)
-		subStruct2 = Struct[tags[1]]
 		subStruct1 = Struct[tags[0]]
+		subStruct2 = Struct[tags[1]]
 		sEnd = hbound(formula) + formtime
 		sStart = lbound(formula) + formtime
 		end = None
 		allF = True
-		foundP2 = False
+		maxvalid = -1
 		for t in range(sStart, sEnd+PERIOD, PERIOD):
 			if (t in subStruct2.history):
+				maxvalid = max(maxvalid, t)
 				if (subStruct2.history[t] == True):
 					end = t
 					allF = False
-					foundP2 = True
 					break
 			else:
 				allF = False
 		# if we're past the time we have to have an answer, we didn't see the eventually
 		# TODO need aggressive until/since, gotta check current but be able to wait for P2
+		found = True
 		if allF:
 			return False
 		elif (end is None):
-			end = ctime - wdelay(untilP2(formula))
-			print "using new end %d" % end
-			#return formula
+			end = maxvalid
+			found = False
 		
 		# did find eventually, check P1
 		sEnd = end
 		sStart = formtime
 		allT = True
-		print "checking always (%d,%d)" % (sStart, sEnd)
 		for t in range(sStart, sEnd+PERIOD, PERIOD):
 			if (t in subStruct1.history):
 				if (subStruct1.history[t] == False):
@@ -238,7 +237,7 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 			else:
 				allT = False
 		# past time and still alive, return true
-		if (allT == True and foundP2):
+		if (allT == True and found):
 			return True
 		return formula
 	elif (ftype(formula) == PEVENT_T):
@@ -282,6 +281,8 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 		sStart = formtime - hbound(formula)
 		start = None
 		allF = True
+		print "checking (%d,%d)" % (sStart, sEnd)
+		print "sub: %s" % subStruct2
 		for t in range(sStart, sEnd+PERIOD, PERIOD):
 			if (t in subStruct2.history):
 				if (subStruct2.history[t] == True):
@@ -291,7 +292,9 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 			else:
 				allF = False
 		# if we're past the time we have to have an answer, we didn't see the eventually
-		if allF: #(start is None and ctime > formtime + wdelay(formula)):
+		print "start: %s" % start
+		found = True
+		if allF: 
 			return False
 		elif (start is None):
 			return formula
@@ -300,6 +303,8 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 		sEnd = formtime
 		sStart = start
 		allT = True
+		print "checking (%d,%d)" % (sStart, sEnd)
+		print "sub: %s" % subStruct1
 		for t in range(sStart, sEnd+PERIOD, PERIOD):
 			if (t in subStruct1.history):
 				if (subStruct1.history[t] == False):
