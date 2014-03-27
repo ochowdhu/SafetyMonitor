@@ -206,19 +206,31 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 		sEnd = hbound(formula) + formtime
 		sStart = lbound(formula) + formtime
 		end = None
+		allF = True
+		foundP2 = False
 		for t in range(sStart, sEnd+PERIOD, PERIOD):
-			if (t in subStruct2.history and subStruct2.history[t] == True):
-				end = t
+			if (t in subStruct2.history):
+				if (subStruct2.history[t] == True):
+					end = t
+					allF = False
+					foundP2 = True
+					break
+			else:
+				allF = False
 		# if we're past the time we have to have an answer, we didn't see the eventually
-		if (end is None and ctime > formtime + wdelay(formula)):
+		# TODO need aggressive until/since, gotta check current but be able to wait for P2
+		if allF:
 			return False
 		elif (end is None):
-			return formula
+			end = ctime - wdelay(untilP2(formula))
+			print "using new end %d" % end
+			#return formula
 		
 		# did find eventually, check P1
 		sEnd = end
 		sStart = formtime
 		allT = True
+		print "checking always (%d,%d)" % (sStart, sEnd)
 		for t in range(sStart, sEnd+PERIOD, PERIOD):
 			if (t in subStruct1.history):
 				if (subStruct1.history[t] == False):
@@ -226,7 +238,7 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 			else:
 				allT = False
 		# past time and still alive, return true
-		if (allT == True):
+		if (allT == True and foundP2):
 			return True
 		return formula
 	elif (ftype(formula) == PEVENT_T):
@@ -241,7 +253,7 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 			else:
 				allF = False
 		# if we're past the time we have to have an answer, we didn't see the eventually
-		if (allF == True or ctime > formtime + wdelay(formula)):
+		if (allF == True):	# or ctime > formtime + wdelay(formula)):
 			return False
 		return formula
 	elif (ftype(formula) == PALWAYS_T):
@@ -269,11 +281,17 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 		sEnd = formtime - lbound(formula)
 		sStart = formtime - hbound(formula)
 		start = None
+		allF = True
 		for t in range(sStart, sEnd+PERIOD, PERIOD):
-			if (t in subStruct2.history and subStruct2.history[t] == True):
-				start = t
+			if (t in subStruct2.history):
+				if (subStruct2.history[t] == True):
+					start = t
+					allF = False
+					break
+			else:
+				allF = False
 		# if we're past the time we have to have an answer, we didn't see the eventually
-		if (start is None and ctime > formtime + wdelay(formula)):
+		if allF: #(start is None and ctime > formtime + wdelay(formula)):
 			return False
 		elif (start is None):
 			return formula
