@@ -1,0 +1,122 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1265\cocoasubrtf190
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\f0\fs24 \cf0 Overview: \
+The algorithm works by carrying a list of residual formulas and evaluating them as much as possible every timestep. If any residual formula is evaluated to false then the formula is violated. We use a history structure which contains two lists for every subformula of any temporal subformula of the target policy. The history list contains a set of (time, truth) tuples and the residue list contains a set of residual formulas. \
+\
+Each subformula structure is updated in a similar way as the overall algorithm \'97 by keeping a list of residual formulas and aggressively checking them. Once a residual formula is fully evaluated its truth value is added to the structures history list. Temporal formulas are checked by checking the formula over the subformula\'92s list.\
+\
+Residue formulas are a tuple (time, formula) which represent the formula evaluated at time \'93time\'94. \
+\
+Assume we have a substitute(Struct, state, rformula) which takes the structure, the current state, and a residue formula and returns a new residue formula with any current evaluated values incorporated (basically, replace any propositions with their current value, and any evaluate-able temporal formulas with their value). We also have a reduce(rformula) function which reduces a formula (replaces false implications with true, condenses \'93or\'94 branches that include true, condenses \'93and\'94 branches that include false, etc). Together, reduce(substitute(S,state,rformula)) is used to update the rformulas when evaluating. If the formula can be evaluated then reduce(sub()) will return True or False, otherwise it will return the residual formula as condensed as possible.\
+\
+\
+Now, some examples\
+\
+\
+Simple example: Future in Future:\
+\
+a -> <1,3> ([1,2] b)\
+\
+assume everything is false everywhere but mentioned:\
+(2,a), (4,b), (5,b)\
+\
+The structure for this formula has 2 sub-formulas:\
+b: [] []\
+([1,2] b): [] []\
+where the first list is the history list, the second the residue list\
+\
+And we start with empty residual list\
+R = \{\}\
+\
+We\'92ll use P to denote the total formula a -> <1,3> ([1,2] b) and rP to denote a reduced residue of P\
+\
+\
+\
+Walkthrough:\
+=============\
+t = 0\
+increment structures:\
+	add residues to structures:\
+	b:		[] [(0,b)]\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 	[1,2] b:	[ ]	[(0, [1,2] b)]\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 	check structures, add to history if evaluated\
+	# b evaluates, so add F to history\
+	b: 		[(0,F)]	[]\
+	# can\'92t evaluate [1,2] b at 0 yet, so keep residue around\
+	[1,2] b:	[ ]	[(0, [1,2] b)]\
+Add current residue to R\
+R = \{ (0, P) \}\
+Check Residues:\
+	(0,P) => (0,T) because a is false\
+Residue at end of time\
+R = \{\}\
+Struct at end of time\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 b: 		[(0,F)]	[]\
+[1,2] b:	[ ]	[(0, [1,2] b)]\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 \'97\'97\'97\'97\'97\
+t = 1\
+increment structures\
+b:		[(0,F), (1,F)]	[]\
+[1,2] b:	[(0,F)]		[(1,[1,2] b)]\
+add current residue to R\
+R = \{(1,P)\} \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 Check Residues:\
+	(1,P) => (1,T) because a is false\
+Residue at end of time\
+R = \{\}\
+\'97\'97\'97\'97\'97\
+t = 2\
+increment structures\
+b:		[(0,F), (1,F), (2,T)]	[]\
+[1,2] b:	[(0,F)]		[(1,[1,2] b), (2, [1,2] b)]\
+add current residue to R\
+R = \{(2, P)\} \
+Check Residues:\
+	(2,P) is reduced to (2,rP) but still can\'92t check antecedent, so gets carried over\
+Residue at end of time\
+R = \{(2, rP)\}\
+\'97\'97\'97\'97\'97\
+t = 3\
+increment structures\
+b:		[(0,F), (1,F), (2,T), (3,F)]	[]\
+[1,2] b:	[(0,F), (1,F), (2,F)]		[(3, [1,2] b)]\
+add current residue to R\
+R = \{(2, rP), (3,P)\} \
+Check Residues:\
+	(2,rP) still can\'92t check antecedent, gets carried over\
+	(3,P) gets reduced to (3,T) since a is false, gets removed\
+Residue at end of time\
+R = \{(2, rP)\}\
+\'97\'97\'97\'97\'97\
+t = 4\
+increment structures\
+b:		[(0,F), (1,F), (2,F), (3,F), (4,T)]	[]\
+[1,2] b:	[(0,F), (1,F), (2,F)]			[ (3, [1,2] b),(4,[1,2] b) ]\
+add current residue to R\
+R = \{(2, rP), (4,P)\} \
+Check Residues:\
+	(2,rP) still can\'92t check antecedent, gets carried over\
+	(4,P) gets reduced to (4,T) since a is false, gets removed\
+Residue at end of time\
+R = \{(2, rP)\}\
+\'97\'97\'97\'97\'97\
+t = 5\
+increment structures\
+b:		[(0,F), (1,F), (2,F), (3,F), (4,T) (5,T)]	[]\
+[1,2] b:	[(0,F), (1,F), (2,F), (3,T)]			[(4,[1,2] b), (5, [1,2] b)]\
+add current residue to R\
+R = \{(2, rP), (5,P)\} \
+Check Residues:\
+	(2,rP) now sees (3,T) in the structure for [1,2] b \'97 reduces to (2,T) and gets removed\
+	(5,P) gets reduced to (4,T) since a is false, gets removed\
+Residue at end of time\
+R = \{\}}
