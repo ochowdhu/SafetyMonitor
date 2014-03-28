@@ -505,22 +505,6 @@ def incr_struct_resp(Struct, cstate):
 		# remove finished residues
 		cStruct.cleanRes()
 
-		######################################################
-		################ Increment structure depending on type
-		#if (ftype(cStruct[1]) == EVENT_T):
-		#	pass
-		#elif (ftype(cStruct[1]) == ALWAYS_T):
-		#	pass
-		#elif (ftype(cStruct[1]) == UNTIL_T):
-		#	pass
-		#elif (ftype(cStruct[FORMULAi]) == PEVENT_T):
-		#	pass
-		#elif (ftype(cStruct[FORMULAi]) == PALWAYS_T):
-		#	pass
-		#elif (ftype(cStruct[FORMULAi]) == SINCE_T):
-		#	pass
-		#else:	# non-temporal, just check it
-		#	pass
 		#########################################
 		###################### Chopping
 		# remove unneeded values from struct list
