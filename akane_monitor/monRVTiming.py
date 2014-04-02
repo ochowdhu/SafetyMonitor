@@ -11,6 +11,7 @@ import signal
 
 # Get some stuff out of here, easier to deal with
 from monUtils import *
+from timer import Timer
 
 # global constants
 delim = ','
@@ -29,7 +30,7 @@ def main():
 	if len(sys.argv) > 3:
 		inFormula = eval(sys.argv[1])	# DANGEROUS. DON'T PASS ME ARBITRARY CODE
 		inFile = open(sys.argv[2], "r")
-		algChoose = int(sys.argv[3])
+		algChoose = sys.argv[3]
 	else:
 		print "Bad Usage: python monitor.py <formula> <tracefile> <algChoose> [period]"
 		sys.exit(1)
@@ -50,11 +51,14 @@ def main():
 	print "############## Finished setting up"
 	print "############## Beginning monitor algorithm: %s" % algChoose
 	#mon_residue(inFile, inFormula, traceOrder)
-	if (algChoose == 0):
+	if (algChoose == "res"):
+		algChoose = ALG_RES
 		mon_intresidue(inFile, inFormula, traceOrder)
-	elif (algChoose == 1):
+	elif (algChoose == "purecons"):
+		algChoose = ALG_PURECONS
 		mon_purecons(inFile, inFormula, traceOrder)
-	elif (algChoose == 2):
+	elif (algChoose == "stcons"):
+		algChoose = ALG_STCONS
 		mon_stcons(inFile, inFormula, traceOrder)
 	else:
 		print "No algorithm chosen, quitting..."
@@ -62,49 +66,6 @@ def main():
 ##################################
 
 ############## BEGIN MONITOR FUNCTIONS ###########
-def mon_stcons(inFile, inFormula, traceOrder):
-	allPass = True
-	FastDie = True
-	cstate = {}
-	formulas =[]
-	history = {}
-	Struct = {}
-	build_past_structure(Struct, inFormula)
-	WD = wdelay(inFormula)
-	#
-	eptr = 0
-	cptr = 0
-	#
-	dprint("Using delay %s" % WD)
-	#
-	for line in inFile:
-		updateState(cstate, traceOrder, line)
-		history[cptr] = cstate.copy()
-		#
-		ctime = cstate["time"]
-		dprint("current state is %s" % (cstate,))
-		#
-		while ((eptr <= cptr) and (tau(history, cptr) - tau(history, eptr) >= WD)):
-			evaltime = tau(history,eptr)
-			dprint("checking time %s" % evaltime)
-			mon = reduce(substitute_stcons(Struct, cstate, (eptr, inFormula)))
-			#
-			allPass = allPass and mon
-			if (FastDie and bool(mon) == False):
-				dprint("!!!!FORMULA VIOLATED %s@%s" % (eptr, cptr))
-				sys.exit(5)
-			eptr = eptr + 1
-		cptr = cptr + 1
-		#
-		# clean history
-		histremove = [k for k in history if (cstate["time"] - history[k]["time"] > WD)]	
-		for k in histremove:
-			del history[k]
-	if allPass:
-		print "#### Trace Satisfied formula ###"
-	else:
-		print "### Trace Violated formula ###"
-
 def mon_purecons(inFile, inFormula, traceOrder):
 	allPass = True
 	FastDie = True
@@ -125,11 +86,11 @@ def mon_purecons(inFile, inFormula, traceOrder):
 		history[cptr] = cstate.copy()
 		#
 		ctime = cstate["time"]
-		dprint("current state is %s" % (cstate,))
+		dprint("current state is %s" % (cstate,), DBG_SMON)
 		#
-		while ((eptr <= cptr) and (tau(history, cptr) - tau(history, eptr) >= WD)):
-			evaltime = tau(history,eptr)
-			dprint("checking time %s" % evaltime)
+		#while ((eptr <= cptr) and (tau(history, cptr) - tau(history, eptr) >= WD)):
+		while ((eptr <= cptr) and (cptr - eptr >= WD)):
+			dprint("checking step %s" % eptr, DBG_SMON)
 			mon = smon_purecons(eptr, history, inFormula)
 			#
 			allPass = allPass and mon
@@ -140,7 +101,54 @@ def mon_purecons(inFile, inFormula, traceOrder):
 		cptr = cptr + 1
 		#
 		# clean history
-		histremove = [k for k in history if (cstate["time"] - history[k]["time"] > (PD+D))]	
+		histremove = [k for k in history if (cptr - eptr > (PD+D))]	
+		for k in histremove:
+			dprint("removing history %s" % k,DBG_SMON)
+			del history[k]
+	if allPass:
+		print "#### Trace Satisfied formula ###"
+	else:
+		print "### Trace Violated formula ###"
+
+def mon_stcons(inFile, inFormula, traceOrder):
+	allPass = True
+	FastDie = True
+	cstate = {}
+	formulas =[]
+	history = {}
+	Struct = {}
+	build_past_structure(Struct, inFormula)
+	D = delay(inFormula)
+	NFD = nfdelay(inFormula)
+	WD = wdelay(inFormula)
+	#
+	eptr = 0
+	cptr = 0
+	#
+	dprint("Using delay D: %s NFD: %s WD: %s" % (D,NFD,WD))
+	#
+	for line in inFile:
+		updateState(cstate, traceOrder, line)
+		history[cptr] = cstate.copy()
+		incr_struct_stcons(Struct, history, cptr)
+		#
+		ctime = cstate["time"]
+		dprint("current state is %s" % (cstate,), DBG_SMON)
+		#
+		#while ((eptr <= cptr) and (tau(history, cptr) - tau(history, eptr) >= WD)):
+		while ((eptr <= cptr) and (cptr - eptr >= WD)):
+			dprint("checking step %s" % eptr, DBG_SMON)
+			mon = reduce(substitute_stcons(Struct, history, eptr, (eptr, inFormula)))
+			#
+			allPass = allPass and mon
+			if (FastDie and bool(mon) == False):
+				dprint("!!!!FORMULA VIOLATED %s@%s" % (eptr, cptr))
+				sys.exit(5)
+			eptr = eptr + 1
+		cptr = cptr + 1
+		#
+		# clean history
+		histremove = [k for k in history if (cptr - eptr > D+NFD)]	
 		for k in histremove:
 			del history[k]
 	if allPass:
@@ -157,7 +165,9 @@ def mon_intresidue(inFile, inFormula, traceOrder):
 	D = delay(inFormula)
 	DP = past_delay(inFormula)
 	WD = wdelay(inFormula)
-	build_structure(Struct, inFormula)
+	with Timer() as t:
+		build_structure(Struct, inFormula)
+	print "Build Structure took %s ms" % (t.msecs,)
 
 	dprint("Struct is: ", DBG_STRUCT)
 	for s in Struct:
@@ -169,9 +179,6 @@ def mon_intresidue(inFile, inFormula, traceOrder):
 			dprint("###### New event received",DBG_SMON)
 			updateState(cstate, traceOrder, line)
 			incr_struct_intres(Struct, cstate)
-			#dprint("INCREMENTED, DEBUG")
-			#for s in Struct:
-			#	dprint("%s" % (Struct[s],), DBG_STRUCT)
 
 			dprint("Adding current formula", DBG_SMON)
 			formulas.append((cstate["time"], inFormula))
@@ -205,50 +212,48 @@ def smon_purecons(cstep, history, formula):
 	if (cstep < 0):
 		return True
 	if (ftype(formula) == EXP_T):
-		#dprint("got an exp, returning")
 		return smon_purecons(cstep, history, rchild(formula))
 	elif (ftype(formula) == PROP_T):
-		#dprint("got a prop, returning")
+		#try:
 		return history[cstep][rchild(formula)]
+		#except KeyError:
+		#	print history
+		#	sys.exit(2)
 	elif (ftype(formula) == NPROP_T):
-		#dprint("got an nprop")
 		return not history[cstep][rchild(formula)]
 	elif (ftype(formula) == AND_T):
-		#dprint("got an and, returning both")
 		return smon_purecons(cstep, history, lchild(formula)) and smon_purecons(cstep, history, rchild(formula))
 	elif (ftype(formula) == OR_T):
-		#dprint("got an or, returning both")
 		return smon_purecons(cstep, history, lchild(formula)) or smon_purecons(cstep, history, rchild(formula))
 	elif (ftype(formula) == IMPLIES_T):
-		#dprint("got an implies, returning both")
 		return not smon_purecons(cstep, history, lchild(formula)) or smon_purecons(cstep, history, rchild(formula))
 	elif (ftype(formula) == EVENT_T): 
-		#dprint("got an eventually, checking struct")
-		l = tau(history, cstep) + formula[1]
-		h = tau(history, cstep) + formula[2]
+	#	l = tau(history, cstep) + formula[1]
+	#	h = tau(history, cstep) + formula[2]
+		l = cstep + formula[1]
+		h = cstep + formula[2]
 
-		#dprint("checking range: [%d, %d]" % (l,h))
 		for i in range(l, h+PERIOD):
 			if smon_purecons(i, history, rchild(formula)):
 				return True
 		# didn't find the event in the bounds
 		return False
 	elif (ftype(formula) == ALWAYS_T):
-		#dprint("got an always, checking struct")
-		l = tau(history, cstep) + formula[1]
-		h = tau(history, cstep) + formula[2]
-		#dprint("checking range: [%d, %d]" % (l,h))
+		#l = tau(history, cstep) + formula[1]
+		#h = tau(history, cstep) + formula[2]
+		l = cstep + formula[1]
+		h = cstep + formula[2]
 		for i in range(l, h+PERIOD):
 			if not smon_purecons(i, history, rchild(formula)):
 				return False 
 		# didn't find point where subform was false
 		return True
 	elif (ftype(formula) == UNTIL_T): 
-		#dprint("got until, checking struct")
-		l = tau(history, cstep) + formula[1]
-		h = tau(history, cstep) + formula[2]
+		#l = tau(history, cstep) + formula[1]
+		#h = tau(history, cstep) + formula[2]
+		l = cstep + formula[1]
+		h = cstep + formula[2]
 		end = None
-		#dprint("checking range: [%d, %d]" % (l,h))
 		for i in range(l, h+PERIOD):
 			if smon_purecons(i, history, untilP2(formula)):
 				end = i
@@ -258,44 +263,41 @@ def smon_purecons(cstep, history, formula):
 			return False
 
 		# found P2, check always P1
-		l = tau(history, cstep)
+		#l = tau(history, cstep)
+		l = cstep
 		h = end
-		#dprint("checking range: [%d, %d]" % (l,h))
 		for i in range(l, h+PERIOD):
 			if not smon_purecons(i, history, untilP1(formula)):
 				return False 
 		# didn't find point where subform was false
 		return True
 	elif (ftype(formula) == PEVENT_T):
-		#dprint("got a pevent, checking structure")
+		#l = tau(history, cstep) - formula[2]
+		#h = tau(history, cstep) - formula[1]
+		l = cstep + formula[1]
+		h = cstep + formula[2]
 
-		#dprint("got an eventually, checking struct")
-		l = tau(history, cstep) - formula[2]
-		h = tau(history, cstep) - formula[1]
-
-		#dprint("checking range: [%d, %d]" % (l,h))
 		for i in range(l, h+PERIOD):
 			if smon_purecons(i, history, rchild(formula)):
 				return True
 		# didn't find the event in the bounds
 		return False
 	elif (ftype(formula) == PALWAYS_T):
-		#dprint("got a palways, checking structure")
-		l = tau(history, cstep) - formula[2]
-		h = tau(history, cstep) - formula[1]
-		#dprint("checking range: [%d, %d]" % (l,h))
+		#l = tau(history, cstep) - formula[2]
+		#h = tau(history, cstep) - formula[1]
+		l = cstep - formula[2]
+		h = cstep - formula[1]
 		for i in range(l, h+PERIOD):
 			if not smon_purecons(i, history, rchild(formula)):
 				return False 
 		# didn't find point where subform was false
 		return True
 	elif (ftype(formula) == SINCE_T):
-		#dprint("got until, checking struct")
-		l = tau(history, cstep) - formula[2]
-		h = tau(history, cstep) - formula[1]
-		#dprint("checking range: %d - %d" % (l, h))
+		#l = tau(history, cstep) - formula[2]
+		#h = tau(history, cstep) - formula[1]
+		l = cstep - formula[2]
+		h = cstep - formula[1]
 		start = None
-		#dprint("checking range: [%d, %d]" % (l,h))
 		for i in range(l, h+PERIOD):
 			if smon_purecons(i, history, untilP2(formula)):
 				start = i
@@ -306,8 +308,8 @@ def smon_purecons(cstep, history, formula):
 
 		# found P2, check always P1
 		l = start
-		h = tau(history, cstep)
-		#dprint("checking range: [%d, %d]" % (l,h))
+		#h = tau(history, cstep)
+		h = cstep
 		for i in range(l, h+PERIOD):
 			if not smon_purecons(i, history, untilP1(formula)):
 				return False 
@@ -411,18 +413,18 @@ def build_structure(Struct, formula, extbound=0):
 
 def add_struct(Struct, tag, delay, formula):
 	global algChoose
-	if (algChoose == 0):
+	if (algChoose == ALG_RES):
 		newSt = istructure(tag, formula, delay)
-	elif (algChoose == 2):
+	elif (algChoose == ALG_STCONS):
 		newSt = ipstructure(tag, formula, delay)
 	else:
-		print "!!!!SHOULD NOT GET HERE....!!!"
+		dprint("!!!!SHOULD NOT GET HERE....!!!", DBG_ERROR)
 		sys.exit(2)
 	# Add interval that fills entire past bound 
 	for i in range(0-delay, 0):
 		newSt.addHist(i, True)
 	Struct[tag] = newSt
-	print "Added %s to %s" % (newSt, Struct)
+	dprint("Added %s to %s" % (newSt, Struct), DBG_STRUCT)
 	return
 
 def incr_struct_intres(Struct, cstate):
@@ -458,9 +460,10 @@ def incr_struct_intres(Struct, cstate):
 		dprint("Incremented and cleaned: %s" % (cStruct,), DBG_STRUCT)
 	return
 ##### END FULL STRUCT #########
+##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
 
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
 ######### PAST-ONLY STRUCT #####
-
 def build_past_structure(Struct, formula, extbound=0):
 	if (ftype(formula) == EXP_T):
 		dprint("BUILDING: got an exp, recursing", DBG_STRUCT)
@@ -492,55 +495,46 @@ def build_past_structure(Struct, formula, extbound=0):
 		return True
 	elif (ftype(formula) == EVENT_T): 
 		dprint("BUILDING: got an eventually, ADDING STRUCT and recursing", DBG_STRUCT)
-	#	cTag = tag_formula(formula)
-	#	d = delay(formula) + extbound
-	#	add_struct(Struct, cTag, d, rchild(formula))
+		d = delay(formula) + extbound
 		return build_past_structure(Struct, rchild(formula), extbound=d)
 	elif (ftype(formula) == ALWAYS_T):
 		dprint("BUILDING: got an always, ADDING STRUCT and recursing", DBG_STRUCT)
-		#cTag = tag_formula(formula)
-		#d = delay(formula) + extbound
-		#add_struct(Struct, cTag, d, rchild(formula))
-		return build_past_structure(Struct, rchild(formula), extbound=d)
+		d = delay(formula) + extbound
+		return build_past_structure(Struct, rchild(formula),extbound=d)
 	elif (ftype(formula) == UNTIL_T): 
 		dprint("BUILDING: got an until, ADDING STRUCT and recursing both", DBG_STRUCT)
-		# Tags get put into formula[2] so tagging P2 then P1 makes formula into
-		# [bound, bound, tagP1, tagP2, P1, P2]
-		# do P2
-		cTag = tag_formula(formula)
-		d2 = delay(untilP2(formula)) + extbound
-		add_struct(Struct, cTag, d2, untilP2(formula))
-		# do P1
-		cTag = tag_formula(formula)
 		d1 = delay(untilP1(formula)) + extbound
-		add_struct(Struct, cTag, d1, untilP1(formula))
-		build_past_structure(Struct, untilP1(formula), extbound=d1)
+		build_past_structure(Struct, untilP1(formula),extbound=d1)
+		d2 = delay(untilP2(formula)) + extbound
 		build_past_structure(Struct, untilP2(formula), extbound=d2)
 		return True
 	elif (ftype(formula) == PALWAYS_T):
 		dprint("BUILDING: got a past always, ADDING STRUCT and recursing", DBG_STRUCT)
-		cTag = tag_formula(formula)
-		d = past_delay(formula) + extbound
-		add_struct(Struct, cTag, d, rchild(formula))
+		if (not_future(formula)):
+			cTag = tag_formula(formula)
+			d = past_delay(formula) + extbound
+			add_struct(Struct, cTag, d, rchild(formula))
 		return build_past_structure(Struct, rchild(formula), extbound=d)
 	elif (ftype(formula) == PEVENT_T):
 		dprint("BUILDING: got a past eventually, ADDING STRUCT and recursing", DBG_STRUCT)
-		cTag = tag_formula(formula)
-		d = past_delay(formula) + extbound
-		add_struct(Struct, cTag, d, rchild(formula))
+		if (not_future(formula)):
+			cTag = tag_formula(formula)
+			d = past_delay(formula) + extbound
+			add_struct(Struct, cTag, d, rchild(formula))
 		return build_past_structure(Struct, rchild(formula), extbound=d)
 	elif (ftype(formula) == SINCE_T):
 		dprint("BUILDING: got a since, ADDING BOTH STRUCTS and recursing both", DBG_STRUCT)
-		# Tags get put into formula[2] so tagging P2 then P1 makes formula into
-		# [bound, bound, tagP1, tagP2, P1, P2]
-		# do P2
-		cTag = tag_formula(formula)
-		d2 = delay(untilP2(formula)) + extbound
-		add_struct(Struct, cTag, d2, untilP2(formula))
-		# do P1
-		cTag = tag_formula(formula)
-		d1 = delay(untilP1(formula)) + extbound
-		add_struct(Struct, cTag, d1, untilP1(formula))
+		if (not_future(formula)):
+			# Tags get put into formula[2] so tagging P2 then P1 makes formula into
+			# [bound, bound, tagP1, tagP2, P1, P2]
+			# do P2
+			cTag = tag_formula(formula)
+			d2 = delay(untilP2(formula)) + extbound
+			add_struct(Struct, cTag, d2, untilP2(formula))
+			# do P1
+			cTag = tag_formula(formula)
+			d1 = delay(untilP1(formula)) + extbound
+			add_struct(Struct, cTag, d1, untilP1(formula))
 		build_past_structure(Struct, untilP1(formula), extbound=d1)
 		build_past_structure(Struct, untilP2(formula), extbound=d2)
 		return True
@@ -550,7 +544,37 @@ def build_past_structure(Struct, formula, extbound=0):
 	# shouldn't get here
 	return False
 
+def incr_struct_stcons(Struct, history, step):
+	taglist = list(Struct.keys())
+	taglist.sort()
+	taglist.reverse()
+	# must check in order due to nested dependencies
+	for t in taglist:
+		cStruct = Struct[t]
 
+		# add current time residue to each structure
+		#newform = substitute_perint_agp(Struct, cstate, (ctime, cStruct.formula))
+		cStruct.addRes(Struct, history, step, cStruct.formula)
+
+		# reduce all residues with new time
+		cStruct.incrRes(Struct, history, step)
+		# update history based on residues
+		cStruct.updateHist()
+		# remove finished residues
+		cStruct.cleanRes()
+		# remove finished histories
+		cStruct.cleanHist()
+
+		#########################################
+		###################### Chopping
+		# remove unneeded values from struct list
+		#intlist = cStruct[-1]
+		#for i in (intlist[:]):
+		#	# remove any closed intervals that end earlier than our max look-back
+		#	if (not isopen_interval(i) and (i[1] < ctime-cStruct[2])):
+		#		intlist.remove(i)
+		dprint("Incremented and cleaned: %s" % (cStruct,), DBG_STRUCT)
+	return
 ####### END PAST-ONLY STRUCT #########
 
 ##########################################

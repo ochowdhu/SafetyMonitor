@@ -11,6 +11,7 @@ EXP_T, PROP_T, NPROP_T, NOT_T, AND_T, OR_T, IMPLIES_T, EVENT_T, ALWAYS_T, UNTIL_
 TAGi, FORMULAi, DELAYi, VALIDi, LISTi, FLISTi = range(0,6) 
 
 ALC_ALIVE, ALC_VIOLATE, ALC_SATISFY = range(0,3)
+ALG_RES, ALG_STCONS, ALG_PURECONS = range(0,3)
 
 ## debug constants
 DBG_ERROR = 0x01
@@ -18,6 +19,7 @@ DBG_STRUCT = 0x02
 DBG_SMON = 0x04
 DBG_STATE = 0x08
 DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
+#DBG_MASK = DBG_ERROR 
 
 # global constants
 PERIOD = 1
@@ -34,7 +36,6 @@ class ipstructure:
 		self.valid = 0
 
 	def addHist(self, time, val):
-		dprint("adding %s to history at time %d" % (val,time))
 		if (val):
 			added = False
 			for i in self.history:
@@ -45,31 +46,29 @@ class ipstructure:
 				self.history.append(Interval(time, time+PERIOD))
 		# Add to validity whether True or false
 		self.valid = max(self.valid, time+PERIOD)
-	def addRes(self, Struct, cstate, time, formula):
-		self.residues.append((time, subsitute_stcons(Struct, cstate, (time, formula))))
+	def addRes(self, Struct, history, step, formula):
+		self.residues.append((step, substitute_stcons(Struct, history, step, (step, formula))))
 	def cleanRes(self):
 		self.residues = [f for f in self.residues if (f[1] != True and f[1] != False)]
+	def cleanHist(self):
+		self.history = [i for i in self.history if (i.end >= self.valid-self.delay)]
 	def updateHist(self):
 		for res in self.residues:
 			if (res[1] == True):
 				self.addHist(res[0], True)
 			elif (res[1] == False):
 				self.addHist(res[0], False)
-	def incrRes(self, Struct, cstate):
+	def incrRes(self, Struct, history, step):
 		for i,f in enumerate(self.residues):
-			self.residues[i] = (f[0], reduce(substitute_stcons(Struct, cstate, f)))
+			self.residues[i] = (f[0], reduce(substitute_stcons(Struct, history, step, f)))
 	def alCheck(self, interval):
-		dprint("alchecking %s" % interval)
 		trInt = interval.truncate(self.valid)
-		dprint("truncated: %s" % trInt)
 		# if truncate is empty, then we can't check any of interval yet
 		if (trInt.empty()):
 			return ALC_ALIVE
-		dprint("not empty")
 		# can check something, lets look
 		found_super = False
 		for i in self.history:
-			dprint("checking %s >= %s" % (i, trInt))
 			if (i.superset(trInt)):
 				found_super = True
 		# didn't find always from start to current, violation
@@ -92,7 +91,6 @@ class istructure:
 		self.valid = 0
 
 	def addHist(self, time, val):
-		dprint("adding %s to history at time %d" % (val,time))
 		if (val):
 			added = False
 			for i in self.history:
@@ -119,17 +117,13 @@ class istructure:
 		for i,f in enumerate(self.residues):
 			self.residues[i] = (f[0], reduce(substitute_perint_agp(Struct, cstate, f)))
 	def alCheck(self, interval):
-		dprint("alchecking %s" % interval)
 		trInt = interval.truncate(self.valid)
-		dprint("truncated: %s" % trInt)
 		# if truncate is empty, then we can't check any of interval yet
 		if (trInt.empty()):
 			return ALC_ALIVE
-		dprint("not empty")
 		# can check something, lets look
 		found_super = False
 		for i in self.history:
-			dprint("checking %s >= %s" % (i, trInt))
 			if (i.superset(trInt)):
 				found_super = True
 		# didn't find always from start to current, violation
@@ -229,7 +223,6 @@ def tag_formula(formula):
 
 # get tag of past-time formula
 def get_tags(formula):
-	#print "GET_TAGS OF %s" % (formula,)
 	if (len(formula) == 5):
 		return formula[3]
 	elif (len(formula) == 7):
@@ -272,7 +265,39 @@ def ftype(formula):
 	else:
 		return INVALID_T
 
-
+def not_future(formula):
+	if (ftype(formula) == EXP_T):
+		return not_future(Struct, rchild(formula))
+	elif (ftype(formula) == VALUE_T):
+		return True
+	elif (ftype(formula) == PROP_T):
+		return True
+	elif (ftype(formula) == NPROP_T):
+		return True
+	elif (ftype(formula) == NOT_T):
+		return not_future(Struct, rchild(formula))
+	elif (ftype(formula) == AND_T):
+		return not_future(Struct, lchild(formula)) and not_future(Struct, rchild(formula))
+	elif (ftype(formula) == OR_T):
+		return not_future(Struct, lchild(formula)) and not_future(Struct, rchild(formula))
+	elif (ftype(formula) == IMPLIES_T):
+		return not_future(Struct, lchild(formula)) and not_future(Struct, rchild(formula))
+	elif (ftype(formula) == EVENT_T): 
+		return False
+	elif (ftype(formula) == ALWAYS_T):	
+		return False
+	elif (ftype(formula) == UNTIL_T): 
+		return False
+	elif (ftype(formula) == PALWAYS_T):
+		return not_future(rchild(formula))
+	elif (ftype(formula) == PEVENT_T):
+		return not_future(rchild(formula))
+	elif (ftype(formula) == SINCE_T):
+		return not_future(untilP1(formula)) and not_future(untilP2(formula))
+	else:
+		# shouldn't get here
+		dprint("future checking error...", DBG_ERROR)
+		return False
 
 def substitute_per_agp(Struct, cstate, formula_entry):
 	ctime = cstate["time"]
@@ -301,7 +326,6 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 	elif (ftype(formula) == OR_T):
 		return ['orprop', substitute_per_agp(Struct, cstate, (formtime,formula[1])), substitute_per_agp(Struct, cstate, (formtime, formula[2]))]
 	elif (ftype(formula) == IMPLIES_T):
-		print "Got implies %s" % formula
 		return ['impprop', substitute_per_agp(Struct, cstate, (formtime,formula[1])), substitute_per_agp(Struct, cstate, (formtime, formula[2]))]
 	elif (ftype(formula) == EVENT_T): 
 		subStruct = Struct[get_tags(formula)]
@@ -418,8 +442,8 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 		sStart = formtime - hbound(formula)
 		start = None
 		allF = True
-		print "checking (%d,%d)" % (sStart, sEnd)
-		print "sub: %s" % subStruct2
+		#print "checking (%d,%d)" % (sStart, sEnd)
+		#print "sub: %s" % subStruct2
 		for t in range(sStart, sEnd+PERIOD, PERIOD):
 			if (t in subStruct2.history):
 				if (subStruct2.history[t] == True):
@@ -429,7 +453,7 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 			else:
 				allF = False
 		# if we're past the time we have to have an answer, we didn't see the eventually
-		print "start: %s" % start
+		#print "start: %s" % start
 		found = True
 		if allF: 
 			return False
@@ -440,8 +464,8 @@ def substitute_per_agp(Struct, cstate, formula_entry):
 		sEnd = formtime
 		sStart = start
 		allT = True
-		print "checking (%d,%d)" % (sStart, sEnd)
-		print "sub: %s" % subStruct1
+		#print "checking (%d,%d)" % (sStart, sEnd)
+		#print "sub: %s" % subStruct1
 		for t in range(sStart, sEnd+PERIOD, PERIOD):
 			if (t in subStruct1.history):
 				if (subStruct1.history[t] == False):
@@ -482,7 +506,6 @@ def substitute_perint_agp(Struct, cstate, formula_entry):
 	elif (ftype(formula) == OR_T):
 		return ['orprop', substitute_perint_agp(Struct, cstate, (formtime,formula[1])), substitute_perint_agp(Struct, cstate, (formtime, formula[2]))]
 	elif (ftype(formula) == IMPLIES_T):
-		print "Got implies %s" % formula
 		return ['impprop', substitute_perint_agp(Struct, cstate, (formtime,formula[1])), substitute_perint_agp(Struct, cstate, (formtime, formula[2]))]
 	elif (ftype(formula) == EVENT_T): 
 		subStruct = Struct[get_tags(formula)]
@@ -605,153 +628,163 @@ def substitute_perint_agp(Struct, cstate, formula_entry):
 	else:
 		return INVALID_T
 
-def substitute_stcons(Struct, cstate, formula_entry):
-	ctime = cstate["time"]
+def substitute_stcons(Struct, history, eptr, formula_entry):
 	formtime = formula_entry[0]
 	formula = formula_entry[1]
 	if (ftype(formula) == EXP_T):
-		return [formula[0], substitute_perint_agp(Struct, cstate, (formtime, formula[1]))]
+		return [formula[0], substitute_stcons(Struct, history, eptr, (formtime, lchild(formula)))]
 	elif (ftype(formula) == VALUE_T):
 		return formula
 	elif (ftype(formula) == PROP_T):
-		#return cstate[formula[1]]
-		if (cstate[formula[1]]):
+		if (history[eptr][lchild(formula)]):
 			return True
 		else:
 			return False
 	elif (ftype(formula) == NPROP_T):
-		#return not cstate[formula[1]]
-		if (cstate[formula[1]]):
+		if (history[eptr][lchild(formula)]):
 			return False
 		else:
 			return True
 	elif (ftype(formula) == NOT_T):
-		return ['notprop', substitute_perint_agp(Struct, cstate, (formtime, formula[1]))]
+		return ['notprop', substitute_stcons(Struct, history, eptr, (formtime, lchild(formula)))]
 	elif (ftype(formula) == AND_T):
-		return ['andprop', substitute_perint_agp(Struct, cstate, (formtime, formula[1])), substitute_perint_agp(Struct, cstate, (formtime,formula[2]))]
+		return ['andprop', substitute_stcons(Struct, history, eptr, (formtime, lchild(formula))), substitute_stcons(Struct, history, eptr, (formtime,rchild(formula)))]
 	elif (ftype(formula) == OR_T):
-		return ['orprop', substitute_perint_agp(Struct, cstate, (formtime,formula[1])), substitute_perint_agp(Struct, cstate, (formtime, formula[2]))]
+		return ['orprop', substitute_stcons(Struct, history, eptr, (formtime,lchild(formula))), substitute_stcons(Struct, history, eptr, (formtime, rchild(formula)))]
 	elif (ftype(formula) == IMPLIES_T):
-		print "Got implies %s" % formula
-		return ['impprop', substitute_perint_agp(Struct, cstate, (formtime,formula[1])), substitute_perint_agp(Struct, cstate, (formtime, formula[2]))]
+		return ['impprop', substitute_stcons(Struct, history, eptr, (formtime,lchild(formula))), substitute_stcons(Struct, history, eptr, (formtime, rchild(formula)))]
 	elif (ftype(formula) == EVENT_T): 
-		subStruct = Struct[get_tags(formula)]
-		sEnd = hbound(formula) + formtime
-		sStart = lbound(formula) + formtime
-		check = Interval(sStart, sEnd+PERIOD)
+		l = lbound(formula) + formtime
+		h = hbound(formula) + formtime
 		
-		for i in subStruct.history:
-			if i.intersects(check):
+		for i in range(l, h+PERIOD):
+			if reduce(substitute_stcons(Struct, history, i, (i, rchild(formula)))):
 				return True
-		# not waiting on any data, if formula satisfied would've returned true above
-		if (subStruct.valid > sEnd):
-			return False
-		return formula
+		return False
 	elif (ftype(formula) == ALWAYS_T):
-		subStruct = Struct[get_tags(formula)]
-		sEnd = hbound(formula) + formtime
-		sStart = lbound(formula) + formtime
-		check = Interval(sStart, sEnd+PERIOD)
+		l = lbound(formula) + formtime
+		h = hbound(formula) + formtime
 
-		alcheck = subStruct.alCheck(check)
-		if (alcheck == ALC_SATISFY):
-			return True
-		elif (alcheck == ALC_VIOLATE):
-			return False
-		else: # alcheck == ALC_ALIVE
-			return formula
+		for i in range(l, h+PERIOD):
+			if (not reduce(substitute_stcons(Struct, history, i, (i, rchild(formula))))):
+				return False
+		return True
 	elif (ftype(formula) == UNTIL_T): 
-		tags = get_tags(formula)
-		subStruct1 = Struct[tags[0]]
-		subStruct2 = Struct[tags[1]]
-		sEnd = hbound(formula) + formtime
-		sStart = lbound(formula) + formtime
-		check = Interval(sStart, sEnd+PERIOD)
+		l = lbound(formula) + formtime
+		h = hbound(formula) + formtime
 		end = None
-		efound = True
-
-		for i in subStruct2.history:
-			if i.intersects(check):
-				end = i.intersection(check).start
-		# didn't find P2 and past time
-		if (end is None and subStruct2.valid > sEnd):
+		for i in range(l, h+PERIOD):
+			if reduce(substitute_stcons(Struct, history, i, (i, untilP2(formula)))):
+				end = i
+				break
+		if (end is None):
 			return False
-		elif (end is None):
-			end = subStruct2.valid
-			efound = False
-		
-		# did find eventually, check P1
-		sEnd = end + PERIOD		# end value is inclusive
-		sStart = formtime
-		check = Interval(sStart, sEnd)
-		alcheck = subStruct1.alCheck(check)
+		#
+		l = formtime
+		h = end
 
-		if (alcheck == ALC_SATISFY and efound):
-			return True
-		elif (alcheck == ALC_VIOLATE):
-			return False
-		else: # alcheck == ALC_ALIVE or ALC_SAT and not found
-			return formula
+		for i in range(l, h+PERIOD):
+			if (not reduce(substitute_stcons(Struct, history, i, (i, untilP1(formula))))):
+				return False
+		return True
 	elif (ftype(formula) == PEVENT_T):
-		subStruct = Struct[get_tags(formula)]
-		sEnd = formtime - lbound(formula)
-		sStart = formtime - hbound(formula)
-		check = Interval(sStart, sEnd+PERIOD)
-		
-		for i in subStruct.history:
-			if i.intersects(check):
-				return True
-		# not waiting on any data, if formula satisfied would've returned true above
-		if (subStruct.valid > sEnd):
+		if (not_future(formula)):
+			subStruct = Struct[get_tags(formula)]
+			sEnd = formtime - lbound(formula)
+			sStart = formtime - hbound(formula)
+			check = Interval(sStart, sEnd+PERIOD)
+			
+			for i in subStruct.history:
+				if i.intersects(check):
+					return True
+			# not waiting on any data, if formula satisfied would've returned true above
+			if (subStruct.valid > sEnd):
+				return False
+			return formula
+		#### Nested, Don't have struct, check manually
+		else:
+			l = formtime - hbound(formula)
+			h = formtime - lbound(formula)
+			
+			for i in range(l, h+PERIOD):
+				if reduce(substitute_stcons(Struct, history, i, (i, rchild(formula)))):
+					return True
 			return False
-		return formula
 	elif (ftype(formula) == PALWAYS_T):
-		subStruct = Struct[get_tags(formula)]
-		sEnd = formtime - lbound(formula)
-		sStart = formtime - hbound(formula)
-		check = Interval(sStart, sEnd+PERIOD)
+		if (not_future(formula)):
+			subStruct = Struct[get_tags(formula)]
+			sEnd = formtime - lbound(formula)
+			sStart = formtime - hbound(formula)
+			check = Interval(sStart, sEnd+PERIOD)
 
-		alcheck = subStruct.alCheck(check)
-		if (alcheck == ALC_SATISFY):
+			alcheck = subStruct.alCheck(check)
+			if (alcheck == ALC_SATISFY):
+				return True
+			elif (alcheck == ALC_VIOLATE):
+				return False
+			else: # alcheck == ALC_ALIVE
+				return formula
+		#### nested future, don't have struct, check manually
+		else: 
+			l = formtime - hbound(formula)
+			h = formtime - lbound(formula)
+
+			for i in range(l, h+PERIOD):
+				if (not reduce(substitute_stcons(Struct, history, i, (i, rchild(formula))))):
+					return False
 			return True
-		elif (alcheck == ALC_VIOLATE):
-			return False
-		else: # alcheck == ALC_ALIVE
-			return formula
 	elif (ftype(formula) == SINCE_T):
-		tags = get_tags(formula)
-		subStruct1 = Struct[tags[0]]
-		subStruct2 = Struct[tags[1]]
-		sEnd = formtime - lbound(formula)
-		sStart = formtime - hbound(formula)
+		if (not_future(formula)):
+			tags = get_tags(formula)
+			subStruct1 = Struct[tags[0]]
+			subStruct2 = Struct[tags[1]]
+			sEnd = formtime - lbound(formula)
+			sStart = formtime - hbound(formula)
 
+			check = Interval(sStart, sEnd+PERIOD)
+			start = None
+			efound = True
 
-		check = Interval(sStart, sEnd+PERIOD)
-		start = None
-		efound = True
+			for i in subStruct2.history:
+				if i.intersects(check):
+					start = i.intersection(check).start
+			# didn't find P2 and past time
+			if (start is None and subStruct2.valid > sEnd):
+				return False
+			elif (start is None):
+				start = subStruct2.valid
+				efound = False
 
-		for i in subStruct2.history:
-			if i.intersects(check):
-				start = i.intersection(check).start
-		# didn't find P2 and past time
-		if (start is None and subStruct2.valid > sEnd):
-			return False
-		elif (start is None):
-			start = subStruct2.valid
-			efound = False
+			# did find eventually, check P1
+			sEnd = formtime + PERIOD	# end is inclusive
+			sStart = start 
+			check = Interval(sStart, sEnd)
+			alcheck = subStruct1.alCheck(check)
 
-		# did find eventually, check P1
-		sEnd = formtime + PERIOD	# end is inclusive
-		sStart = start 
-		check = Interval(sStart, sEnd)
-		alcheck = subStruct1.alCheck(check)
-
-		if (alcheck == ALC_SATISFY and efound):
+			if (alcheck == ALC_SATISFY and efound):
+				return True
+			elif (alcheck == ALC_VIOLATE):
+				return False
+			else: # alcheck == ALC_ALIVE or ALC_SAT and not found
+				return formula
+		# nested future, don't have struct, check manually
+		else:
+			l = formtime - hbound(formula)
+			h = formtime - lbound(formula)
+			start = None
+			for i in range(l, h+PERIOD):
+				if reduce(substitute_stcons(Struct, history, i, (i, untilP2(formula)))):
+					end = i
+					break
+			if (start is None):
+				return False
+			#
+			l = start
+			h = formtime 
+			for i in range(l, h+PERIOD):
+				if (not reduce(substitute_stcons(Struct, history, i, (i, untilP1(formula))))):
+					return False
 			return True
-		elif (alcheck == ALC_VIOLATE):
-			return False
-		else: # alcheck == ALC_ALIVE or ALC_SAT and not found
-			return formula
 	else:
 		return INVALID_T
 
@@ -776,7 +809,7 @@ def reduce(formula):
 	elif (ftype(formula) == AND_T):
 		child1 = reduce(formula[1])
 		child2 = reduce(formula[2])
-		if (child1 == False or child == False):
+		if (child1 == False or child2 == False):
 			return False
 		elif (child1 == True and child2 == True):
 			return True
@@ -811,16 +844,10 @@ def reduce(formula):
 		return formula
 	elif (ftype(formula) == PEVENT_T):
 		return formula
-		#dprint("Can't get here, should've been removed by sub()", DBG_ERROR)
-		#return INVALID_T
 	elif (ftype(formula) == PALWAYS_T):
 		return formula
-		#dprint("Can't get here, should've been removed by sub()", DBG_ERROR)
-		#return INVALID_T
 	elif (ftype(formula) == SINCE_T):
 		return formula
-		#dprint("Can't get here, should've been removed by sub()", DBG_ERROR)
-		#return INVALID_T
 	else:
 		return INVALID_T
 
@@ -897,7 +924,7 @@ def past_delay(formula):
 	# shouldn't get here
 	return None
 def wdelay(formula):
-	print "wdelay %s" % formula
+	#print "wdelay %s" % formula
 	if (ftype(formula) == EXP_T):
 		return wdelay(rchild(formula))
 	elif (ftype(formula) == PROP_T):
@@ -961,7 +988,44 @@ def mwdelay(formula):
 		return None
 	# shouldn't get here
 	return None
-
+def nfdelay(formula):
+	if (ftype(formula) == EXP_T):
+		return nfdelay(rchild(formula))
+	elif (ftype(formula) == PROP_T):
+		return 0
+	elif (ftype(formula) == NPROP_T):
+		return 0
+	elif (ftype(formula) == NOT_T):
+		return nfdelay(rchild(formula))
+	elif (ftype(formula) == AND_T):
+		return max(nfdelay(lchild(formula)),nfdelay(rchild(formula)))
+	elif (ftype(formula) == OR_T):
+		return max(nfdelay(lchild(formula)),nfdelay(rchild(formula)))
+	elif (ftype(formula) == IMPLIES_T):
+		return max(nfdelay(lchild(formula)),nfdelay(rchild(formula)))
+	elif (ftype(formula) == EVENT_T): 
+		return nfdelay(rchild(formula))
+	elif (ftype(formula) == ALWAYS_T):
+		return nfdelay(rchild(formula))
+	elif (ftype(formula) == UNTIL_T): 
+		return max(nfdelay(untilP1(formula)),nfdelay(untilP2(formula)))
+	elif (ftype(formula) == PALWAYS_T):
+		if (not_future(formula)):
+			return nfdelay(rchild(formula))
+		return hbound(formula) + nfdelay(rchild(formula))
+	elif (ftype(formula) == PEVENT_T):
+		if (not_future(formula)):
+			return nfdelay(rchild(formula))
+		return hbound(formula) + nfdelay(rchild(formula))
+	elif (ftype(formula) == SINCE_T):
+		if (not_future(formula)):
+			return max(nfdelay(untilP1(formula)),nfdelay(untilP2(formula)))
+		return hbound(formula) + max(nfdelay(untilP1(formula)),nfdelay(untilP2(formula)))
+	else:
+		dprint("NESTED-FUTURE-DELAY ERROR: Got unmatched AST node while building", DBG_ERROR);
+		return None
+	# shouldn't get here
+	return None
 
 ########## Interval Utils
 # add interval to list
