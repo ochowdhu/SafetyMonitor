@@ -25,8 +25,9 @@ def main():
 	#### Handle input parameters
 	##############################
 	#algChoose = 0
+	print len(sys.argv)
 	if len(sys.argv) > 4:
-		PERIOD = int(sys.argv[3])
+		PERIOD = int(sys.argv[4])
 	if len(sys.argv) > 3:
 		inFormula = eval(sys.argv[1])	# DANGEROUS. DON'T PASS ME ARBITRARY CODE
 		inFile = open(sys.argv[2], "r")
@@ -178,7 +179,9 @@ def mon_intresidue(inFile, inFormula, traceOrder):
 	for line in inFile:
 			dprint("###### New event received",DBG_SMON)
 			updateState(cstate, traceOrder, line)
-			incr_struct_intres(Struct, cstate)
+			with Timer() as t:
+				incr_struct_intres(Struct, cstate)
+			dprint("incr struct took %s s" % (t.secs), DBG_TIME)
 
 			dprint("Adding current formula", DBG_SMON)
 			formulas.append((cstate["time"], inFormula))
@@ -586,6 +589,9 @@ def updateState(cstate, traceOrder, line):
 		dprint("%d| Updating %s to %s" % (i, traceOrder[i], vals[i]), DBG_STATE)
 		cstate[traceOrder[i]] = int(vals[i])
 
+def setAlgChoose(val):
+	global algChoose
+	algChoose = val
 #### Python stuff - set main and catch ^C
 #########################################
 def signal_handler(signal, frame):

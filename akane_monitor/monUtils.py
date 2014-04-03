@@ -18,14 +18,18 @@ DBG_ERROR = 0x01
 DBG_STRUCT = 0x02
 DBG_SMON = 0x04
 DBG_STATE = 0x08
-DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
-#DBG_MASK = DBG_ERROR 
+DBG_TIME = 0x10
+#DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
+DBG_MASK = DBG_ERROR | DBG_TIME
 
 # global constants
 PERIOD = 1
 sTag = 0
 
 
+def setDBG_MASK(val):
+	global DBG_MASK
+	DBG_MASK = val
 class ipstructure:
 	def __init__(self, tag, formula=[], delay=0):
 		self.tag = tag
