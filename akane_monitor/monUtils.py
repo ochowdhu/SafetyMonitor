@@ -20,7 +20,7 @@ DBG_SMON = 0x04
 DBG_STATE = 0x08
 DBG_TIME = 0x10
 #DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
-DBG_MASK = DBG_ERROR | DBG_TIME
+DBG_MASK = DBG_ERROR | DBG_TIME 
 
 # global constants
 PERIOD = 1
@@ -271,7 +271,7 @@ def ftype(formula):
 
 def not_future(formula):
 	if (ftype(formula) == EXP_T):
-		return not_future(Struct, rchild(formula))
+		return not_future(rchild(formula))
 	elif (ftype(formula) == VALUE_T):
 		return True
 	elif (ftype(formula) == PROP_T):
@@ -279,13 +279,13 @@ def not_future(formula):
 	elif (ftype(formula) == NPROP_T):
 		return True
 	elif (ftype(formula) == NOT_T):
-		return not_future(Struct, rchild(formula))
+		return not_future(rchild(formula))
 	elif (ftype(formula) == AND_T):
-		return not_future(Struct, lchild(formula)) and not_future(Struct, rchild(formula))
+		return not_future(lchild(formula)) and not_future(rchild(formula))
 	elif (ftype(formula) == OR_T):
-		return not_future(Struct, lchild(formula)) and not_future(Struct, rchild(formula))
+		return not_future(lchild(formula)) and not_future(rchild(formula))
 	elif (ftype(formula) == IMPLIES_T):
-		return not_future(Struct, lchild(formula)) and not_future(Struct, rchild(formula))
+		return not_future(lchild(formula)) and not_future(rchild(formula))
 	elif (ftype(formula) == EVENT_T): 
 		return False
 	elif (ftype(formula) == ALWAYS_T):	

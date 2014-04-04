@@ -16,6 +16,10 @@ from timer import Timer
 # global constants
 delim = ','
 algChoose = None 
+incrtime = 0
+incrcount = 0
+redtime = 0
+redcount = 0
 
 ###### Keeping this script compatible with resMonitor for now
 def main():
@@ -102,9 +106,10 @@ def mon_purecons(inFile, inFormula, traceOrder):
 		cptr = cptr + 1
 		#
 		# clean history
-		histremove = [k for k in history if (cptr - eptr > (PD+D))]	
+		histremove = [k for k in history if (cptr - int(history[k]['time']) > (PD+D))]	
+		#print "removing %s from history" % histremove
 		for k in histremove:
-			dprint("removing history %s" % k,DBG_SMON)
+			#dprint("removing history %s" % k,DBG_SMON)
 			del history[k]
 	if allPass:
 		print "#### Trace Satisfied formula ###"
@@ -112,6 +117,8 @@ def mon_purecons(inFile, inFormula, traceOrder):
 		print "### Trace Violated formula ###"
 
 def mon_stcons(inFile, inFormula, traceOrder):
+	global incrtime
+	global incrcount
 	allPass = True
 	FastDie = True
 	cstate = {}
@@ -131,7 +138,10 @@ def mon_stcons(inFile, inFormula, traceOrder):
 	for line in inFile:
 		updateState(cstate, traceOrder, line)
 		history[cptr] = cstate.copy()
-		incr_struct_stcons(Struct, history, cptr)
+		with Timer() as t:
+			incr_struct_stcons(Struct, history, cptr)
+		incrtime = incrtime + t.secs
+		incrcount = incrcount + 1
 		#
 		ctime = cstate["time"]
 		dprint("current state is %s" % (cstate,), DBG_SMON)
@@ -144,20 +154,29 @@ def mon_stcons(inFile, inFormula, traceOrder):
 			allPass = allPass and mon
 			if (FastDie and bool(mon) == False):
 				dprint("!!!!FORMULA VIOLATED %s@%s" % (eptr, cptr))
+				dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
 				sys.exit(5)
 			eptr = eptr + 1
 		cptr = cptr + 1
 		#
 		# clean history
-		histremove = [k for k in history if (cptr - eptr > D+NFD)]	
+		histremove = [k for k in history if (cptr - int(history[k]['time']) > D+NFD)]	
+		#print "removing %s from history" % histremove
 		for k in histremove:
 			del history[k]
 	if allPass:
 		print "#### Trace Satisfied formula ###"
+		dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
 	else:
 		print "### Trace Violated formula ###"
+		dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
 
 def mon_intresidue(inFile, inFormula, traceOrder):
+	## TIMING
+	global incrtime
+	global incrcount
+	global redtime
+	global redcount
 	# some algorithm local variables
 	cstate = {}
 	formulas = []
@@ -181,7 +200,8 @@ def mon_intresidue(inFile, inFormula, traceOrder):
 			updateState(cstate, traceOrder, line)
 			with Timer() as t:
 				incr_struct_intres(Struct, cstate)
-			dprint("incr struct took %s s" % (t.secs), DBG_TIME)
+			incrtime = incrtime + t.secs
+			incrcount = incrcount + 1
 
 			dprint("Adding current formula", DBG_SMON)
 			formulas.append((cstate["time"], inFormula))
@@ -191,18 +211,29 @@ def mon_intresidue(inFile, inFormula, traceOrder):
 				formulas[i] = (f[0], reduce(substitute_perint_agp(Struct, cstate, f)))
 			dprint(formulas, DBG_SMON)
 			dprint("removing finished formulas and check violations...", DBG_SMON)
+			# count avg reduction time
+			rform = [f[0] for f in formulas if f[1] == True]
+			for i in rform:
+				redtime = redtime + (int(cstate["time"]) - int(i))
+				redcount = redcount + 1
 			# remove any True formulas from the list
 			formulas[:] = [f for f in formulas if f[1] != True]
 			# skip actually checking while we see if struct build works
 			for i,f in enumerate(formulas[:]):
 				if (f[1] == False):
 						print "VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+						dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+						dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
 						sys.exit(1)
 				else:	# eventually never satisfied
 					if (f[0]+WD <= cstate["time"]):
 						print "VIOLATOR: %s" % (f,)
 						print "VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+						dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+						dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
 						sys.exit(1)
+	dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+	dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
 	print "finished, trace satisfies formula"
 
 ########### END MONITOR FUNCTIONS ############
@@ -224,12 +255,18 @@ def smon_purecons(cstep, history, formula):
 		#	sys.exit(2)
 	elif (ftype(formula) == NPROP_T):
 		return not history[cstep][rchild(formula)]
+	elif (ftype(formula) == NOT_T):
+		return not smon_purecons(cstep, history, rchild(formula))
 	elif (ftype(formula) == AND_T):
 		return smon_purecons(cstep, history, lchild(formula)) and smon_purecons(cstep, history, rchild(formula))
 	elif (ftype(formula) == OR_T):
 		return smon_purecons(cstep, history, lchild(formula)) or smon_purecons(cstep, history, rchild(formula))
 	elif (ftype(formula) == IMPLIES_T):
-		return not smon_purecons(cstep, history, lchild(formula)) or smon_purecons(cstep, history, rchild(formula))
+		left = smon_purecons(cstep,history, lchild(formula))
+		right = smon_purecons(cstep, history, rchild(formula))
+		#print "implies: left: %s right: %s " % (left, right)
+		return not left or right
+		#return not smon_purecons(cstep, history, lchild(formula)) or smon_purecons(cstep, history, rchild(formula))
 	elif (ftype(formula) == EVENT_T): 
 	#	l = tau(history, cstep) + formula[1]
 	#	h = tau(history, cstep) + formula[2]
@@ -277,8 +314,8 @@ def smon_purecons(cstep, history, formula):
 	elif (ftype(formula) == PEVENT_T):
 		#l = tau(history, cstep) - formula[2]
 		#h = tau(history, cstep) - formula[1]
-		l = cstep + formula[1]
-		h = cstep + formula[2]
+		l = cstep - formula[2]
+		h = cstep - formula[1]
 
 		for i in range(l, h+PERIOD):
 			if smon_purecons(i, history, rchild(formula)):
@@ -319,6 +356,7 @@ def smon_purecons(cstep, history, formula):
 		# didn't find point where subform was false
 		return True
 	else:
+		print "got formula %s" % formula
 		return INVALID_T
 
 ######### END CONSERVATIVE SOLVE ##########
