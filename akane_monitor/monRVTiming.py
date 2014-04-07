@@ -69,6 +69,9 @@ def main():
 	elif (algChoose == "fstcons"):
 		algChoose = ALG_FSTCONS
 		mon_fstcons(inFile, inFormula, traceOrder)
+	elif (algChoose == "rescons"):
+		algChoose = ALG_RESCONS
+		mon_rescons(inFile, inFormula, traceOrder)
 	else:
 		print "No algorithm chosen, quitting..."
 ############# END MAIN ############
@@ -166,6 +169,62 @@ def mon_fstcons(inFile, inFormula, traceOrder):
 			del history[k]
 		# increment current pointer
 		cptr = cptr + 1
+	dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+	#dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
+	if allPass:
+		print "#### Trace Satisfied formula ###"
+	else:
+		print "### Trace Violated formula ###"
+
+def mon_rescons(inFile, inFormula, traceOrder):
+	global incrtime
+	global incrcount
+	allPass = True
+	FastDie = True
+	cstate = {}
+	formulas =[]
+	history = {}
+	Struct = {}
+	#build_structure(Struct, inFormula)
+	print "building with build_fst"
+	build_fst_structure(Struct, inFormula)
+	WD = wdelay(inFormula)
+	PD = past_delay(inFormula)
+	D = delay(inFormula)
+	#
+	eptr = 0
+	cptr = 0
+	#
+	dprint("Using WD: %s D: %s, PD: %s" % (WD,D,PD))
+	#
+	for line in inFile:
+		updateState(cstate, traceOrder, line)
+		history[cptr] = cstate.copy()
+		with Timer() as t:
+			incr_struct_fstcons(Struct, cstate)
+		incrtime = incrtime + t.secs
+		incrcount = incrcount + 1
+		#
+		ctime = cstate["time"]
+		dprint("current state is %s" % (cstate,), DBG_SMON)
+		#
+		while ((eptr <= cptr) and (tau(history,cptr) - tau(history,eptr) >= WD)):
+			dprint("checking step %s" % eptr, DBG_SMON)
+			mon = reduce(substitute_perint_agp(Struct, history[eptr], (tau(history, eptr), inFormula)))
+			#
+			allPass = allPass and mon
+			if (FastDie and bool(mon) == False):
+				dprint("!!!!FORMULA VIOLATED %s@%s -- %s@%s" % (eptr, cptr, tau(history, eptr), tau(history,cptr)))
+				sys.exit(5)
+			eptr = eptr + 1
+		# clean history
+		histremove = [k for k in history if (tau(history,cptr) - tau(history,k) > (PD+D))]	
+		for k in histremove:
+			del history[k]
+		# increment current pointer
+		cptr = cptr + 1
+	dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+	#dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
 	if allPass:
 		print "#### Trace Satisfied formula ###"
 	else:
@@ -628,7 +687,7 @@ def build_structure(Struct, formula, extbound=0):
 
 def add_struct(Struct, tag, delay, formula):
 	global algChoose
-	if (algChoose == ALG_RES):
+	if (algChoose == ALG_RES or algChoose == ALG_RESCONS):
 		newSt = istructure(tag, formula, delay)
 	elif (algChoose == ALG_STCONS):
 		newSt = ipstructure(tag, formula, delay)
@@ -666,14 +725,6 @@ def incr_struct_intres(Struct, cstate):
 		# remove finished histories
 		cStruct.cleanHist()
 
-		#########################################
-		###################### Chopping
-		# remove unneeded values from struct list
-		#intlist = cStruct[-1]
-		#for i in (intlist[:]):
-		#	# remove any closed intervals that end earlier than our max look-back
-		#	if (not isopen_interval(i) and (i[1] < ctime-cStruct[2])):
-		#		intlist.remove(i)
 		dprint("Incremented and cleaned: %s" % (cStruct,), DBG_STRUCT)
 	return
 

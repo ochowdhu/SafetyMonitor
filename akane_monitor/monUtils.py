@@ -11,7 +11,7 @@ EXP_T, PROP_T, NPROP_T, NOT_T, AND_T, OR_T, IMPLIES_T, EVENT_T, ALWAYS_T, UNTIL_
 TAGi, FORMULAi, DELAYi, VALIDi, LISTi, FLISTi = range(0,6) 
 
 ALC_ALIVE, ALC_VIOLATE, ALC_SATISFY = range(0,3)
-ALG_RES, ALG_STCONS, ALG_PURECONS = range(0,3)
+ALG_RES, ALG_STCONS, ALG_PURECONS, ALG_FSTCONS, ALG_RESCONS = range(0,5)
 
 ## debug constants
 DBG_ERROR = 0x01
@@ -30,6 +30,9 @@ sTag = 0
 def setDBG_MASK(val):
 	global DBG_MASK
 	DBG_MASK = val
+def setPeriod(per):
+	global PERIOD
+	PERIOD = per
 class ipstructure:
 	def __init__(self, tag, formula=[], delay=0):
 		self.tag = tag
@@ -855,6 +858,8 @@ def reduce(formula):
 	else:
 		return INVALID_T
 
+def tau(history, cptr):
+	return int(history[cptr]['time'])
 
 def dprint(string, lvl=0xFF):
 #	print "DPRINT %s %d" % (string, lvl)
