@@ -9,4 +9,9 @@ echo "======================="
 echo "Using formula: $formula"
 
 #python ./resMonitor.py "$formula" $2 $3
-python ./nresMonitor.py "$formula" $2 $3
+#python ./nresMonitor.py "$formula" $2 $3
+#python ./nresMonitor2.py "$formula" $2 $3
+
+#python -m cProfile ./monRVTiming.py "$formula" $2 $3 $4
+#/usr/bin/time -v python ./monRVTiming.py "$formula" $2 $3 $4
+python ./monRVTiming.py "$formula" $2 $3 $4
