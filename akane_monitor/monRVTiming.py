@@ -72,6 +72,12 @@ def main():
 	elif (algChoose == "rescons"):
 		algChoose = ALG_RESCONS
 		mon_rescons(inFile, inFormula, traceOrder)
+	elif (algChoose == "astcons"):
+		algChoose = ALG_ASTCONS
+		mon_astcons(inFile, inFormula, traceOrder)
+	elif (algChoose == "ares"):
+		algChoose = ALG_ARES
+		mon_ares(inFile, inFormula, traceOrder)
 	else:
 		print "No algorithm chosen, quitting..."
 ############# END MAIN ############
@@ -121,6 +127,131 @@ def mon_purecons(inFile, inFormula, traceOrder):
 	else:
 		print "### Trace Violated formula ###"
 
+def mon_astcons(inFile, inFormula, traceOrder):
+	global incrtime
+	global incrcount
+	allPass = True
+	FastDie = True
+	cstate = {}
+	formulas =[]
+	history = {}
+	Struct = {}
+	#build_structure(Struct, inFormula)
+	print "building with build_fst"
+	build_fst_structure(Struct, inFormula)
+	WD = wdelay(inFormula)
+	PD = past_delay(inFormula)
+	D = delay(inFormula)
+	#
+	eptr = 0
+	cptr = 0
+	#
+	dprint("Using WD: %s D: %s, PD: %s" % (WD,D,PD))
+	#
+	for line in inFile:
+		updateState(cstate, traceOrder, line)
+		history[cptr] = cstate.copy()
+		with Timer() as t:
+			incr_struct_fstcons(Struct, cstate)
+		incrtime = incrtime + t.secs
+		incrcount = incrcount + 1
+		#
+		ctime = cstate["time"]
+		dprint("current state is %s" % (cstate,), DBG_SMON)
+		#
+		#while ((eptr <= cptr) and (tau(history, cptr) - tau(history, eptr) >= WD)):
+		while ((eptr <= cptr) and (tau(history,cptr) - tau(history,eptr) >= WD)):
+			dprint("checking step %s" % eptr, DBG_SMON)
+			mon = smon_astcons(Struct, eptr, history, inFormula)
+			#
+			allPass = allPass and mon
+			if (FastDie and bool(mon) == False):
+				dprint("!!!!FORMULA VIOLATED %s@%s -- %s@%s" % (eptr, cptr, tau(history, eptr), tau(history,cptr)))
+				sys.exit(5)
+			eptr = eptr + 1
+		# clean history
+		histremove = [k for k in history if (tau(history,cptr) - tau(history,k) > (PD+D))]	
+		for k in histremove:
+			del history[k]
+		# increment current pointer
+		cptr = cptr + 1
+	dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+	#dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
+	if allPass:
+		print "#### Trace Satisfied formula ###"
+	else:
+		print "### Trace Violated formula ###"
+
+def mon_ares(inFile, inFormula, traceOrder):
+	global incrtime
+	global incrcount
+	global redtime
+	global redcount
+	# some algorithm local variables
+	cstate = {}
+	formulas = []
+	Struct = {}
+	# build struct and save delay
+	D = delay(inFormula)
+	DP = past_delay(inFormula)
+	WD = wdelay(inFormula)
+	with Timer() as t:
+		#build_structure(Struct, inFormula)
+		build_fst_structure(Struct, inFormula)
+	print "Build Structure took %s ms" % (t.msecs,)
+
+	dprint("Struct is: ", DBG_STRUCT)
+	for s in Struct:
+		dprint("%s" % (Struct[s],), DBG_STRUCT)
+		
+	dprint("Formula delay is %d, %d :: wait delay %d" % (D,DP,WD), DBG_SMON)
+	# wait for new data...
+	for line in inFile:
+			dprint("###### New event received",DBG_SMON)
+			updateState(cstate, traceOrder, line)
+			with Timer() as t:
+				incr_aStruct(Struct, cstate)
+			incrtime = incrtime + t.secs
+			incrcount = incrcount + 1
+
+			dprint("Adding current formula", DBG_SMON)
+			formulas.append((cstate["time"], inFormula))
+			dprint(formulas, DBG_SMON)
+			dprint("reducing all formulas", DBG_SMON)
+			for i,f in enumerate(formulas[:]):
+				formulas[i] = (f[0], reduce(substitute_as(Struct, cstate, f)))
+			dprint(formulas, DBG_SMON)
+			dprint("removing finished formulas and check violations...", DBG_SMON)
+			# count avg reduction time
+			rform = [f[0] for f in formulas if f[1] == True]
+			for i in rform:
+				redtime = redtime + (int(cstate["time"]) - int(i))
+				redcount = redcount + 1
+			# remove any True formulas from the list
+			formulas[:] = [f for f in formulas if f[1] != True]
+			# skip actually checking while we see if struct build works
+			for i,f in enumerate(formulas[:]):
+				if (f[1] == False):
+						dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+						if redcount != 0:
+							dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
+						else:
+							dprint("redcount was 0, weird...", DBG_TIME)
+						print "!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+						sys.exit(1)
+				else:	# eventually never satisfied
+					if (f[0]+WD <= cstate["time"]):
+						dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+						dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
+						print "VIOLATOR: %s" % (f,)
+						print "!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+						sys.exit(1)
+	dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+	dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
+	print "#### finished, trace satisfies formula"
+
+##### OLDER MONITOR STUFF #########################
+###########################################
 def mon_fstcons(inFile, inFormula, traceOrder):
 	global incrtime
 	global incrcount
@@ -456,12 +587,11 @@ def smon_purecons(cstep, history, formula):
 		h = tau(history, cstep) - formula[1]
 		start = None
 
-
 		for i in history:
 			if (tau(history, i) > h):
 				break
 			elif (l <= tau(history,i)): # guaranteed tau <= h due to test above
-				if smon_purecons(i, history, rchild(formula)):
+				if smon_purecons(i, history, untilP2(formula)):
 					start = i
 					break
 		# didn't find the event in the bounds
@@ -476,12 +606,12 @@ def smon_purecons(cstep, history, formula):
 			if (tau(history, i) > h):
 				break
 			elif (l <= tau(history,i)): # guaranteed tau <= h due to test above
-				if not smon_purecons(i, history, rchild(formula)):
+				if not smon_purecons(i, history, untilP1(formula)):
 					return False
 		# didn't find point where subform was false
 		return True
 	else:
-		print "got formula %s" % formula
+		print "INVALID smon_purecons: got formula %s" % formula
 		return INVALID_T
 
 def smon_fstcons(Struct, cstep, history, formula):
@@ -693,6 +823,8 @@ def add_struct(Struct, tag, delay, formula):
 		newSt = ipstructure(tag, formula, delay)
 	elif (algChoose == ALG_FSTCONS):
 		newSt = istructure(tag, formula, delay)
+	elif (algChoose == ALG_ASTCONS or algChoose == ALG_ARES):
+		newSt = aStructure(tag, formula, delay)
 	else:
 		dprint("!!!!SHOULD NOT GET HERE....!!!", DBG_ERROR)
 		sys.exit(2)
@@ -725,6 +857,27 @@ def incr_struct_intres(Struct, cstate):
 		# remove finished histories
 		cStruct.cleanHist()
 
+		dprint("Incremented and cleaned: %s" % (cStruct,), DBG_STRUCT)
+	return
+
+def incr_aStruct(Struct, cstate):
+	ctime = cstate["time"]
+	taglist = list(Struct.keys())
+	taglist.sort()
+	taglist.reverse()
+	# check in order due to dependencies
+	for t in taglist:
+		cStruct = Struct[t]
+		# add residue
+		cStruct.addRes(ctime, cStruct.formula)
+		# reduce all residues with new time
+		cStruct.incrRes(Struct, cstate)
+		# update history based on residues
+		cStruct.updateHist()
+		# remove finished residues
+		cStruct.cleanRes()
+		# remove finished histories
+		cStruct.cleanHist()
 		dprint("Incremented and cleaned: %s" % (cStruct,), DBG_STRUCT)
 	return
 

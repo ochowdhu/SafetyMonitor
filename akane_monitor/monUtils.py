@@ -11,7 +11,7 @@ EXP_T, PROP_T, NPROP_T, NOT_T, AND_T, OR_T, IMPLIES_T, EVENT_T, ALWAYS_T, UNTIL_
 TAGi, FORMULAi, DELAYi, VALIDi, LISTi, FLISTi = range(0,6) 
 
 ALC_ALIVE, ALC_VIOLATE, ALC_SATISFY = range(0,3)
-ALG_RES, ALG_STCONS, ALG_PURECONS, ALG_FSTCONS, ALG_RESCONS = range(0,5)
+ALG_RES, ALG_STCONS, ALG_PURECONS, ALG_FSTCONS, ALG_RESCONS, ALG_ASTCONS, ALG_ARES = range(0,7)
 
 ## debug constants
 DBG_ERROR = 0x01
@@ -20,7 +20,7 @@ DBG_SMON = 0x04
 DBG_STATE = 0x08
 DBG_TIME = 0x10
 #DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
-DBG_MASK = DBG_ERROR | DBG_TIME 
+DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SMON
 
 # global constants
 PERIOD = 1
@@ -155,10 +155,15 @@ class structure:
 
 	def addHist(self, time, val):
 		self.history[time] = val
+		self.valid = max(self.valid, time)
 	def addRes(self, time, formula):
 		self.residues.append((time,formula))
 	def cleanRes(self):
 		self.residues = [f for f in self.residues if (f[1] != True and f[1] != False)]
+	def cleanHist(self):
+		oldhist = [i for i in self.history if (i < (self.valid - self.delay))]
+		for i in oldhist:
+			del self.history[i]
 	def updateHist(self):
 		for res in self.residues:
 			if (res[1] == True):
@@ -170,6 +175,39 @@ class structure:
 			self.residues[i] = (f[0], reduce(substitute_per_agp(Struct, cstate, f)))
 	def __str__(self):
 		return "Struct: [%d|| DEL: %d FORM: %s VAL: %d :: HIST: %s, RES: %s]" % (self.tag, self.delay, self.formula, self.valid, self.history, self.residues)
+
+class aStructure:
+	def __init__(self, tag, formula=[], delay=0):
+		self.tag = tag
+		self.formula = formula
+		self.delay = delay
+		self.history = {}
+		self.residues = []
+		self.valid = 0
+
+	def addHist(self, time, val):
+		self.history[time] = val
+		self.valid = max(self.valid, time)
+	def addRes(self, time, formula):
+		self.residues.append((time,formula))
+	def cleanRes(self):
+		self.residues = [f for f in self.residues if (f[1] != True and f[1] != False)]
+	def cleanHist(self):
+		oldhist = [i for i in self.history if (i < (self.valid - self.delay))]
+		for i in oldhist:
+			del self.history[i]
+	def updateHist(self):
+		for res in self.residues:
+			if (res[1] == True):
+				self.addHist(res[0], True)
+			elif (res[1] == False):
+				self.addHist(res[0], False)
+	def incrRes(self, Struct, cstate):
+		for i,f in enumerate(self.residues):
+			self.residues[i] = (f[0], reduce(substitute_as(Struct, cstate, f)))
+	def __str__(self):
+		return "Struct: [%d|| DEL: %d FORM: %s VAL: %d :: HIST: %s, RES: %s]" % (self.tag, self.delay, self.formula, self.valid, self.history, self.residues)
+
 
 class Interval(object):
 	def __init__(self, start, end):
@@ -305,6 +343,172 @@ def not_future(formula):
 		# shouldn't get here
 		dprint("future checking error...", DBG_ERROR)
 		return False
+
+def substitute_as(Struct, cstate, formula_entry):
+	ctime = cstate["time"]
+	formtime = formula_entry[0]
+	formula = formula_entry[1]
+	if (ftype(formula) == EXP_T):
+		return [formula[0], substitute_as(Struct, cstate, (formtime, formula[1]))]
+	elif (ftype(formula) == VALUE_T):
+		return formula
+	elif (ftype(formula) == PROP_T):
+		#return cstate[formula[1]]
+		print "evaluating %s" % formula[1]
+		if (cstate[formula[1]]):
+			print "true..."
+			return True
+		else:
+			print "false..."
+			return False
+	elif (ftype(formula) == NPROP_T):
+		#return not cstate[formula[1]]
+		if (cstate[formula[1]]):
+			return False
+		else:
+			return True
+	elif (ftype(formula) == NOT_T):
+		return ['notprop', substitute_as(Struct, cstate, (formtime, formula[1]))]
+	elif (ftype(formula) == AND_T):
+		return ['andprop', substitute_as(Struct, cstate, (formtime, formula[1])), substitute_as(Struct, cstate, (formtime,formula[2]))]
+	elif (ftype(formula) == OR_T):
+		return ['orprop', substitute_as(Struct, cstate, (formtime,formula[1])), substitute_as(Struct, cstate, (formtime, formula[2]))]
+	elif (ftype(formula) == IMPLIES_T):
+		return ['impprop', substitute_as(Struct, cstate, (formtime,formula[1])), substitute_as(Struct, cstate, (formtime, formula[2]))]
+	elif (ftype(formula) == EVENT_T): 
+		h = hbound(formula) + formtime
+		l = lbound(formula) + formtime
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		#
+		for i in sthist:
+			if (i > h):
+				break
+			elif (l <= i):
+				if sthist[i]:
+					return True
+		if subStruct.valid >= ctime:
+			return False
+		return formula
+	elif (ftype(formula) == ALWAYS_T):
+		h = hbound(formula) + formtime
+		l = lbound(formula) + formtime
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		#
+		for i in sthist:
+			if (i > h):
+				break
+			elif (l <= i):
+				if not sthist[i]:
+					return False
+		if subStruct.valid >= ctime:
+			return True
+		return formula
+	elif (ftype(formula) == UNTIL_T): 
+		tags = get_tags(formula)
+		subStruct1 = Struct[tags[0]]
+		subStruct2 = Struct[tags[1]]
+		sthist1 = subStruct1.history
+		sthist2 = subStruct2.history
+		h = hbound(formula) + formtime
+		l = lbound(formula) + formtime
+		end = None
+		done = True
+
+		for i in sthist1:
+			if (i > h):
+				break
+			elif (l <= i):
+				end = i
+		#
+		if (end is None and subStruct.valid >= ctime):
+			return False
+		elif (end is None):
+			done = False
+			end = ctime
+
+		l = formtime	
+		h = end
+		for i in sthist2:
+			if (i > h):
+				break
+			elif (l <= i):
+				if not sthist2[i]:
+					return False
+		# always is surviving, did we find eventually? done if so
+		if done:
+			return True
+		# still haven't seen eventually, hang on
+		return formula
+	elif (ftype(formula) == PEVENT_T):
+		h = formtime - lbound(formula)
+		l = formtime - hbound(formula)
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		#
+		for i in sthist:
+			if (i > h):
+				break
+			elif (l <= i):
+				if sthist[i]:
+					return True
+		if subStruct.valid >= ctime:
+			return False
+		return formula
+	elif (ftype(formula) == PALWAYS_T):
+		sEnd = formtime - lbound(formula)
+		sStart = formtime - hbound(formula)
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		#
+		for i in sthist:
+			if (i > h):
+				break
+			elif (l <= i):
+				if not sthist[i]:
+					return False
+		if subStruct.valid >= ctime:
+			return True
+		return formula
+	elif (ftype(formula) == SINCE_T):
+		tags = get_tags(formula)
+		subStruct1 = Struct[tags[0]]
+		subStruct2 = Struct[tags[1]]
+		sthist1 = subStruct1.history
+		sthist2 = subStruct2.history
+		h = formtime - lbound(formula)
+		l = formtime - hbound(formula)
+		start = None
+		done = True
+		#
+		for i in sthist1:
+			if (i > h):
+				break
+			elif (l <= i):
+				start = i
+		#
+		if (start is None and subStruct.valid >= ctime):
+			return False
+		elif (start is None):
+			done = False
+			end = ctime
+
+		l = start 
+		h = formtime
+		for i in sthist2:
+			if (i > h):
+				break
+			elif (l <= i):
+				if not sthist2[i]:
+					return False
+		# always is surviving, did we find eventually? done if so
+		if done:
+			return True
+		# still haven't seen eventually, hang on
+		return formula
+	else:
+		return INVALID_T
 
 def substitute_per_agp(Struct, cstate, formula_entry):
 	ctime = cstate["time"]
