@@ -605,7 +605,9 @@ def smon_purecons(cstep, history, formula):
 		for i in history:
 			if (tau(history, i) > h):
 				break
-			elif (l <= tau(history,i)): # guaranteed tau <= h due to test above
+			### making this < instead of <= because that's what Omar has
+			#elif (l <= tau(history,i)): # guaranteed tau <= h due to test above
+			elif (l < tau(history,i)): # guaranteed tau <= h due to test above
 				if not smon_purecons(i, history, untilP1(formula)):
 					return False
 		# didn't find point where subform was false

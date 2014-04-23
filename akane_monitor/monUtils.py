@@ -20,7 +20,7 @@ DBG_SMON = 0x04
 DBG_STATE = 0x08
 DBG_TIME = 0x10
 #DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
-DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SMON
+DBG_MASK = DBG_ERROR | DBG_TIME 
 
 # global constants
 PERIOD = 1
@@ -353,16 +353,11 @@ def substitute_as(Struct, cstate, formula_entry):
 	elif (ftype(formula) == VALUE_T):
 		return formula
 	elif (ftype(formula) == PROP_T):
-		#return cstate[formula[1]]
-		print "evaluating %s" % formula[1]
 		if (cstate[formula[1]]):
-			print "true..."
 			return True
 		else:
-			print "false..."
 			return False
 	elif (ftype(formula) == NPROP_T):
-		#return not cstate[formula[1]]
 		if (cstate[formula[1]]):
 			return False
 		else:
@@ -387,7 +382,7 @@ def substitute_as(Struct, cstate, formula_entry):
 			elif (l <= i):
 				if sthist[i]:
 					return True
-		if subStruct.valid >= ctime:
+		if subStruct.valid >= h:
 			return False
 		return formula
 	elif (ftype(formula) == ALWAYS_T):
@@ -402,7 +397,7 @@ def substitute_as(Struct, cstate, formula_entry):
 			elif (l <= i):
 				if not sthist[i]:
 					return False
-		if subStruct.valid >= ctime:
+		if subStruct.valid >= h:
 			return True
 		return formula
 	elif (ftype(formula) == UNTIL_T): 
@@ -414,30 +409,31 @@ def substitute_as(Struct, cstate, formula_entry):
 		h = hbound(formula) + formtime
 		l = lbound(formula) + formtime
 		end = None
-		done = True
+		#done = True
 
-		for i in sthist1:
+		for i in sthist2:
 			if (i > h):
 				break
 			elif (l <= i):
 				end = i
 		#
-		if (end is None and subStruct.valid >= ctime):
+		if (end is None and subStruct2.valid >= h):
 			return False
 		elif (end is None):
-			done = False
+			#done = False
 			end = ctime
 
 		l = formtime	
 		h = end
-		for i in sthist2:
+		for i in sthist1:
 			if (i > h):
 				break
 			elif (l <= i):
-				if not sthist2[i]:
+				if not sthist1[i]:
 					return False
 		# always is surviving, did we find eventually? done if so
-		if done:
+		#if done and subStruct1.valid >= h:
+		if subStruct1.valid >= h:
 			return True
 		# still haven't seen eventually, hang on
 		return formula
@@ -453,12 +449,12 @@ def substitute_as(Struct, cstate, formula_entry):
 			elif (l <= i):
 				if sthist[i]:
 					return True
-		if subStruct.valid >= ctime:
+		if subStruct.valid >= h:
 			return False
 		return formula
 	elif (ftype(formula) == PALWAYS_T):
-		sEnd = formtime - lbound(formula)
-		sStart = formtime - hbound(formula)
+		h = formtime - lbound(formula)
+		l = formtime - hbound(formula)
 		subStruct = Struct[get_tags(formula)]
 		sthist = subStruct.history
 		#
@@ -468,7 +464,7 @@ def substitute_as(Struct, cstate, formula_entry):
 			elif (l <= i):
 				if not sthist[i]:
 					return False
-		if subStruct.valid >= ctime:
+		if subStruct.valid >= h:
 			return True
 		return formula
 	elif (ftype(formula) == SINCE_T):
@@ -480,32 +476,31 @@ def substitute_as(Struct, cstate, formula_entry):
 		h = formtime - lbound(formula)
 		l = formtime - hbound(formula)
 		start = None
-		done = True
 		#
-		for i in sthist1:
+		for i in sthist2:
 			if (i > h):
 				break
 			elif (l <= i):
 				start = i
 		#
-		if (start is None and subStruct.valid >= ctime):
+		if (start is None and subStruct2.valid >= h):
 			return False
 		elif (start is None):
-			done = False
-			end = ctime
+			# haven't seen eventually yet, can't check always
+			return formula
 
 		l = start 
 		h = formtime
-		for i in sthist2:
+		for i in sthist1:
 			if (i > h):
 				break
 			elif (l <= i):
-				if not sthist2[i]:
+				if not sthist1[i]:
 					return False
-		# always is surviving, did we find eventually? done if so
-		if done:
+		# always is surviving, can we see all of it?
+		if subStruct1.valid >= h:
 			return True
-		# still haven't seen eventually, hang on
+		# still waiting on P1 to be valid up to current formula time
 		return formula
 	else:
 		return INVALID_T
