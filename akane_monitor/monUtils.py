@@ -428,7 +428,9 @@ def substitute_as(Struct, cstate, formula_entry):
 		for i in sthist1:
 			if (i > h):
 				break
-			elif (l <= i):
+			#elif (l <= i):
+			# usual semantics is l < i, so using that
+			elif (l < i):
 				if not sthist1[i]:
 					return False
 		# always is surviving, did we find eventually? done if so
@@ -481,7 +483,10 @@ def substitute_as(Struct, cstate, formula_entry):
 			if (i > h):
 				break
 			elif (l <= i):
-				start = i
+				if sthist2[i]:
+					start = i
+					# don't break because we want the most recent P1
+					#break
 		#
 		if (start is None and subStruct2.valid >= h):
 			return False
@@ -494,7 +499,9 @@ def substitute_as(Struct, cstate, formula_entry):
 		for i in sthist1:
 			if (i > h):
 				break
-			elif (l <= i):
+			#elif (l <= i):
+			# using l < i since that's the usual semantics
+			elif (l < i):
 				if not sthist1[i]:
 					return False
 		# always is surviving, can we see all of it?

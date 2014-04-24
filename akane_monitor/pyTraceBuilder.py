@@ -6,7 +6,7 @@ import csv
 
 PERIOD = 1
 
-period = sys.argv[1]
+PERIOD = int(sys.argv[1])
 vars = sys.argv[2].split(",")
 vars.insert(0,'time')
 
@@ -20,11 +20,11 @@ else:
 print "got varlist: %s" % vars
 print "writing CSV..."
 dr = csv.DictWriter(outfile, vars)
-#dr.writeheader()
+dr.writeheader()
 # fake it, no writeheader() in python 2.6
-for i in vars:
-	outfile.write(i + ",")
-outfile.write("\n")
+#for i in vars:
+#	outfile.write(i + ",")
+#outfile.write("\n")
 
 inTrace = inT.split(";")
 time = 0
@@ -37,6 +37,7 @@ for t in inTrace:
 	for s in t.split(','):
 		for v in s:
 			d[v] = 1
+	print "writing d: %s" % d
 	dr.writerow(d)
 	time = time + PERIOD
 

@@ -522,7 +522,6 @@ def smon_purecons(cstep, history, formula):
 		l = tau(history, cstep) + formula[1]
 		h = tau(history, cstep) + formula[2]
 		
-		#checklist = [i for i in history if (l <= tau(history, i) and tau(history,i) <= h)]
 		for i in history:
 			if (tau(history, i) > h):
 				break
@@ -553,7 +552,9 @@ def smon_purecons(cstep, history, formula):
 		for i in history:
 			if (tau(history, i) > h):
 				break
-			elif (l <= tau(history,i)): # guaranteed tau <= h 
+			#elif (l <= tau(history,i)): # guaranteed tau <= h 
+			# apparently the usual semantics is l < tau, so using that
+			elif (l < tau(history,i)): # guaranteed tau <= h 
 				if not smon_purecons(i, history, untilP1(formula)):
 					return False
 		# didn't find point where subform was false
@@ -593,7 +594,8 @@ def smon_purecons(cstep, history, formula):
 			elif (l <= tau(history,i)): # guaranteed tau <= h due to test above
 				if smon_purecons(i, history, untilP2(formula)):
 					start = i
-					break
+					# don't break - we want the most recent P1
+					#break
 		# didn't find the event in the bounds
 		if (start is None):
 			return False
@@ -605,8 +607,8 @@ def smon_purecons(cstep, history, formula):
 		for i in history:
 			if (tau(history, i) > h):
 				break
-			### making this < instead of <= because that's what Omar has
 			#elif (l <= tau(history,i)): # guaranteed tau <= h due to test above
+			### making this < instead of <= because that's what Omar has
 			elif (l < tau(history,i)): # guaranteed tau <= h due to test above
 				if not smon_purecons(i, history, untilP1(formula)):
 					return False
@@ -800,16 +802,22 @@ def build_structure(Struct, formula, extbound=0):
 		dprint("BUILDING: got a since, ADDING BOTH STRUCTS and recursing both", DBG_STRUCT)
 		# Tags get put into formula[2] so tagging P2 then P1 makes formula into
 		# [bound, bound, tagP1, tagP2, P1, P2]
+		d = past_delay(formula) + extbound
+		print "SINCE DELAY: %s" % d
 		# do P2
 		cTag = tag_formula(formula)
-		d2 = delay(untilP2(formula)) + extbound
-		add_struct(Struct, cTag, d2, untilP2(formula))
+		#d2 = past_delay(untilP2(formula)) + extbound
+		#add_struct(Struct, cTag, d2, untilP2(formula))
+		add_struct(Struct, cTag, d, untilP2(formula))
 		# do P1
 		cTag = tag_formula(formula)
-		d1 = delay(untilP1(formula)) + extbound
-		add_struct(Struct, cTag, d1, untilP1(formula))
-		build_structure(Struct, untilP1(formula), extbound=d1)
-		build_structure(Struct, untilP2(formula), extbound=d2)
+		#d1 = past_delay(untilP1(formula)) + extbound
+		#add_struct(Struct, cTag, d1, untilP1(formula))
+		add_struct(Struct, cTag, d, untilP1(formula))
+		#build_structure(Struct, untilP1(formula), extbound=d1)
+		#build_structure(Struct, untilP2(formula), extbound=d2)
+		build_structure(Struct, untilP1(formula), extbound=d)
+		build_structure(Struct, untilP2(formula), extbound=d)
 		return True
 	else:
 		dprint("BUILDING ERROR: Got unmatched AST node while building", DBG_STRUCT);
@@ -959,17 +967,12 @@ def build_fst_structure(Struct, formula, extbound=0):
 		dprint("BUILDING: got an until, ADDING STRUCT and recursing both", DBG_STRUCT)
 		# Tags get put into formula[2] so tagging P2 then P1 makes formula into
 		# [bound, bound, tagP1, tagP2, P1, P2]
-		# do P2
 		d = delay(formula) + extbound
+		# do P2
 		cTag = tag_formula(formula)
-		d2 = delay(untilP2(formula)) + extbound
-		#add_struct(Struct, cTag, d2, untilP2(formula))
-		dprint("adding until struct with delay %s" % d, DBG_STRUCT)
 		add_struct(Struct, cTag, d, untilP2(formula))
 		# do P1
 		cTag = tag_formula(formula)
-		d1 = delay(untilP1(formula)) + extbound
-		#add_struct(Struct, cTag, d1, untilP1(formula))
 		add_struct(Struct, cTag, d, untilP1(formula))
 		build_fst_structure(Struct, untilP1(formula), extbound=d)
 		build_fst_structure(Struct, untilP2(formula), extbound=d)
@@ -990,16 +993,15 @@ def build_fst_structure(Struct, formula, extbound=0):
 		dprint("BUILDING: got a since, ADDING BOTH STRUCTS and recursing both", DBG_STRUCT)
 		# Tags get put into formula[2] so tagging P2 then P1 makes formula into
 		# [bound, bound, tagP1, tagP2, P1, P2]
+		d = past_delay(formula) + extbound
 		# do P2
 		cTag = tag_formula(formula)
-		d2 = delay(untilP2(formula)) + extbound
-		add_struct(Struct, cTag, d2, untilP2(formula))
+		add_struct(Struct, cTag, d, untilP2(formula))
 		# do P1
 		cTag = tag_formula(formula)
-		d1 = delay(untilP1(formula)) + extbound
-		add_struct(Struct, cTag, d1, untilP1(formula))
-		build_fst_structure(Struct, untilP1(formula), extbound=d1)
-		build_fst_structure(Struct, untilP2(formula), extbound=d2)
+		add_struct(Struct, cTag, d, untilP1(formula))
+		build_fst_structure(Struct, untilP1(formula), extbound=d)
+		build_fst_structure(Struct, untilP2(formula), extbound=d)
 		return True
 	else:
 		dprint("BUILDING ERROR: Got unmatched AST node while building", DBG_STRUCT);
