@@ -11,7 +11,7 @@ EXP_T, PROP_T, NPROP_T, NOT_T, AND_T, OR_T, IMPLIES_T, EVENT_T, ALWAYS_T, UNTIL_
 TAGi, FORMULAi, DELAYi, VALIDi, LISTi, FLISTi = range(0,6) 
 
 ALC_ALIVE, ALC_VIOLATE, ALC_SATISFY = range(0,3)
-ALG_RES, ALG_STCONS, ALG_PURECONS, ALG_FSTCONS, ALG_RESCONS, ALG_ASTCONS, ALG_ARES = range(0,7)
+ALG_RES, ALG_STCONS, ALG_PURECONS, ALG_FSTCONS, ALG_RESCONS, ALG_ASTCONS, ALG_ARES, ALG_AIRES = range(0,8)
 
 ## debug constants
 DBG_ERROR = 0x01
@@ -20,7 +20,7 @@ DBG_SMON = 0x04
 DBG_STATE = 0x08
 DBG_TIME = 0x10
 #DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
-DBG_MASK = DBG_ERROR | DBG_TIME 
+DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SMON | DBG_STRUCT
 
 # global constants
 PERIOD = 1
@@ -206,8 +206,63 @@ class aStructure:
 		for i,f in enumerate(self.residues):
 			self.residues[i] = (f[0], reduce(substitute_as(Struct, cstate, f)))
 	def __str__(self):
-		return "Struct: [%d|| DEL: %d FORM: %s VAL: %d :: HIST: %s, RES: %s]" % (self.tag, self.delay, self.formula, self.valid, self.history, self.residues)
+		return "aStruct: [%d|| DEL: %d FORM: %s VAL: %d :: HIST: %s, RES: %s]" % (self.tag, self.delay, self.formula, self.valid, self.history, self.residues)
 
+class iStructure:
+	def __init__(self, tag, formula=[], delay=0):
+		self.tag = tag
+		self.formula = formula
+		self.delay = delay
+		self.history = []
+		self.residues = []
+		self.valid = 0
+
+	def addHist(self, time, val):
+		self.valid = max(self.valid, time)
+		if (val):
+			added = False
+			for i in self.history:
+				if (i.extendedBy(time)):
+					i.addEntry(time)
+					added = True
+			if (not added):
+				self.history.append(CInterval(time, time))
+	def addRes(self, time, formula):
+		self.residues.append((time,formula))
+	def cleanRes(self):
+		self.residues = [f for f in self.residues if (f[1] != True and f[1] != False)]
+	def cleanHist(self):
+		self.history = [i for i in self.history if (i.end >= (self.valid - self.delay))]
+	def updateHist(self):
+		for res in self.residues:
+			if (res[1] == True):
+				self.addHist(res[0], True)
+			elif (res[1] == False):
+				self.addHist(res[0], False)
+	def incrRes(self, Struct, cstate):
+		for i,f in enumerate(self.residues):
+			self.residues[i] = (f[0], reduce(substitute_ais(Struct, cstate, f)))
+	def alCheck(self, interval):
+		trInt = interval.truncate(self.valid)
+		# if truncate is empty, then we can't check any of interval yet
+		if (trInt.empty()):
+			return ALC_ALIVE
+		# can check something, lets look
+		found_super = False
+		for i in self.history:
+			if (i.superset(trInt)):
+				found_super = True
+		# didn't find always from start to current, violation
+		if (not found_super):
+			return ALC_VIOLATE
+		# found entire interval, satisfies
+		elif (found_super and trInt == interval):
+			return ALC_SATISFY
+		# else found but not finished, keep going
+		return ALC_ALIVE
+
+	def __str__(self):
+		return "iStruct: [%d|| DEL: %d FORM: %s VAL: %d :: HIST: %s, RES: %s]" % (self.tag, self.delay, self.formula, self.valid, self.history, self.residues)
 
 class Interval(object):
 	def __init__(self, start, end):
@@ -228,17 +283,8 @@ class Interval(object):
 
 	def intersection(self, interval):
 		return Interval(max(self.start, interval.start), min(self.end, interval.end))
-
 	def intersects(self, interval):
 		return not self.intersection(interval).empty()
-		#if (self.start <= interval.start):
-		#	if (self.end > interval.start):
-		#		return True
-		#	return False
-		#else:
-		#	if (interval.end > self.start):
-		#		return True
-		#	return False
 	def addEntry(self, entry):
 		if (entry == self.end):
 			self.end = entry+PERIOD
@@ -258,6 +304,47 @@ class Interval(object):
 		return (self.start <= interval.start and self.end > interval.end)
 	def empty(self):
 		return self.start >= self.end
+
+class CInterval(object):
+	def __init__(self, start, end):
+			self.start = start
+			self.end = end
+
+	def __str__(self):
+		return "[%d,%d]" % (self.start, self.end)
+	def __repr__(self):
+		return "[%d,%d]" % (self.start, self.end)
+
+	def __contains__(self, point):
+		return (point >= self.start and point <= self.end)
+	def __eq__(self, other):
+		return (self.start == other.start and self.end == other.end)
+	def __ne__(self, other):
+		return (self.start != other.start or self.end != other.end)
+
+	def intersection(self, interval):
+		return CInterval(max(self.start, interval.start), min(self.end, interval.end))
+	def intersects(self, interval):
+		return not self.intersection(interval).empty()
+	def addEntry(self, entry):
+		if (entry == self.end+PERIOD):
+			self.end = entry
+			return True
+		if (entry == self.start-PERIOD):
+			self.start = entry
+			return True
+		else:
+			return False
+	def extendedBy(self, entry):
+		return (entry == self.end+PERIOD or entry == self.start-PERIOD)
+	def truncate(self, v):
+		return CInterval(self.start, min(self.end, v))
+	def superset(self, interval):
+		return (self.start <= interval.start and self.end >= interval.end)
+	def prop_superset(self, interval):
+		return (self.start < interval.start and self.end > interval.end)
+	def empty(self):
+		return self.start > self.end
 
 # add a tag to past time formula
 def tag_formula(formula):
@@ -509,6 +596,156 @@ def substitute_as(Struct, cstate, formula_entry):
 			return True
 		# still waiting on P1 to be valid up to current formula time
 		return formula
+	else:
+		return INVALID_T
+
+def substitute_ais(Struct, cstate, formula_entry):
+	ctime = cstate["time"]
+	formtime = formula_entry[0]
+	formula = formula_entry[1]
+	if (ftype(formula) == EXP_T):
+		return [formula[0], substitute_ais(Struct, cstate, (formtime, formula[1]))]
+	elif (ftype(formula) == VALUE_T):
+		return formula
+	elif (ftype(formula) == PROP_T):
+		if (cstate[formula[1]]):
+			return True
+		else:
+			return False
+	elif (ftype(formula) == NPROP_T):
+		if (cstate[formula[1]]):
+			return False
+		else:
+			return True
+	elif (ftype(formula) == NOT_T):
+		return ['notprop', substitute_ais(Struct, cstate, (formtime, formula[1]))]
+	elif (ftype(formula) == AND_T):
+		return ['andprop', substitute_ais(Struct, cstate, (formtime, formula[1])), substitute_ais(Struct, cstate, (formtime,formula[2]))]
+	elif (ftype(formula) == OR_T):
+		return ['orprop', substitute_ais(Struct, cstate, (formtime,formula[1])), substitute_ais(Struct, cstate, (formtime, formula[2]))]
+	elif (ftype(formula) == IMPLIES_T):
+		return ['impprop', substitute_ais(Struct, cstate, (formtime,formula[1])), substitute_ais(Struct, cstate, (formtime, formula[2]))]
+	elif (ftype(formula) == EVENT_T): 
+		h = hbound(formula) + formtime
+		l = lbound(formula) + formtime
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		check = CInterval(l,h)
+		#
+		for i in sthist:
+			if i.intersects(check):
+				return True
+		if (subStruct.valid >= h):
+			return False
+		return formula
+	elif (ftype(formula) == ALWAYS_T):
+		h = hbound(formula) + formtime
+		l = lbound(formula) + formtime
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		check = CInterval(l,h)
+		#
+		alcheck = subStruct.alCheck(check)
+		if (alcheck == ALC_SATISFY):
+			return True
+		elif (alcheck == ALC_VIOLATE):
+			return False
+		else: # alcheck == ALC_ALIVE
+			return formula
+	elif (ftype(formula) == UNTIL_T): 
+		tags = get_tags(formula)
+		subStruct1 = Struct[tags[0]]
+		subStruct2 = Struct[tags[1]]
+		sthist1 = subStruct1.history
+		sthist2 = subStruct2.history
+		h = hbound(formula) + formtime
+		l = lbound(formula) + formtime
+		check = CInterval(l,h)
+		end = None
+		#done = True
+
+		for i in sthist2:
+			if i.intersects(check):
+				end = i.intersection(check).start
+		# didn't find P2 and past time
+		if (end is None and subStruct2.valid >= h):
+			return False
+		elif (end is None):
+			end = ctime
+
+		l = formtime	
+		h = end
+		check = CInterval(l,h)
+		alcheck = subStruct1.alCheck(check)
+
+		if (alcheck == ALC_SATISFY and subStruct2.valid >= h):
+			return True
+		elif (alcheck == ALC_VIOLATE):
+			return False
+		else: # alcheck == ALC_ALIVE or ALC_SAT and not found
+			return formula
+	elif (ftype(formula) == PEVENT_T):
+		h = formtime - lbound(formula)
+		l = formtime - hbound(formula)
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		check = CInterval(l,h)
+		#
+		for i in sthist:
+			if i.intersects(check):
+				return True
+		if subStruct.valid >= h:
+			return False
+		return formula
+	elif (ftype(formula) == PALWAYS_T):
+		h = formtime - lbound(formula)
+		l = formtime - hbound(formula)
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		check = CInterval(l,h)
+		#
+		alcheck = subStruct.alCheck(check)
+		if (alcheck == ALC_SATISFY):
+			return True
+		elif (alcheck == ALC_VIOLATE):
+			return False
+		else: # alcheck == ALC_ALIVE
+			return formula
+	elif (ftype(formula) == SINCE_T):
+		tags = get_tags(formula)
+		subStruct1 = Struct[tags[0]]
+		subStruct2 = Struct[tags[1]]
+		sthist1 = subStruct1.history
+		sthist2 = subStruct2.history
+		h = formtime - lbound(formula)
+		l = formtime - hbound(formula)
+		start = None
+		check = CInterval(l,h)
+		#
+		print "checking since at %s" % check
+		print "eventhist: %s" % sthist2
+		for i in sthist2:
+			if i.intersects(check):
+				start = i.intersection(check).start
+		if (start is None and subStruct2.valid >= h):
+			return False
+		elif (start is None):
+			# haven't seen eventually yet, can't check always
+			return formula
+
+		l = start + PERIOD
+		h = formtime
+		check = CInterval(l,h)
+		alcheck = subStruct1.alCheck(check)
+
+		print "checking always at %s" % check
+		print "alwayshist: %s" % sthist1
+		if (alcheck == ALC_SATISFY or alcheck == ALC_ALIVE and subStruct2.valid >= h):
+			return True
+		elif (alcheck == ALC_VIOLATE):
+			return False
+		else: # alcheck == ALC_ALIVE or ALC_SAT and not found
+			return formula
 	else:
 		return INVALID_T
 

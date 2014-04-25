@@ -78,6 +78,9 @@ def main():
 	elif (algChoose == "ares"):
 		algChoose = ALG_ARES
 		mon_ares(inFile, inFormula, traceOrder)
+	elif (algChoose == "aires"):
+		algChoose = ALG_AIRES
+		mon_aires(inFile, inFormula, traceOrder)
 	else:
 		print "No algorithm chosen, quitting..."
 ############# END MAIN ############
@@ -220,6 +223,74 @@ def mon_ares(inFile, inFormula, traceOrder):
 			dprint("reducing all formulas", DBG_SMON)
 			for i,f in enumerate(formulas[:]):
 				formulas[i] = (f[0], reduce(substitute_as(Struct, cstate, f)))
+			dprint(formulas, DBG_SMON)
+			dprint("removing finished formulas and check violations...", DBG_SMON)
+			# count avg reduction time
+			rform = [f[0] for f in formulas if f[1] == True]
+			for i in rform:
+				redtime = redtime + (int(cstate["time"]) - int(i))
+				redcount = redcount + 1
+			# remove any True formulas from the list
+			formulas[:] = [f for f in formulas if f[1] != True]
+			# skip actually checking while we see if struct build works
+			for i,f in enumerate(formulas[:]):
+				if (f[1] == False):
+						dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+						if redcount != 0:
+							dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
+						else:
+							dprint("redcount was 0, weird...", DBG_TIME)
+						print "!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+						sys.exit(1)
+				else:	# eventually never satisfied
+					if (f[0]+WD <= cstate["time"]):
+						dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+						dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
+						print "VIOLATOR: %s" % (f,)
+						print "!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+						sys.exit(1)
+	dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
+	dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
+	print "#### finished, trace satisfies formula"
+
+def mon_aires(inFile, inFormula, traceOrder):
+	global incrtime
+	global incrcount
+	global redtime
+	global redcount
+	# some algorithm local variables
+	cstate = {}
+	formulas = []
+	Struct = {}
+	# build struct and save delay
+	D = delay(inFormula)
+	DP = past_delay(inFormula)
+	WD = wdelay(inFormula)
+	with Timer() as t:
+		#build_structure(Struct, inFormula)
+		build_fst_structure(Struct, inFormula)
+	print "Build Structure took %s ms" % (t.msecs,)
+
+	dprint("Struct is: ", DBG_STRUCT)
+	for s in Struct:
+		dprint("%s" % (Struct[s],), DBG_STRUCT)
+		
+	dprint("Formula delay is %d, %d :: wait delay %d" % (D,DP,WD), DBG_SMON)
+	# wait for new data...
+	for line in inFile:
+			dprint("###### New event received",DBG_SMON)
+			updateState(cstate, traceOrder, line)
+			with Timer() as t:
+				incr_aStruct(Struct, cstate)
+			incrtime = incrtime + t.secs
+			incrcount = incrcount + 1
+
+			dprint("Adding current formula", DBG_SMON)
+			formulas.append((cstate["time"], inFormula))
+			dprint(formulas, DBG_SMON)
+			dprint("reducing all formulas", DBG_SMON)
+			for i,f in enumerate(formulas[:]):
+				formulas[i] = (f[0], reduce(substitute_ais(Struct, cstate, f)))
 			dprint(formulas, DBG_SMON)
 			dprint("removing finished formulas and check violations...", DBG_SMON)
 			# count avg reduction time
@@ -835,6 +906,8 @@ def add_struct(Struct, tag, delay, formula):
 		newSt = istructure(tag, formula, delay)
 	elif (algChoose == ALG_ASTCONS or algChoose == ALG_ARES):
 		newSt = aStructure(tag, formula, delay)
+	elif (algChoose == ALG_AIRES):
+		newSt = iStructure(tag, formula, delay)
 	else:
 		dprint("!!!!SHOULD NOT GET HERE....!!!", DBG_ERROR)
 		sys.exit(2)
