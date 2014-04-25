@@ -280,7 +280,7 @@ def mon_aires(inFile, inFormula, traceOrder):
 	for line in inFile:
 			dprint("###### New event received",DBG_SMON)
 			updateState(cstate, traceOrder, line)
-			print "got new state %s" % cstate
+			#print "got new state %s" % cstate
 			with Timer() as t:
 				incr_aStruct(Struct, cstate)
 			incrtime = incrtime + t.secs

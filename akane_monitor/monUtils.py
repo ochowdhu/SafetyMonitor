@@ -20,7 +20,7 @@ DBG_SMON = 0x04
 DBG_STATE = 0x08
 DBG_TIME = 0x10
 #DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
-DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SMON | DBG_STRUCT
+DBG_MASK = DBG_ERROR | DBG_TIME #| DBG_SMON | DBG_STRUCT
 
 # global constants
 PERIOD = 1
@@ -503,6 +503,7 @@ def substitute_as(Struct, cstate, formula_entry):
 				break
 			elif (l <= i):
 				end = i
+				# don't break, want the latest i
 		#
 		if (end is None and subStruct2.valid >= h):
 			return False
@@ -666,7 +667,7 @@ def substitute_ais(Struct, cstate, formula_entry):
 
 		for i in sthist2:
 			if i.intersects(check):
-				end = i.intersection(check).start
+				end = i.intersection(check).end
 		# didn't find P2 and past time
 		if (end is None and subStruct2.valid >= h):
 			return False
@@ -722,11 +723,11 @@ def substitute_ais(Struct, cstate, formula_entry):
 		start = None
 		check = CInterval(l,h)
 		#
-		print "checking since at %s" % check
-		print "eventhist: %s" % sthist2
+		#print "checking since at %s" % check
+		#print "eventhist: %s" % sthist2
 		for i in sthist2:
 			if i.intersects(check):
-				start = i.intersection(check).start
+				start = i.intersection(check).end
 		if (start is None and subStruct2.valid >= h):
 			return False
 		elif (start is None):
@@ -738,8 +739,8 @@ def substitute_ais(Struct, cstate, formula_entry):
 		check = CInterval(l,h)
 		alcheck = subStruct1.alCheck(check)
 
-		print "checking always at %s" % check
-		print "alwayshist: %s" % sthist1
+		#print "checking always at %s" % check
+		#print "alwayshist: %s" % sthist1
 		if (alcheck == ALC_SATISFY or alcheck == ALC_ALIVE and subStruct2.valid >= h):
 			return True
 		elif (alcheck == ALC_VIOLATE):
