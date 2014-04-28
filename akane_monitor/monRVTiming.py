@@ -16,10 +16,21 @@ from timer import Timer
 # global constants
 delim = ','
 algChoose = None 
+# benchmarking variables
+TimeData = monTimeData()
+# time/count for total execution time
+looptime = 0
+loopcount = 0
+# time/count for incrementing structure
 incrtime = 0
 incrcount = 0
+# count for total time to reduce residues 
 redtime = 0
 redcount = 0
+# maximum # of residues carried
+max_rescount = 0
+# memory count (add up bytes here?)
+memorycount = 0
 
 ###### Keeping this script compatible with resMonitor for now
 def main():
@@ -88,6 +99,7 @@ def main():
 
 ############## BEGIN MONITOR FUNCTIONS ###########
 def mon_purecons(inFile, inFormula, traceOrder):
+	global TimeData		# timing data container
 	allPass = True
 	FastDie = True
 	cstate = {}
@@ -103,28 +115,34 @@ def mon_purecons(inFile, inFormula, traceOrder):
 	dprint("Using WD: %s D: %s, PD: %s" % (WD,D,PD))
 	#
 	for line in inFile:
-		updateState(cstate, traceOrder, line)
-		history[cptr] = cstate.copy()
-		#
-		ctime = cstate["time"]
-		dprint("current state is %s" % (cstate,), DBG_SMON)
-		#
-		#while ((eptr <= cptr) and (tau(history, cptr) - tau(history, eptr) >= WD)):
-		while ((eptr <= cptr) and (tau(history,cptr) - tau(history,eptr) >= WD)):
-			dprint("checking step %s" % eptr, DBG_SMON)
-			mon = smon_purecons(eptr, history, inFormula)
+		with Timer() as mytimer:
+			updateState(cstate, traceOrder, line)
+			history[cptr] = cstate.copy()
 			#
-			allPass = allPass and mon
-			if (FastDie and bool(mon) == False):
-				dprint("!!!!FORMULA VIOLATED %s@%s -- %s@%s" % (eptr, cptr, tau(history, eptr), tau(history,cptr)))
-				sys.exit(5)
-			eptr = eptr + 1
-		# clean history
-		histremove = [k for k in history if (tau(history,cptr) - tau(history,k) > (PD+D))]	
-		for k in histremove:
-			del history[k]
-		# increment current pointer
-		cptr = cptr + 1
+			ctime = cstate["time"]
+			dprint("current state is %s" % (cstate,), DBG_SMON)
+			#
+			#while ((eptr <= cptr) and (tau(history, cptr) - tau(history, eptr) >= WD)):
+			while ((eptr <= cptr) and (tau(history,cptr) - tau(history,eptr) >= WD)):
+				dprint("checking step %s" % eptr, DBG_SMON)
+				mon = smon_purecons(eptr, history, inFormula)
+				#
+				allPass = allPass and mon
+				if (FastDie and bool(mon) == False):
+					dprint("!!!!FORMULA VIOLATED %s@%s -- %s@%s" % (eptr, cptr, tau(history, eptr), tau(history,cptr)))
+					sys.exit(5)
+				eptr = eptr + 1
+			if (tau(history,cptr) == 4):
+				print history
+			TimeData.addMemSize(len(history))
+			# clean history
+			histremove = [k for k in history if (tau(history,cptr) - tau(history,k) > (PD+D))]	
+			for k in histremove:
+				del history[k]
+			# increment current pointer
+			cptr = cptr + 1
+		TimeData.addLoopTime(mytimer.secs)
+	dprint("TimeData: %s" % TimeData)
 	if allPass:
 		print "#### Trace Satisfied formula ###"
 	else:
@@ -254,10 +272,7 @@ def mon_ares(inFile, inFormula, traceOrder):
 	print "#### finished, trace satisfies formula"
 
 def mon_aires(inFile, inFormula, traceOrder):
-	global incrtime
-	global incrcount
-	global redtime
-	global redcount
+	global TimeData
 	# some algorithm local variables
 	cstate = {}
 	formulas = []
@@ -267,59 +282,55 @@ def mon_aires(inFile, inFormula, traceOrder):
 	DP = past_delay(inFormula)
 	WD = wdelay(inFormula)
 	with Timer() as t:
-		#build_structure(Struct, inFormula)
 		build_fst_structure(Struct, inFormula)
 	print "Build Structure took %s ms" % (t.msecs,)
 
 	dprint("Struct is: ", DBG_STRUCT)
 	for s in Struct:
 		dprint("%s" % (Struct[s],), DBG_STRUCT)
-		
-	dprint("Formula delay is %d, %d :: wait delay %d" % (D,DP,WD), DBG_SMON)
+	dprint("Formula delay is %s, %s :: wait delay %s" % (D,DP,WD), DBG_SMON)
 	# wait for new data...
 	for line in inFile:
-			dprint("###### New event received",DBG_SMON)
-			updateState(cstate, traceOrder, line)
-			#print "got new state %s" % cstate
-			with Timer() as t:
-				incr_aStruct(Struct, cstate)
-			incrtime = incrtime + t.secs
-			incrcount = incrcount + 1
+			with Timer() as mytimer:
+				dprint("###### New event received",DBG_SMON)
+				updateState(cstate, traceOrder, line)
+				#print "got new state %s" % cstate
+				with Timer() as t:
+					incr_aStruct(Struct, cstate)
+				TimeData.addStIncTime(t.secs)
 
-			dprint("Adding current formula", DBG_SMON)
-			formulas.append((cstate["time"], inFormula))
-			dprint(formulas, DBG_SMON)
-			dprint("reducing all formulas", DBG_SMON)
-			for i,f in enumerate(formulas[:]):
-				formulas[i] = (f[0], reduce(substitute_ais(Struct, cstate, f)))
-			dprint(formulas, DBG_SMON)
-			dprint("removing finished formulas and check violations...", DBG_SMON)
-			# count avg reduction time
-			rform = [f[0] for f in formulas if f[1] == True]
-			for i in rform:
-				redtime = redtime + (int(cstate["time"]) - int(i))
-				redcount = redcount + 1
-			# remove any True formulas from the list
-			formulas[:] = [f for f in formulas if f[1] != True]
-			# skip actually checking while we see if struct build works
-			for i,f in enumerate(formulas[:]):
-				if (f[1] == False):
-						dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
-						if redcount != 0:
-							dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
-						else:
-							dprint("redcount was 0, weird...", DBG_TIME)
-						print "!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
-						sys.exit(1)
-				else:	# eventually never satisfied
-					if (f[0]+WD <= cstate["time"]):
-						dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
-						dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
-						print "VIOLATOR: %s" % (f,)
-						print "!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
-						sys.exit(1)
-	dprint("total incr time: %s, # incrs: %s, avg time: %s" % (incrtime, incrcount, incrtime/incrcount),DBG_TIME)
-	dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
+				dprint("Adding current formula", DBG_SMON)
+				# add current step's formula
+				formulas.append((cstate["time"], inFormula))
+				dprint(formulas, DBG_SMON)
+				dprint("reducing all formulas", DBG_SMON)
+				# reduce all the formulas
+				for i,f in enumerate(formulas[:]):
+					formulas[i] = (f[0], reduce(substitute_ais(Struct, cstate, f)))
+				dprint(formulas, DBG_SMON)
+				dprint("removing finished formulas and check violations...", DBG_SMON)
+				# count avg reduction time
+				rform = [f[0] for f in formulas if f[1] == True]
+				for i in rform:
+					TimeData.addReduceTime(int(cstate["time"]) - int(i))
+				# check max # residues
+				TimeData.checkMaxRes(len(formulas))
+
+				# remove any True formulas from the list
+				formulas[:] = [f for f in formulas if f[1] != True]
+				# skip actually checking while we see if struct build works
+				for i,f in enumerate(formulas[:]):
+					if (f[1] == False):
+							print "Monitor Time Data: %s" % TimeData
+							print "!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+							sys.exit(1)
+					else:	# eventually never satisfied
+						if (f[0]+WD <= cstate["time"]):
+							print "Monitor Time Data: %s" % TimeData
+							print "!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+							sys.exit(1)
+			TimeData.addLoopTime(mytimer.secs)
+	print "Monitor Time Data: %s" % TimeData
 	print "#### finished, trace satisfies formula"
 
 ##### OLDER MONITOR STUFF #########################
@@ -562,23 +573,24 @@ def smon_purecons(cstep, history, formula):
 	# just return True if checking something before we have state
 	# this is essentially initialization -- protects us from failing due to 
 	# past time invariants that look past the beggining of the trace
+	formtype = ftype(formula)
 	if (cstep < 0):
 		return True
-	if (ftype(formula) == EXP_T):
+	if (formtype == EXP_T):
 		return smon_purecons(cstep, history, rchild(formula))
-	elif (ftype(formula) == PROP_T):
+	elif (formtype == PROP_T):
 		return history[cstep][rchild(formula)]
-	elif (ftype(formula) == NPROP_T):
+	elif (formtype == NPROP_T):
 		return not history[cstep][rchild(formula)]
-	elif (ftype(formula) == NOT_T):
+	elif (formtype == NOT_T):
 		return not smon_purecons(cstep, history, rchild(formula))
-	elif (ftype(formula) == AND_T):
+	elif (formtype == AND_T):
 		return smon_purecons(cstep, history, lchild(formula)) and smon_purecons(cstep, history, rchild(formula))
-	elif (ftype(formula) == OR_T):
+	elif (formtype == OR_T):
 		return smon_purecons(cstep, history, lchild(formula)) or smon_purecons(cstep, history, rchild(formula))
-	elif (ftype(formula) == IMPLIES_T):
+	elif (formtype == IMPLIES_T):
 		return not smon_purecons(cstep,history, lchild(formula)) or smon_purecons(cstep, history, rchild(formula))
-	elif (ftype(formula) == EVENT_T): 
+	elif (formtype == EVENT_T): 
 		l = tau(history, cstep) + formula[1]
 		h = tau(history, cstep) + formula[2]
 
@@ -590,7 +602,7 @@ def smon_purecons(cstep, history, formula):
 					return True
 		# didn't find the event in the bounds
 		return False
-	elif (ftype(formula) == ALWAYS_T):
+	elif (formtype == ALWAYS_T):
 		l = tau(history, cstep) + formula[1]
 		h = tau(history, cstep) + formula[2]
 		
@@ -602,7 +614,7 @@ def smon_purecons(cstep, history, formula):
 					return False
 		# didn't find point where subform was false
 		return True
-	elif (ftype(formula) == UNTIL_T): 
+	elif (formtype == UNTIL_T): 
 		l = tau(history, cstep) + formula[1]
 		h = tau(history, cstep) + formula[2]
 		end = None
@@ -631,7 +643,7 @@ def smon_purecons(cstep, history, formula):
 					return False
 		# didn't find point where subform was false
 		return True
-	elif (ftype(formula) == PEVENT_T):
+	elif (formtype == PEVENT_T):
 		l = tau(history, cstep) - formula[2]
 		h = tau(history, cstep) - formula[1]
 
@@ -643,7 +655,7 @@ def smon_purecons(cstep, history, formula):
 					return True
 		# didn't find point where subform was false
 		return False
-	elif (ftype(formula) == PALWAYS_T):
+	elif (formtype == PALWAYS_T):
 		l = tau(history, cstep) - formula[2]
 		h = tau(history, cstep) - formula[1]
 
@@ -655,7 +667,7 @@ def smon_purecons(cstep, history, formula):
 					return False
 		# didn't find point where subform was false
 		return True
-	elif (ftype(formula) == SINCE_T):
+	elif (formtype == SINCE_T):
 		l = tau(history, cstep) - formula[2]
 		h = tau(history, cstep) - formula[1]
 		start = None

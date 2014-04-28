@@ -346,6 +346,37 @@ class CInterval(object):
 	def empty(self):
 		return self.start > self.end
 
+class monTimeData:
+	def __init__(self):
+		self.loop_t = 0
+		self.loop_c = 0
+		self.stinc_t = 0
+		self.stinc_c = 0
+		self.reduce_t = 0
+		self.reduce_c = 0
+		self.maxres_c = 0
+		self.mem_c = 0
+		self.mem_n = 0
+
+	def __str__(self):
+		return "monTimeData: loop: %s / %s; stinc: %s / %s; reduce: %s / %s; maxres: %s; mem: %s / %s" % (self.loop_t, self.loop_c, self.stinc_t, self.stinc_c, self.reduce_t, self.reduce_c, self.maxres_c, self.mem_c, self.mem_n)
+	def __repr__(self):
+		return "monTimeData struct"
+	def addLoopTime(self, secs):
+		self.loop_t += secs
+		self.loop_c += 1
+	def addStIncTime(self, secs):
+		self.stinc_t += secs
+		self.stinc_c += 1
+	def addReduceTime(self, secs):
+		self.reduce_t += secs
+		self.reduce_c += 1
+	def addMemSize(self, size):
+		self.mem_c += size
+		self.mem_n += 1
+	def checkMaxRes(self, numres):
+		self.maxres_c = max(self.maxres_c, numres)
+
 # add a tag to past time formula
 def tag_formula(formula):
 	global sTag
@@ -361,7 +392,31 @@ def get_tags(formula):
 		return (formula[3], formula[4])
 	return -1
 
+ftypeDict = {
+	"exp" : EXP_T,
+	"prop" : PROP_T,
+	"nprop" : NPROP_T,
+	"notprop" : NOT_T,
+	"andprop" : AND_T,
+	"orprop" : OR_T,
+	"impprop" : IMPLIES_T,
+	"eventprop" : EVENT_T,
+	"alwaysprop" : ALWAYS_T,
+	"untilprop" : UNTIL_T,
+	"onceprop" : PEVENT_T,
+	"palwaysprop" : PALWAYS_T,
+	"sinceprop" : SINCE_T,
+}
+
 def ftype(formula):
+	if (formula == 0 or formula == 1 or formula == True or formula == False):
+		return VALUE_T
+	try:
+		return ftypeDict[formula[0]]
+	except KeyError:
+		return INVALID_T
+
+def ftype_old(formula):
 	# check for value (needed for post substitute residual formulas)
 	if (formula == 0 or formula == 1 or formula == True or formula == False):
 		return VALUE_T
@@ -435,29 +490,30 @@ def substitute_as(Struct, cstate, formula_entry):
 	ctime = cstate["time"]
 	formtime = formula_entry[0]
 	formula = formula_entry[1]
-	if (ftype(formula) == EXP_T):
+	formtype = ftype(formula)
+	if (formtype == EXP_T):
 		return [formula[0], substitute_as(Struct, cstate, (formtime, formula[1]))]
-	elif (ftype(formula) == VALUE_T):
+	elif (formtype == VALUE_T):
 		return formula
-	elif (ftype(formula) == PROP_T):
+	elif (formtype == PROP_T):
 		if (cstate[formula[1]]):
 			return True
 		else:
 			return False
-	elif (ftype(formula) == NPROP_T):
+	elif (formtype == NPROP_T):
 		if (cstate[formula[1]]):
 			return False
 		else:
 			return True
-	elif (ftype(formula) == NOT_T):
+	elif (formtype == NOT_T):
 		return ['notprop', substitute_as(Struct, cstate, (formtime, formula[1]))]
-	elif (ftype(formula) == AND_T):
+	elif (formtype == AND_T):
 		return ['andprop', substitute_as(Struct, cstate, (formtime, formula[1])), substitute_as(Struct, cstate, (formtime,formula[2]))]
-	elif (ftype(formula) == OR_T):
+	elif (formtype == OR_T):
 		return ['orprop', substitute_as(Struct, cstate, (formtime,formula[1])), substitute_as(Struct, cstate, (formtime, formula[2]))]
-	elif (ftype(formula) == IMPLIES_T):
+	elif (formtype == IMPLIES_T):
 		return ['impprop', substitute_as(Struct, cstate, (formtime,formula[1])), substitute_as(Struct, cstate, (formtime, formula[2]))]
-	elif (ftype(formula) == EVENT_T): 
+	elif (formtype == EVENT_T): 
 		h = hbound(formula) + formtime
 		l = lbound(formula) + formtime
 		subStruct = Struct[get_tags(formula)]
@@ -472,7 +528,7 @@ def substitute_as(Struct, cstate, formula_entry):
 		if subStruct.valid >= h:
 			return False
 		return formula
-	elif (ftype(formula) == ALWAYS_T):
+	elif (formtype == ALWAYS_T):
 		h = hbound(formula) + formtime
 		l = lbound(formula) + formtime
 		subStruct = Struct[get_tags(formula)]
@@ -487,7 +543,7 @@ def substitute_as(Struct, cstate, formula_entry):
 		if subStruct.valid >= h:
 			return True
 		return formula
-	elif (ftype(formula) == UNTIL_T): 
+	elif (formtype == UNTIL_T): 
 		tags = get_tags(formula)
 		subStruct1 = Struct[tags[0]]
 		subStruct2 = Struct[tags[1]]
@@ -527,7 +583,7 @@ def substitute_as(Struct, cstate, formula_entry):
 			return True
 		# still haven't seen eventually, hang on
 		return formula
-	elif (ftype(formula) == PEVENT_T):
+	elif (formtype == PEVENT_T):
 		h = formtime - lbound(formula)
 		l = formtime - hbound(formula)
 		subStruct = Struct[get_tags(formula)]
@@ -542,7 +598,7 @@ def substitute_as(Struct, cstate, formula_entry):
 		if subStruct.valid >= h:
 			return False
 		return formula
-	elif (ftype(formula) == PALWAYS_T):
+	elif (formtype == PALWAYS_T):
 		h = formtime - lbound(formula)
 		l = formtime - hbound(formula)
 		subStruct = Struct[get_tags(formula)]
@@ -557,7 +613,7 @@ def substitute_as(Struct, cstate, formula_entry):
 		if subStruct.valid >= h:
 			return True
 		return formula
-	elif (ftype(formula) == SINCE_T):
+	elif (formtype == SINCE_T):
 		tags = get_tags(formula)
 		subStruct1 = Struct[tags[0]]
 		subStruct2 = Struct[tags[1]]
@@ -604,29 +660,30 @@ def substitute_ais(Struct, cstate, formula_entry):
 	ctime = cstate["time"]
 	formtime = formula_entry[0]
 	formula = formula_entry[1]
-	if (ftype(formula) == EXP_T):
+	formtype = ftype(formula)
+	if (formtype == EXP_T):
 		return [formula[0], substitute_ais(Struct, cstate, (formtime, formula[1]))]
-	elif (ftype(formula) == VALUE_T):
+	elif (formtype == VALUE_T):
 		return formula
-	elif (ftype(formula) == PROP_T):
+	elif (formtype == PROP_T):
 		if (cstate[formula[1]]):
 			return True
 		else:
 			return False
-	elif (ftype(formula) == NPROP_T):
+	elif (formtype == NPROP_T):
 		if (cstate[formula[1]]):
 			return False
 		else:
 			return True
-	elif (ftype(formula) == NOT_T):
+	elif (formtype == NOT_T):
 		return ['notprop', substitute_ais(Struct, cstate, (formtime, formula[1]))]
-	elif (ftype(formula) == AND_T):
+	elif (formtype == AND_T):
 		return ['andprop', substitute_ais(Struct, cstate, (formtime, formula[1])), substitute_ais(Struct, cstate, (formtime,formula[2]))]
-	elif (ftype(formula) == OR_T):
+	elif (formtype == OR_T):
 		return ['orprop', substitute_ais(Struct, cstate, (formtime,formula[1])), substitute_ais(Struct, cstate, (formtime, formula[2]))]
-	elif (ftype(formula) == IMPLIES_T):
+	elif (formtype == IMPLIES_T):
 		return ['impprop', substitute_ais(Struct, cstate, (formtime,formula[1])), substitute_ais(Struct, cstate, (formtime, formula[2]))]
-	elif (ftype(formula) == EVENT_T): 
+	elif (formtype == EVENT_T): 
 		h = hbound(formula) + formtime
 		l = lbound(formula) + formtime
 		subStruct = Struct[get_tags(formula)]
@@ -639,7 +696,7 @@ def substitute_ais(Struct, cstate, formula_entry):
 		if (subStruct.valid >= h):
 			return False
 		return formula
-	elif (ftype(formula) == ALWAYS_T):
+	elif (formtype == ALWAYS_T):
 		h = hbound(formula) + formtime
 		l = lbound(formula) + formtime
 		subStruct = Struct[get_tags(formula)]
@@ -653,7 +710,7 @@ def substitute_ais(Struct, cstate, formula_entry):
 			return False
 		else: # alcheck == ALC_ALIVE
 			return formula
-	elif (ftype(formula) == UNTIL_T): 
+	elif (formtype == UNTIL_T): 
 		tags = get_tags(formula)
 		subStruct1 = Struct[tags[0]]
 		subStruct2 = Struct[tags[1]]
@@ -685,7 +742,7 @@ def substitute_ais(Struct, cstate, formula_entry):
 			return False
 		else: # alcheck == ALC_ALIVE or ALC_SAT and not found
 			return formula
-	elif (ftype(formula) == PEVENT_T):
+	elif (formtype == PEVENT_T):
 		h = formtime - lbound(formula)
 		l = formtime - hbound(formula)
 		subStruct = Struct[get_tags(formula)]
@@ -698,7 +755,7 @@ def substitute_ais(Struct, cstate, formula_entry):
 		if subStruct.valid >= h:
 			return False
 		return formula
-	elif (ftype(formula) == PALWAYS_T):
+	elif (formtype == PALWAYS_T):
 		h = formtime - lbound(formula)
 		l = formtime - hbound(formula)
 		subStruct = Struct[get_tags(formula)]
@@ -712,7 +769,7 @@ def substitute_ais(Struct, cstate, formula_entry):
 			return False
 		else: # alcheck == ALC_ALIVE
 			return formula
-	elif (ftype(formula) == SINCE_T):
+	elif (formtype == SINCE_T):
 		tags = get_tags(formula)
 		subStruct1 = Struct[tags[0]]
 		subStruct2 = Struct[tags[1]]
@@ -1266,6 +1323,71 @@ def reduce(formula):
 			return True
 		else:
 			return ['andprop', child1, child2]
+	elif (ftype(formula) == OR_T):
+		child1 = reduce(formula[1])
+		child2 = reduce(formula[2])
+		if (child1 == True or child2 == True):
+			return True
+		elif (child1 == False and child2 == False):
+			return False
+		else:
+			return ['orprop', child1, child2]
+	elif (ftype(formula) == IMPLIES_T):
+		child1 = reduce(formula[1])
+		child2 = reduce(formula[2])
+		if (child1 == False or child2 == True):
+			return True
+		elif (child1 == True and child2 == False):
+			return False
+		else:
+			return ['impprop', child1, child2]
+	elif (ftype(formula) == EVENT_T): 
+		## Fill in with check and return formula if not sure yet
+		return formula
+	elif (ftype(formula) == ALWAYS_T):
+		## Fill in with check and return formula if not sure yet
+		return formula
+	elif (ftype(formula) == UNTIL_T): 
+		## Fill in with check and return formula if not sure yet
+		return formula
+	elif (ftype(formula) == PEVENT_T):
+		return formula
+	elif (ftype(formula) == PALWAYS_T):
+		return formula
+	elif (ftype(formula) == SINCE_T):
+		return formula
+	else:
+		return INVALID_T
+
+def sc_reduce(formula):
+	if (ftype(formula) == EXP_T):
+		#return [formula[0], reduce(formula[1])]
+		return reduce(formula[1])
+	elif (ftype(formula) == VALUE_T):
+		return formula
+	elif (ftype(formula) == PROP_T):
+		dprint("shouldn't get here, already sub'd", DBG_ERROR)
+		return cstate[formula[1]]
+	elif (ftype(formula) == NPROP_T):
+		dprint("shouldn't get here, already sub'd", DBG_ERROR)
+		return not cstate[formula[1]]
+	elif (ftype(formula) == NOT_T):
+		child = reduce(formula[1])
+		if (ftype(child) == VALUE_T):
+			return not child
+		else:
+			return ['notprop', child]
+	elif (ftype(formula) == AND_T):
+		child1 = reduce(formula[1])
+		if (child1 == False):
+			return False
+		elif (child1 == True): 
+			child2 = reduce(formula[2])
+			if (child2 == False):
+				return False
+			elif (child2 == True):
+				return True
+		return ['andprop', child1, child2]
 	elif (ftype(formula) == OR_T):
 		child1 = reduce(formula[1])
 		child2 = reduce(formula[2])
