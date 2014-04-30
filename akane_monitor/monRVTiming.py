@@ -123,7 +123,9 @@ def mon_purecons(inFile, inFormula, traceOrder):
 			dprint("current state is %s" % (cstate,), DBG_SMON)
 			#
 			#while ((eptr <= cptr) and (tau(history, cptr) - tau(history, eptr) >= WD)):
-			while ((eptr <= cptr) and (tau(history,cptr) - tau(history,eptr) >= WD)):
+			cptime = tau(history, cptr)
+			#while ((eptr <= cptr) and (tau(history,cptr) - tau(history,eptr) >= WD)):
+			while ((eptr <= cptr) and (cptime - tau(history,eptr) >= WD)):
 				dprint("checking step %s" % eptr, DBG_SMON)
 				mon = smon_purecons(eptr, history, inFormula)
 				#
@@ -132,11 +134,9 @@ def mon_purecons(inFile, inFormula, traceOrder):
 					dprint("!!!!FORMULA VIOLATED %s@%s -- %s@%s" % (eptr, cptr, tau(history, eptr), tau(history,cptr)))
 					sys.exit(5)
 				eptr = eptr + 1
-			if (tau(history,cptr) == 4):
-				print history
 			TimeData.addMemSize(len(history))
 			# clean history
-			histremove = [k for k in history if (tau(history,cptr) - tau(history,k) > (PD+D))]	
+			histremove = [k for k in history if (cptime - tau(history,k) > (PD+D))]	
 			for k in histremove:
 				del history[k]
 			# increment current pointer
@@ -271,6 +271,72 @@ def mon_ares(inFile, inFormula, traceOrder):
 	dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
 	print "#### finished, trace satisfies formula"
 
+def mon_aistcons(inFile, inFormula, traceOrder):
+	global TimeData
+	# some algorithm local variables
+	cstate = {}
+	formulas = []
+	Struct = {}
+	# build struct and save delay
+	D = delay(inFormula)
+	DP = past_delay(inFormula)
+	WD = wdelay(inFormula)
+	eptr = 0
+	cptr = 0
+	with Timer() as t:
+		build_fst_structure(Struct, inFormula)
+	print "Build Structure took %s ms" % (t.msecs,)
+
+	dprint("Struct is: ", DBG_STRUCT)
+	for s in Struct:
+		dprint("%s" % (Struct[s],), DBG_STRUCT)
+	dprint("Formula delay is %s, %s :: wait delay %s" % (D,DP,WD), DBG_SMON)
+	# wait for new data...
+	for line in inFile:
+			with Timer() as mytimer:
+				dprint("###### New event received",DBG_SMON)
+				updateState(cstate, traceOrder, line)
+				#print "got new state %s" % cstate
+				with Timer() as t:
+					incr_aStruct(Struct, cstate)
+				TimeData.addStIncTime(t.secs)
+
+				dprint("Adding current formula", DBG_SMON)
+				# add current step's formula
+				formulas.append((cstate["time"], inFormula))
+				dprint(formulas, DBG_SMON)
+				dprint("reducing all formulas", DBG_SMON)
+				# reduce all the formulas
+				for i,f in enumerate(formulas[:]):
+					#formulas[i] = (f[0], reduce(substitute_ais(Struct, cstate, f)))
+					formulas[i] = (f[0], sc_reduce_sub(Struct, cstate, f))
+				dprint(formulas, DBG_SMON)
+				dprint("removing finished formulas and check violations...", DBG_SMON)
+				# count avg reduction time
+				rform = [f[0] for f in formulas if f[1] == True]
+				for i in rform:
+					TimeData.addReduceTime(int(cstate["time"]) - int(i))
+				# check max # residues
+				TimeData.checkMaxRes(len(formulas))
+
+				# remove any True formulas from the list
+				formulas[:] = [f for f in formulas if f[1] != True]
+				# skip actually checking while we see if struct build works
+				for i,f in enumerate(formulas[:]):
+					if (f[1] == False):
+							print "Monitor Time Data: %s" % TimeData
+							print "!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+							sys.exit(1)
+					else:	# eventually never satisfied
+						if (f[0]+WD <= cstate["time"]):
+							print "Monitor Time Data: %s" % TimeData
+							print "!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
+							sys.exit(1)
+			TimeData.addLoopTime(mytimer.secs)
+	print "Monitor Time Data: %s" % TimeData
+	print "#### finished, trace satisfies formula"
+
+
 def mon_aires(inFile, inFormula, traceOrder):
 	global TimeData
 	# some algorithm local variables
@@ -306,7 +372,8 @@ def mon_aires(inFile, inFormula, traceOrder):
 				dprint("reducing all formulas", DBG_SMON)
 				# reduce all the formulas
 				for i,f in enumerate(formulas[:]):
-					formulas[i] = (f[0], reduce(substitute_ais(Struct, cstate, f)))
+					#formulas[i] = (f[0], reduce(substitute_ais(Struct, cstate, f)))
+					formulas[i] = (f[0], sc_reduce_sub(Struct, cstate, f))
 				dprint(formulas, DBG_SMON)
 				dprint("removing finished formulas and check violations...", DBG_SMON)
 				# count avg reduction time
