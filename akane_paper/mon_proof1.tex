@@ -1,0 +1,209 @@
+%% write up of monitor algorithm
+% Aaron Kane
+
+% at eventually, need to finish writing up safety_monitor()
+% should also decide on notation for append, step/bound #, etc
+
+\documentclass[10pt,a4paper]{article}
+\usepackage[noend]{algorithmic}
+\usepackage{algorithm}
+\usepackage[latin1]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{bussproofs}
+
+\addtolength{\textheight}{1in}
+%{\voffset}{-1.5in}
+
+\newcommand{\smon}[1]{\ensuremath{smon(\sigma, \tau, #1)}}
+\newcommand{\ty}[1]{\texttt{#1}}
+\newcommand{\bptr}{b}
+\newcommand{\fptr}{f}
+\newcommand{\ov}[1]{\ensuremath{\overline{#1}}}
+\newcommand{\ep}{ep}
+\newcommand{\cp}{cp}
+\newcommand{\rp}[2]{\ensuremath{\langle #1, #2 \rangle}}
+\newcommand{\res}[2]{\ensuremath{r_{#1}^{#2}}}
+
+
+
+\newtheorem{thm}{Theorem}
+\title{Aggressive Monitor Proof Writeup}
+
+\begin{document}
+\maketitle
+
+\section{Definitions}
+A residue $\res{\phi}{j} = \rp{j}{\psi}$ is a pair where $j \in \mathbb{N}$ is a timestep index and formula $\psi$.
+
+A formula structure $S_{\phi}^i = \{ r_{\phi}^0, r_{\phi}^1, \ldots r_{\phi}^i \}$ is a list of residues and the history $\mathcal{R}^i = \{ S_{\psi_1}^i, S_{\psi_2}^i,\ldots \}$ is a list of formula structures.
+
+
+
+\section{Properties}
+
+
+
+\subsection{Soundness}
+For all $\phi, i, \tau, \sigma$:
+\begin{align}
+\forall \langle j, \psi \rangle \in S_{\phi}^i \quad  \sigma , \tau , j \vDash \psi \rightarrow \sigma , \tau , j \vDash \phi
+\end{align}
+\subsection{Completeness}
+For all $\phi, i, \tau, \sigma$:
+\begin{align}
+\sigma, \tau, i \vDash \phi \rightarrow \exists \langle i, \psi \rangle \in S_{\psi}^i \quad \sigma, \tau, i \vDash \psi \\
+\sigma, \tau, i \nvDash \phi \rightarrow \exists \langle i, \psi \rangle \in S_{\psi}^i \quad \sigma, \tau, i \nvDash \psi
+\end{align}
+\subsection{Promptness}
+For all $\phi, i, \tau, \sigma$:
+\begin{align}
+\forall j:  j<i \wedge \tau_i - \tau_j \geq \Delta (\psi) \rightarrow \exists \langle j, \psi \rangle \in S_{\psi}^i \wedge \psi \equiv \top \vee \psi \equiv \bot
+\end{align}
+
+\newpage
+\section{Algorithm}
+\subsection{Top-level monitoring Algorithm}
+Our top level aggressive monitoring algorithm is as follows:
+
+
+\begin{algorithmic}[1]
+\STATE Recognize formulas for which we build structures
+\STATE $\mathcal{R}^{-1} \leftarrow \emptyset$
+\STATE $S^{-1} \leftarrow \emptyset$
+\STATE $i \leftarrow 0$
+\LOOP
+\STATE Increment Structure $\mathcal{R}^{i}$ for every $\psi' \in \text{temp\_sub}(\varphi)$ in increasing size
+\STATE Reduce all $\rp{j}{\psi} \in \mathcal{R}^i$
+\STATE $S^i \leftarrow S^{i-1} \cup \rp{i}{\varphi}$
+\STATE Reduce all $\rp{j'}{\psi'} \in S^i$
+\STATE $i \leftarrow i + 1$
+\STATE Report any violations on $S^i$
+\ENDLOOP
+\end{algorithmic}
+
+
+\subsubsection*{Incrementing formula structure}
+Incrementing the history structure $\mathcal{R}^i$ is done by incrementing all formula structures by the following algorithm:
+\\
+
+\noindent \textbf{Increment formula structure}
+\begin{algorithmic}[1]
+\STATE ${S_{\phi}^{i}} \leftarrow S_{\phi}^{i-1} \cup \rp{i}{\phi}$
+\FOR{all $\res{\phi}{j} \in {S_{\phi}^{i}}$}
+\STATE Reduce $\res{\phi}{j}$
+\ENDFOR
+\end{algorithmic}
+
+\newpage
+\subsubsection*{Reduce}
+The reduce function takes a residue and returns the reduced residue:
+
+%\begin{algorithm}
+\noindent \textbf{reduce}
+\begin{algorithmic}[1]
+\IF{$\res{\phi}{j} \equiv \top \vee \res{\phi}{j} \equiv \bot$}
+\RETURN $\res{\phi}{j}$
+%%%%% PROP %%%%%
+\ELSIF{$\res{\phi}{j} \equiv p$}
+\RETURN $\rp{j}{\sigma(p)}$
+%%%%% NOT %%%%%%%%
+\ELSIF{$\res{\phi}{j} \equiv \neg \psi$}
+\STATE $\psi' \leftarrow reduce(\psi)$
+\RETURN $\rp{j}{\neg \psi'}$
+%%%%% OR %%%%%%%%%%
+\ELSIF{$\res{\phi}{j} \equiv \psi_1 \vee \psi_2$}
+\STATE $\psi_1' \leftarrow reduce(\psi_1)$
+\STATE $\psi_2' \leftarrow reduce(\psi_2)$
+\RETURN $\rp{j}{\psi_1' \vee \psi_2'}$
+%%%%% UNTIL %%%%%%%%%%%%%%%
+\ELSIF{$\res{\phi}{j} \equiv \psi_1 \mathcal{U}_{[l,h]} \psi_2$}
+\STATE $e \leftarrow \text{smallest } k \in [j+l,j+h] \text{ s.t. } \res{\psi_2}{k} = \top$
+\IF{$e \equiv \emptyset$}
+\STATE $v \leftarrow \text{largest } k \in S_{\psi_2}^i \text{ s.t. } \res{\psi_2}{k} = \top/\bot$
+\IF{$v \geq j+h$}
+\RETURN $\rp{j}{\bot}$
+\ELSE
+\RETURN $\res{\phi}{j}$
+\ENDIF
+\ENDIF % if no e
+\STATE unfinished $\leftarrow \bot$
+\FOR{all $ k \in S_{\psi_2} \text{ s.t. } k \in [j, e]$}
+\IF{$\res{\psi_2}{k} \equiv \bot$}
+\RETURN $\rp{j}{\bot}$
+\ELSIF{$\res{\psi_2}{k} \not\equiv \top$}
+\STATE unfinished $\leftarrow \top$
+\ENDIF % checking psi_1
+\ENDFOR
+\IF{unfinished $\equiv \top$}
+\RETURN $\res{\phi}{j}$
+\ELSE
+\RETURN $\rp{j}{\top}$
+\ENDIF
+%%%%%%% SINCE
+\ELSIF{$\res{\phi}{j} \equiv \psi_1 \mathcal{S}_{[l,h]} \psi_2$}
+\STATE $s \leftarrow \text{largest } k \in [j+l,j+h] \text{ s.t. } \res{\psi_2}{k} = \top$
+\IF{$s \equiv \emptyset$}
+\STATE $v \leftarrow \text{largest } k \in S_{\psi_2}^i \text{ s.t. } \res{\psi_2}{k} = \top/\bot$
+\IF{$v \geq j+h$}
+\RETURN $\rp{j}{\bot}$
+\ELSE
+\RETURN $\res{\phi}{j}$
+\ENDIF
+\ENDIF % if no s
+\STATE unfinished $\leftarrow \bot$
+\FOR{all $k \in S_{\psi_2}: k \in [s, j]$}
+\IF{$\res{\psi_2}{k} \equiv \bot$}
+\RETURN $\rp{j}{\bot}$
+\ELSIF{$\res{\psi_2}{k} \not\equiv \top$}
+\STATE unfinished $\leftarrow \top$
+\ENDIF % checking psi_1
+\ENDFOR
+\IF{unfinished $= \top$}
+\RETURN $\res{\phi}{j}$
+\ELSE
+\RETURN $\rp{j}{\top}$
+\ENDIF
+\ENDIF % outer if
+\end{algorithmic}
+%\end{algorithm}
+
+\section{Soundness/Completeness Proofs}
+
+The soundness and completeness of our top-level algorithm ultimately depends on the soundness and completeness of the reduce algorithm. So first, we show that reduce is sound and complete.
+
+\begin{thm}
+The function $\hat{\res{j}{\phi}} \leftarrow reduce(\sigma_i, \tau_i, \mathbb{R}^i, \res{j}{\phi})$ is sound, complete, and prompt when $\mathbb{R}^i, \res{j}{\phi}$ are sound, complete, and prompt.
+\end{thm}
+\noindent We will show that the properties hold over the form of $\phi$: \\
+\\ \noindent \textbf{Case} $\phi \equiv \top/\bot$: \\
+reduce is trivially sound, complete and prompt since we do not change the residue.
+
+\noindent \textbf{Case} $\phi \equiv p$ \\
+reduce is trivially sound, from the semantics we know $\sigma, \tau, j \vDash p \leftrightarrow \sigma, \tau, j \vDash \sigma_j(p)$. Promptness is trivial since reduce will always return the reduced truth value of a proposition.  For completeness we know that $\sigma, \tau, j \vDash p \rightarrow \sigma, \tau, j \vDash \sigma_j(p)$ and $\sigma, \tau, j \nvDash p \rightarrow \sigma, \tau, j \nvDash \sigma_j (p)$, so replacing $p$ with $\sigma_j(p)$ is complete.
+\\ \\ 
+\noindent \textbf{Case} $\phi \equiv \neg \psi$ \\
+reduce is trivially sound...
+\\ \\
+\noindent \textbf{Case} $\phi \equiv \psi_1 \vee \psi_2$ \\
+...
+\\ \\
+\noindent \textbf{Case} $\phi \equiv \psi_1 \mathcal{U}_{[l,h]} \psi_2$: \\
+Soundness is simple in this case, since reduce either returns $\res{j}{\phi}$ which is trivially sound, or it returns the semantically correct truth value ($\top/\bot$). Reduce will only return $\top$ if $\exists k \in [j+l,j+h]$ s.t. $\res{k}{\psi_2} = \top$ and $\forall k' \in [j,e]$ $\res{k'}{\psi_1} = \top$ (if any $\psi_1$ residue is $\bot$ then $\bot$ will be returned, and if any are not yet evaluated then unfinished is set and the original residue is returned). This is the semantics of $\mathcal{U}$, so we know that a returned $\top/\bot \rightarrow \sigma, \tau, j \vDash \phi$. Thus reduce is sound for $\mathcal{U}$.
+
+Completeness is trivial because the only possible reduction is a sound $\top/\bot$ value or the original $\phi$. So for all $\res{j}{\psi} \in S^i_{\psi_1 \mathcal{U}_{[l,h]} \psi_2}$ we have $\res{\psi}{j} \equiv \rp{j}{\psi_1 \mathcal{U}_{[l,h]} \psi_2}$ or $\res{\psi}{j} \equiv \top/\bot$. Since reduce is sound, if the residue is $\top/\bot$ we know that the residue value is correct ($\top$ if $\sigma, \tau, j \vDash \phi$ and $\bot$ otherwise) and if a residue $\res{\phi}{j} \equiv \rp{j}{\phi}$ it is trivially complete.
+
+Reduce is prompt $\mathbf{reduce}$
+
+
+\section{Description}
+Our runtime monitoring algorithm $\mathbf{agmon}$ takes as input a well-formed bmtl formula $\varphi$, monitors the system trace as it grows, builds history structures for temporal subformula of $\varphi$ and reports violations of $\varphi$ as soon as they are detected.
+
+We summarize the relevant functions below: \\
+$\mathbf{agmon}(\varphi)$ is our top-level monitor function. \\
+$\mathbf{incr}(\sigma_i, \tau, i, \hat{\mathcal{R}}^i, \psi)$ updates the history structure $S^i_{\psi}$ based on the new trace entry $\sigma_i$ \\ 
+$\mathbf{reduce}(\sigma_i,\tau, i, \mathcal{R}^i, \res{\psi}{j})$ takes a residue $\res{\psi}{j}$ and returns a reduced residue based on the history $\mathcal{R}^i$ and current state $\sigma_i, \tau_i$. 
+\end{document}
