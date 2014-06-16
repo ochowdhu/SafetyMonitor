@@ -1,0 +1,145 @@
+%% write up of monitor algorithm
+% Aaron Kane
+
+% at eventually, need to finish writing up safety_monitor()
+% should also decide on notation for append, step/bound #, etc
+
+\documentclass[10pt,a4paper]{article}
+\usepackage[noend]{algorithmic}
+\usepackage{algorithm}
+\usepackage[latin1]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{bussproofs}
+
+
+\newcommand{\smon}[1]{\ensuremath{smon(\sigma, \tau, #1)}}
+\newcommand{\ty}[1]{\texttt{#1}}
+\newcommand{\bptr}{b}
+\newcommand{\fptr}{f}
+\newcommand{\ov}[1]{\ensuremath{\overline{#1}}}
+\newcommand{\ep}{ep}
+\newcommand{\cp}{cp}
+\newcommand{\Res}[1]{\ensuremath{\mathbb{R}_{#1}}}
+\newcommand{\Hist}[1]{\ensuremath{\mathbb{H}_{#1}}}
+\newcommand{\FRes}{\ensuremath{\mathbb{F}}}
+
+\begin{document}
+
+The overall Struct $S$ is made of two sets of lists, the residue sets $\mathbb{R}$ and history sets $\mathcal{H}$.
+
+For each subformula $\phi$ we have a residue $\Res{\phi}$ and history $\Hist{\phi}$.
+\subsubsection*{Aggressive algorithm}
+\begin{algorithmic}
+\STATE Build structures from $\psi$
+\LOOP
+\STATE Obtain snapshot $s$ at time $t$
+\STATE Increment structs with $s, t$
+\STATE Add $(t, \phi)$ to $\FRes$
+\FOR{ all $r_t \in \FRes$}
+\STATE reduce $r_t$
+\ENDFOR
+\STATE Check $\FRes$ for failed residues
+\ENDLOOP
+\end{algorithmic}
+
+\subsubsection*{Increment Structure}
+\begin{algorithmic}
+\FOR{ all $\Res{\phi} \in \mathbb{R}$}
+	\STATE Add $(t, \phi)$ to $\Res{\phi}$
+	\FOR{ all $r_t \in \Res{\phi}$}
+		\STATE $\phi_t' \leftarrow \text{ reduce } r_t$
+		\IF{$\phi_t' \in \{\top, \bot\}$}
+			\STATE Add $\phi_t'$ to $\Hist{\phi}$
+		\ELSE
+			\STATE Add $(t, \phi_t')$ to $\Res{\phi}'$
+		\ENDIF
+	\ENDFOR
+	$\Res{\phi} \leftarrow \Res{\phi}'$
+\ENDFOR
+\end{algorithmic}
+
+\subsubsection*{Reduce}
+\begin{algorithmic}
+\IF{$\psi \equiv p$}
+	\RETURN $s(p)$
+\ELSIF{$\psi \equiv \neg \phi$}
+	\STATE $\phi' \leftarrow \text{ reduce } \phi$
+	\IF{$\phi' \in \{\top,\bot\}$}
+		\RETURN Not $\phi'$
+	\ELSE
+		\RETURN NotNode($\phi'$)
+	\ENDIF
+\ELSIF{$\psi \equiv \phi_1 \vee \phi_2$}
+	\STATE $\phi_1' \leftarrow \text{ reduce } \phi_1$
+	\STATE $\phi_2' \leftarrow \text{ reduce } \phi_2$
+	\IF{$\phi_1' = \top$ or $\phi_2' = \top$}
+		\RETURN $\top$ 
+	\ELSIF{$\phi_1' = \bot$ and $\phi_2' = \bot$}
+		\RETURN $\bot$
+	\ELSE
+		\RETURN OrNode($\phi_1'$, $\phi_2'$)
+	\ENDIF
+\ELSIF{$\psi \equiv \phi_1 \wedge \phi_2$}
+	\STATE $\phi_1' \leftarrow \text{ reduce } \phi_1$
+	\STATE $\phi_2' \leftarrow \text{ reduce } \phi_2$
+	\IF{$\phi_1' = \top$ and $\phi_2' = \top$}
+		\RETURN $\top$ 
+	\ELSIF{$\phi_1' = \bot$ or $\phi_2' = \bot$}
+		\RETURN $\bot$
+	\ELSE
+		\RETURN AndNode($\phi_1'$, $\phi_2'$)
+	\ENDIF
+\ELSIF{$\psi \equiv \phi_1 \rightarrow \phi_2$}
+	\STATE $\phi_1' \leftarrow \text{ reduce } \phi_1$
+	\STATE $\phi_2' \leftarrow \text{ reduce } \phi_2$
+	\IF{$\phi_1' = \bot$ or $\phi_2' = \top$}
+		\RETURN $\top$ 
+	\ELSIF{$\phi_1' = \top$ and $\phi_2' = \bot$}
+		\RETURN $\bot$
+	\ELSE
+		\RETURN ImpNode($\phi_1'$, $\phi_2'$)
+	\ENDIF
+\ELSIF{$\psi \equiv \square_{[l,h]} \phi$}
+	\STATE $l' \leftarrow l + t$
+	\STATE $h' \leftarrow h + t$
+	\STATE check $\Hist{\phi}$
+	\FOR{all $t \in [l',h']$}
+		\IF{$t \not\in \Hist{\phi}$}
+			\RETURN AlwaysNode(l,h, $\phi$)
+		\ELSIF{$\Hist{\phi}(t) = \bot$} 
+			\RETURN $\bot$
+		\ENDIF
+	\ENDFOR
+	\RETURN $\top$
+\ELSIF{$\psi \equiv \lozenge_{[l,h]} \phi$}
+	\STATE $l' \leftarrow l + t$
+	\STATE $h' \leftarrow h + t$
+	\STATE check $\Hist{\phi}$
+	\STATE $\ldots$
+\ELSIF{$\psi \equiv \phi_1 \mathcal{U}_{[l,h]} \phi_2$}
+	\STATE $l' \leftarrow l + t$
+	\STATE $h' \leftarrow h + t$
+	\STATE check $\Hist{\phi}$
+	\STATE $\ldots$
+\ELSIF{$\psi \equiv \blacksquare_{[l,h]} \phi$}
+	\STATE $l' \leftarrow l + t$
+	\STATE $h' \leftarrow h + t$
+	\STATE check $\Hist{\phi}$
+	\STATE $\ldots$
+\ELSIF{$\psi \equiv \blacklozenge_{[l,h]} \phi$}
+	\STATE $l' \leftarrow l + t$
+	\STATE $h' \leftarrow h + t$
+	\STATE check $\Hist{\phi}$
+	\STATE $\ldots$
+\ELSIF{$\psi \equiv \phi_1 \mathcal{S}_{[l,h]} \phi_2$}
+	\STATE $l' \leftarrow l + t$
+	\STATE $h' \leftarrow h + t$
+	\STATE check $\Hist{\phi}$
+	\STATE $\ldots$
+\ENDIF
+
+\end{algorithmic}
+\end{document}
