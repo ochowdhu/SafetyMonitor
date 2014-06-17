@@ -31,76 +31,154 @@
 
 
 \newtheorem{thm}{Theorem}
+\newtheorem{tdef}{Definition}
+\newtheorem{lemma}{Lemma}
+
 \title{Aggressive Monitor Proof Writeup}
+\author{Aaron Kane}
 
 \begin{document}
 \maketitle
 
 \section{Definitions}
-A residue $\res{\phi}{j} = \rp{j}{\psi}$ is a pair where $j \in \mathbb{N}$ is a timestep index and formula $\psi$.
+
+A residue $\res{\phi}{j} = \rp{j}{\psi}$ is a pair where $j \in \mathbb{N}$ is a position in the log and formula $\psi$.
 
 A formula structure $S_{\phi}^i = \{ r_{\phi}^0, r_{\phi}^1, \ldots r_{\phi}^i \}$ is a list of residues and the history $\mathcal{R}^i = \{ S_{\psi_1}^i, S_{\psi_2}^i,\ldots \}$ is a list of formula structures.
 
 
 
-\section{Properties}
+\begin{tdef}[Soundness] For all formula $\varphi$, all $i,j \in \mathbb{N}$ with $j \leq i$, all time stamp sequences $\tau$, all traces $\sigma$, and all formula structures $S^i_{\phi}$ such that 1) $S^i_{\phi} \leftarrow \mathbf{incr}(S^{i-1}_{\phi})$ and 2) $S^{i-1}_{\phi}$ is sound, complete, and prompt, it is the case that: 
+%
+$\forall \rp{j}{\psi} \in S^i_{\phi}: \quad \sigma, \tau, j \vDash \psi \rightarrow \sigma, \tau, j \vDash \phi$
+
+\end{tdef}
+
+\begin{tdef}[Promptness] For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, all traces $\sigma$ and all formula structures $S^i_{\phi}$ such that 1) $S^i_{\phi} \leftarrow \mathbf{incr}(S^{i-1}_{\phi})$ and 2) $S^{i-1}_{\phi}$ is sound, complete, and prompt, it is the case that: $\forall j : j \leq i \wedge \tau_i - \tau_j \geq \Delta (\varphi) \rightarrow \exists \rp{j}{\psi} \in S^i_{\phi} \wedge \psi \equiv \top/\bot$
+
+\end{tdef}
+\begin{tdef}[Completeness] For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, all traces $\sigma$ and all formula structures $S^i_{\phi}$ such that $S^i_{\phi}$ is sound, it is the case that: 1) $\sigma, \tau, i \vDash \phi \rightarrow \exists\rp{i}{\psi} \in S^i_{\phi}: \sigma, \tau, i \vDash \psi$ and 2) $\sigma, \tau, i \nvDash \phi \rightarrow \exists\rp{i}{\psi} \in S^i_{\phi}: \sigma, \tau, i \nvDash \psi$
+
+\end{tdef}
+
+With these properties defined, we ultimately wish to prove the correctness of our top-level algorithm agmon.
+
+\begin{thm}[Correctness of agmon]
+For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, and all traces $\sigma$ it is the case that $agmon(\sigma, \tau, \varphi)$
+\end{thm}
+
+The correctness of agmon relies on the correctness of $\mathbf{reduce}$, which we show here:
+\begin{lemma}[Correctness of $\mathbf{reduce}$]
+For all traces $\sigma$, time stamp sequences $\tau$, trace positions $i \in \mathbb{N}$, residues $\rp{j}{\psi}$ where $j \in \mathbb{N}$ and $\psi$ is a wff, and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete,
+%
+it is the case that $\rp{j}{\psi'} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{R}^i, \rp{j}{\psi})$ is 1) sound, 2) complete, and 3) prompt
 
 
+\end{lemma}
 
-\subsection{Soundness}
-For all $\phi, i, \tau, \sigma$:
-\begin{align}
-\forall \langle j, \psi \rangle \in S_{\phi}^i \quad  \sigma , \tau , j \vDash \psi \rightarrow \sigma , \tau , j \vDash \phi
-\end{align}
-\subsection{Completeness}
-For all $\phi, i, \tau, \sigma$:
-\begin{align}
-\sigma, \tau, i \vDash \phi \rightarrow \exists \langle i, \psi \rangle \in S_{\psi}^i \quad \sigma, \tau, i \vDash \psi \\
-\sigma, \tau, i \nvDash \phi \rightarrow \exists \langle i, \psi \rangle \in S_{\psi}^i \quad \sigma, \tau, i \nvDash \psi
-\end{align}
-\subsection{Promptness}
-For all $\phi, i, \tau, \sigma$:
-\begin{align}
-\forall j:  j<i \wedge \tau_i - \tau_j \geq \Delta (\psi) \rightarrow \exists \langle j, \psi \rangle \in S_{\psi}^i \wedge \psi \equiv \top \vee \psi \equiv \bot
-\end{align}
-
-\newpage
-\section{Algorithm}
+\section{Algorithms}
 \subsection{Top-level monitoring Algorithm}
 Our top level aggressive monitoring algorithm is as follows:
 
 
 \begin{algorithmic}[1]
 \STATE Recognize formulas for which we build structures
-\STATE $\mathcal{R}^{-1} \leftarrow \emptyset$
-\STATE $S^{-1} \leftarrow \emptyset$
-\STATE $i \leftarrow 0$
+\STATE $\mathbb{R}^{-1} \leftarrow \emptyset$; \quad $S^{-1} \leftarrow \emptyset$; \quad $i \leftarrow 0$; \quad $\pi \leftarrow \emptyset$
 \LOOP
-\STATE Increment Structure $\mathcal{R}^{i}$ for every $\psi' \in \text{temp\_sub}(\varphi)$ in increasing size
-\STATE Reduce all $\rp{j}{\psi} \in \mathcal{R}^i$
-\STATE $S^i \leftarrow S^{i-1} \cup \rp{i}{\varphi}$
-\STATE Reduce all $\rp{j'}{\psi'} \in S^i$
+\FOR{every $\psi \in \text{temp\_sub}(\varphi)$ in increasing size}
+	\STATE $S^i_{\psi} \leftarrow S^{i-1}_{\psi} \cup \rp{i}{\psi}$
+	\FOR{all $\rp{j}{\psi'} \in S^i_{\psi}$}
+		\STATE $\pi' \leftarrow \mathbf{reduce}(\sigma, \tau, i, \pi, \rp{j}{\psi'})$
+	\ENDFOR
+\ENDFOR
+%\STATE Reduce all $\rp{j}{\psi} \in \mathcal{R}^i$
+\STATE $\hat{S}_{\varphi}^i \leftarrow S_{\varphi}^{i-1} \cup \rp{i}{\varphi}$
+\FOR{all $\rp{j}{\psi} \in \hat{S}_{\varphi}^i$}
+	\STATE $\pi \leftarrow \mathbf{reduce}(\sigma, \tau, i, \pi, \rp{j}{\psi})$
+\ENDFOR
+%\STATE $S^i \leftarrow \mathbf{reduce}(\sigma, \tau, i, R^i, \hat{S}^{i})$
+%\STATE Reduce all $\rp{j'}{\psi'} \in S^i$
+\STATE \texttt{Report any violations on $S^i$}
 \STATE $i \leftarrow i + 1$
-\STATE Report any violations on $S^i$
 \ENDLOOP
 \end{algorithmic}
 
 
-\subsubsection*{Incrementing formula structure}
-Incrementing the history structure $\mathcal{R}^i$ is done by incrementing all formula structures by the following algorithm:
-\\
+%\subsubsection*{Incrementing formula structure}
+%Incrementing the history structure $\mathcal{R}^i$ is done by incrementing all formula structures by the following algorithm:
+%\\
+%
+%\noindent \textbf{Increment formula structure}
+%\begin{algorithmic}[1]
+%\STATE ${S_{\phi}^{i}} \leftarrow S_{\phi}^{i-1} \cup \rp{i}{\phi}$
+%\FOR{all $\res{\phi}{j} \in {S_{\phi}^{i}}$}
+%\STATE Reduce $\res{\phi}{j}$
+%\ENDFOR
+%\end{algorithmic}
 
-\noindent \textbf{Increment formula structure}
-\begin{algorithmic}[1]
-\STATE ${S_{\phi}^{i}} \leftarrow S_{\phi}^{i-1} \cup \rp{i}{\phi}$
-\FOR{all $\res{\phi}{j} \in {S_{\phi}^{i}}$}
-\STATE Reduce $\res{\phi}{j}$
-\ENDFOR
-\end{algorithmic}
-
-\newpage
+%\displaybreak
 \subsubsection*{Reduce}
 The reduce function takes a residue and returns the reduced residue:
+
+%\begin{align*}
+
+%%% true/false
+\begin{align*}
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\top}) &= \rp{j}{\top} \\
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\bot}) &= \rp{j}{\bot} \\
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{p}) &= \rp{j}{\sigma(p)} \\
+\end{align*}
+%%% NOT
+\begin{align*}
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\neg \psi}) = \left\{
+\begin{aligned}
+\text{Let } &\psi' \leftarrow \mathbf{reduce}(\sigma, \tau, i, \pi, \rp{j}{\psi}) \\
+&\psi'' \leftarrow \mathbf{simplify}(\neg \psi') \\
+&\textbf{return } \rp{j}{\psi''} \\
+\end{aligned} \right. \\
+\end{align*}
+
+%%% OR
+\begin{align*}
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\alpha \vee \beta} = \left\{
+\begin{aligned}
+\text{Let } &\alpha' \leftarrow \mathbf{reduce}(\sigma, \tau, i, \pi, \rp{j}{\alpha}) \\
+&\beta' \leftarrow \mathbf{reduce}(\sigma, \tau, i, \pi, \rp{j}{\beta}) \\
+&\phi' \leftarrow \mathbf{simplify}(\alpha' \vee \beta') \\
+&\textbf{return } \rp{j}{\phi'} \\
+\end{aligned} \right. \\
+\end{align*}
+
+%%% SINCE
+\begin{align*}
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2} = \left\{
+\begin{aligned}
+&test 
+\end{aligned} \right. \\
+\end{align*}
+%%% SINCE
+\begin{align*}
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{U}_{[l,h]} \psi_2} = \left\{
+\begin{aligned}
+&test 
+\end{aligned} \right. \\
+\end{align*}
+
+%%% simplify
+\begin{align*}
+\mathbf{simplify}(\phi) = \left\{
+\begin{aligned}
+&\top &\text{ if } \phi \equiv \top \\
+&\top &\text{ if } \phi \equiv \neg \bot \\
+&\bot &\text{ if } \phi \equiv \bot \\
+&\bot &\text{ if } \phi \equiv \neg \top \\
+&\top &\text {if } \phi \equiv \psi_1 \vee \psi_2 \\
+& &\text{ if } \psi_1 \equiv \top \text{ or } \psi_2 \equiv \top \\
+&\phi &\text{ otherwise}
+\end{aligned} \right. \\
+\end{align*}
+
+%\end{align*}
 
 %\begin{algorithm}
 \noindent \textbf{reduce}
@@ -176,7 +254,7 @@ The reduce function takes a residue and returns the reduced residue:
 The soundness and completeness of our top-level algorithm ultimately depends on the soundness and completeness of the reduce algorithm. So first, we show that reduce is sound and complete.
 
 \begin{thm}
-The function $\hat{\res{j}{\phi}} \leftarrow reduce(\sigma_i, \tau_i, \mathbb{R}^i, \res{j}{\phi})$ is sound, complete, and prompt when $\mathbb{R}^i, \res{j}{\phi}$ are sound, complete, and prompt.
+The function $\hat{r}^{\phi}_{j} \leftarrow reduce(\sigma_i, \tau_i, \mathbb{R}^i, \res{j}{\phi})$ is sound, complete, and prompt when $\mathbb{R}^i, \res{j}{\phi}$ are sound, complete, and prompt.
 \end{thm}
 \noindent We will show that the properties hold over the form of $\phi$: \\
 \\ \noindent \textbf{Case} $\phi \equiv \top/\bot$: \\
