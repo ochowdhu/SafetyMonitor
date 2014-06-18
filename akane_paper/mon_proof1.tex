@@ -27,6 +27,7 @@
 \newcommand{\cp}{cp}
 \newcommand{\rp}[2]{\ensuremath{\langle #1, #2 \rangle}}
 \newcommand{\res}[2]{\ensuremath{r_{#1}^{#2}}}
+\newcommand{\agmon}{\ensuremath{\mathbf{agmon}}}
 
 
 
@@ -61,21 +62,31 @@ $\forall \rp{j}{\psi} \in S^i_{\phi}: \quad \sigma, \tau, j \vDash \psi \rightar
 
 \end{tdef}
 
-With these properties defined, we ultimately wish to prove the correctness of our top-level algorithm agmon.
+With these properties defined, we ultimately wish to prove the correctness of our top-level algorithm \agmon.
 
-\begin{thm}[Correctness of agmon]
-For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, and all traces $\sigma$ it is the case that $agmon(\sigma, \tau, \varphi)$
+\begin{thm}[Correctness of \agmon]
+For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, and all traces $\sigma$ it is the case that $\agmon(\sigma, \tau, \varphi)$
 \end{thm}
 
-The correctness of agmon relies on the correctness of $\mathbf{reduce}$, which we show here:
+The correctness of \agmon\ relies on the correctness of $\mathbf{reduce}$, which we show here:
 \begin{lemma}[Correctness of $\mathbf{reduce}$]
 For all traces $\sigma$, time stamp sequences $\tau$, trace positions $i \in \mathbb{N}$, residues $\rp{j}{\psi}$ where $j \in \mathbb{N}$ and $\psi$ is a wff, and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete,
 %
 it is the case that $\rp{j}{\psi'} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{R}^i, \rp{j}{\psi})$ is 1) sound, 2) complete, and 3) prompt
+\end{lemma}
 
+\begin{lemma}[Better Correctness of $\mathbf{reduce}$?]
+For all traces $\sigma$, 
+time stamp sequences $\tau$, 
+trace positions $i \in \mathbb{N}$, 
+residues $\rp{j}{\psi} \in S^i_{\phi}$ where $j \in \mathbb{N}$ and $\psi$ is a wff, 
+and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete, (which means $S^i_{\phi}$ is also Sound and Complete)
+%
+it is the case that $\rp{j}{\psi'} \in S^i_{\phi}$ where $ \rp{j}{\psi'} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{R}^i, \rp{j}{\psi})$ is 1) sound, 2) complete, and 3) prompt
 
 \end{lemma}
 
+\pagebreak
 \section{Algorithms}
 \subsection{Top-level monitoring Algorithm}
 Our top level aggressive monitoring algorithm is as follows:
@@ -173,81 +184,81 @@ The reduce function takes a residue and returns the reduced residue:
 &\bot &\text{ if } \phi \equiv \bot \\
 &\bot &\text{ if } \phi \equiv \neg \top \\
 &\top &\text {if } \phi \equiv \psi_1 \vee \psi_2 \\
-& &\text{ if } \psi_1 \equiv \top \text{ or } \psi_2 \equiv \top \\
+& &\text{ and } \\ & & \psi_1 \equiv \top \text{ or } \psi_2 \equiv \top \\
 &\phi &\text{ otherwise}
 \end{aligned} \right. \\
 \end{align*}
 
 %\end{align*}
 
-%\begin{algorithm}
-\noindent \textbf{reduce}
-\begin{algorithmic}[1]
-\IF{$\res{\phi}{j} \equiv \top \vee \res{\phi}{j} \equiv \bot$}
-\RETURN $\res{\phi}{j}$
-%%%%% PROP %%%%%
-\ELSIF{$\res{\phi}{j} \equiv p$}
-\RETURN $\rp{j}{\sigma(p)}$
-%%%%% NOT %%%%%%%%
-\ELSIF{$\res{\phi}{j} \equiv \neg \psi$}
-\STATE $\psi' \leftarrow reduce(\psi)$
-\RETURN $\rp{j}{\neg \psi'}$
-%%%%% OR %%%%%%%%%%
-\ELSIF{$\res{\phi}{j} \equiv \psi_1 \vee \psi_2$}
-\STATE $\psi_1' \leftarrow reduce(\psi_1)$
-\STATE $\psi_2' \leftarrow reduce(\psi_2)$
-\RETURN $\rp{j}{\psi_1' \vee \psi_2'}$
-%%%%% UNTIL %%%%%%%%%%%%%%%
-\ELSIF{$\res{\phi}{j} \equiv \psi_1 \mathcal{U}_{[l,h]} \psi_2$}
-\STATE $e \leftarrow \text{smallest } k \in [j+l,j+h] \text{ s.t. } \res{\psi_2}{k} = \top$
-\IF{$e \equiv \emptyset$}
-\STATE $v \leftarrow \text{largest } k \in S_{\psi_2}^i \text{ s.t. } \res{\psi_2}{k} = \top/\bot$
-\IF{$v \geq j+h$}
-\RETURN $\rp{j}{\bot}$
-\ELSE
-\RETURN $\res{\phi}{j}$
-\ENDIF
-\ENDIF % if no e
-\STATE unfinished $\leftarrow \bot$
-\FOR{all $ k \in S_{\psi_2} \text{ s.t. } k \in [j, e]$}
-\IF{$\res{\psi_2}{k} \equiv \bot$}
-\RETURN $\rp{j}{\bot}$
-\ELSIF{$\res{\psi_2}{k} \not\equiv \top$}
-\STATE unfinished $\leftarrow \top$
-\ENDIF % checking psi_1
-\ENDFOR
-\IF{unfinished $\equiv \top$}
-\RETURN $\res{\phi}{j}$
-\ELSE
-\RETURN $\rp{j}{\top}$
-\ENDIF
-%%%%%%% SINCE
-\ELSIF{$\res{\phi}{j} \equiv \psi_1 \mathcal{S}_{[l,h]} \psi_2$}
-\STATE $s \leftarrow \text{largest } k \in [j+l,j+h] \text{ s.t. } \res{\psi_2}{k} = \top$
-\IF{$s \equiv \emptyset$}
-\STATE $v \leftarrow \text{largest } k \in S_{\psi_2}^i \text{ s.t. } \res{\psi_2}{k} = \top/\bot$
-\IF{$v \geq j+h$}
-\RETURN $\rp{j}{\bot}$
-\ELSE
-\RETURN $\res{\phi}{j}$
-\ENDIF
-\ENDIF % if no s
-\STATE unfinished $\leftarrow \bot$
-\FOR{all $k \in S_{\psi_2}: k \in [s, j]$}
-\IF{$\res{\psi_2}{k} \equiv \bot$}
-\RETURN $\rp{j}{\bot}$
-\ELSIF{$\res{\psi_2}{k} \not\equiv \top$}
-\STATE unfinished $\leftarrow \top$
-\ENDIF % checking psi_1
-\ENDFOR
-\IF{unfinished $= \top$}
-\RETURN $\res{\phi}{j}$
-\ELSE
-\RETURN $\rp{j}{\top}$
-\ENDIF
-\ENDIF % outer if
-\end{algorithmic}
-%\end{algorithm}
+%%\begin{algorithm}
+%\noindent \textbf{reduce}
+%\begin{algorithmic}[1]
+%\IF{$\res{\phi}{j} \equiv \top \vee \res{\phi}{j} \equiv \bot$}
+%\RETURN $\res{\phi}{j}$
+%%%%%% PROP %%%%%
+%\ELSIF{$\res{\phi}{j} \equiv p$}
+%\RETURN $\rp{j}{\sigma(p)}$
+%%%%%% NOT %%%%%%%%
+%\ELSIF{$\res{\phi}{j} \equiv \neg \psi$}
+%\STATE $\psi' \leftarrow reduce(\psi)$
+%\RETURN $\rp{j}{\neg \psi'}$
+%%%%%% OR %%%%%%%%%%
+%\ELSIF{$\res{\phi}{j} \equiv \psi_1 \vee \psi_2$}
+%\STATE $\psi_1' \leftarrow reduce(\psi_1)$
+%\STATE $\psi_2' \leftarrow reduce(\psi_2)$
+%\RETURN $\rp{j}{\psi_1' \vee \psi_2'}$
+%%%%%% UNTIL %%%%%%%%%%%%%%%
+%\ELSIF{$\res{\phi}{j} \equiv \psi_1 \mathcal{U}_{[l,h]} \psi_2$}
+%\STATE $e \leftarrow \text{smallest } k \in [j+l,j+h] \text{ s.t. } \res{\psi_2}{k} = \top$
+%\IF{$e \equiv \emptyset$}
+%\STATE $v \leftarrow \text{largest } k \in S_{\psi_2}^i \text{ s.t. } \res{\psi_2}{k} = \top/\bot$
+%\IF{$v \geq j+h$}
+%\RETURN $\rp{j}{\bot}$
+%\ELSE
+%\RETURN $\res{\phi}{j}$
+%\ENDIF
+%\ENDIF % if no e
+%\STATE unfinished $\leftarrow \bot$
+%\FOR{all $ k \in S_{\psi_2} \text{ s.t. } k \in [j, e]$}
+%\IF{$\res{\psi_2}{k} \equiv \bot$}
+%\RETURN $\rp{j}{\bot}$
+%\ELSIF{$\res{\psi_2}{k} \not\equiv \top$}
+%\STATE unfinished $\leftarrow \top$
+%\ENDIF % checking psi_1
+%\ENDFOR
+%\IF{unfinished $\equiv \top$}
+%\RETURN $\res{\phi}{j}$
+%\ELSE
+%\RETURN $\rp{j}{\top}$
+%\ENDIF
+%%%%%%%% SINCE
+%\ELSIF{$\res{\phi}{j} \equiv \psi_1 \mathcal{S}_{[l,h]} \psi_2$}
+%\STATE $s \leftarrow \text{largest } k \in [j+l,j+h] \text{ s.t. } \res{\psi_2}{k} = \top$
+%\IF{$s \equiv \emptyset$}
+%\STATE $v \leftarrow \text{largest } k \in S_{\psi_2}^i \text{ s.t. } \res{\psi_2}{k} = \top/\bot$
+%\IF{$v \geq j+h$}
+%\RETURN $\rp{j}{\bot}$
+%\ELSE
+%\RETURN $\res{\phi}{j}$
+%\ENDIF
+%\ENDIF % if no s
+%\STATE unfinished $\leftarrow \bot$
+%\FOR{all $k \in S_{\psi_2}: k \in [s, j]$}
+%\IF{$\res{\psi_2}{k} \equiv \bot$}
+%\RETURN $\rp{j}{\bot}$
+%\ELSIF{$\res{\psi_2}{k} \not\equiv \top$}
+%\STATE unfinished $\leftarrow \top$
+%\ENDIF % checking psi_1
+%\ENDFOR
+%\IF{unfinished $= \top$}
+%\RETURN $\res{\phi}{j}$
+%\ELSE
+%\RETURN $\rp{j}{\top}$
+%\ENDIF
+%\ENDIF % outer if
+%\end{algorithmic}
+%%\end{algorithm}
 
 \section{Soundness/Completeness Proofs}
 
@@ -278,10 +289,10 @@ Reduce is prompt $\mathbf{reduce}$
 
 
 \section{Description}
-Our runtime monitoring algorithm $\mathbf{agmon}$ takes as input a well-formed bmtl formula $\varphi$, monitors the system trace as it grows, builds history structures for temporal subformula of $\varphi$ and reports violations of $\varphi$ as soon as they are detected.
+Our runtime monitoring algorithm \agmon takes as input a well-formed bmtl formula $\varphi$, monitors the system trace as it grows, builds history structures for temporal subformula of $\varphi$ and reports violations of $\varphi$ as soon as they are detected.
 
 We summarize the relevant functions below: \\
-$\mathbf{agmon}(\varphi)$ is our top-level monitor function. \\
+$\agmon(\varphi)$ is our top-level monitor function. \\
 $\mathbf{incr}(\sigma_i, \tau, i, \hat{\mathcal{R}}^i, \psi)$ updates the history structure $S^i_{\psi}$ based on the new trace entry $\sigma_i$ \\ 
 $\mathbf{reduce}(\sigma_i,\tau, i, \mathcal{R}^i, \res{\psi}{j})$ takes a residue $\res{\psi}{j}$ and returns a reduced residue based on the history $\mathcal{R}^i$ and current state $\sigma_i, \tau_i$. 
 \end{document}
