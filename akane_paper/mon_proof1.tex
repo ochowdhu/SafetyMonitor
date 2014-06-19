@@ -65,9 +65,10 @@ $\forall \rp{j}{\psi} \in S^i_{\phi}: \quad \sigma, \tau, j \vDash \psi \rightar
 With these properties defined, we ultimately wish to prove the correctness of our top-level algorithm \agmon.
 
 \begin{thm}[Correctness of \agmon]
-For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, and all traces $\sigma$ it is the case that $\agmon(\sigma, \tau, \varphi)$
+For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, and all traces $\sigma$ it is the case that if $S^i_{\varphi}$ is 1) sound, 2) complete, and 3) prompt then $\exists j.(\rp{j}{\bot} \in S^i_{\varphi}) \leftrightarrow \sigma, \tau, j \nvDash \varphi$
 \end{thm}
 
+\subsection{Proof of \agmon\ Correctness}
 The correctness of \agmon\ relies on the correctness of $\mathbf{reduce}$, which we show here:
 \begin{lemma}[Correctness of $\mathbf{reduce}$]
 For all traces $\sigma$, time stamp sequences $\tau$, trace positions $i \in \mathbb{N}$, residues $\rp{j}{\psi}$ where $j \in \mathbb{N}$ and $\psi$ is a wff, and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete,
@@ -86,6 +87,12 @@ it is the case that $\rp{j}{\psi'} \in S^i_{\phi}$ where $ \rp{j}{\psi'} \leftar
 
 \end{lemma}
 
+
+\begin{lemma}[Soundness and Completeness of structure extension]
+For all formula $\phi$, all $i \in \mathbb{N}$ and all formula structures $S^{i-1}_{\phi}$ such that $S^{i-1}_{\phi}$ is sound and complete then the extension $\hat{S}^{i}_{\phi} \leftarrow S^{i-1}_{\phi} \cup \rp{i}{\phi}$ is 1) Sound and 2) Complete.
+\end{lemma}
+
+\noindent \emph{Proof}. Trivially if $S^{i-1}_{\phi}$ is sound then $S^{i-1}_{\phi} \cup \rp{i}{\phi}$ is sound since $\sigma, \tau, j \vDash \phi \rightarrow \sigma, \tau, j \vDash \phi$. Similarly, if $S^{i-1}_{\phi}$ is complete than $S^{i-1}_{\phi} \cup \rp{i}{\phi}$ is complete since we know that there exists the residue $\rp{i}{\phi} \in \hat{S}^{i}_{\phi}$ and either $\sigma, \tau, i \vDash \phi \rightarrow \sigma, \tau, i \vDash \phi$ or $\sigma, \tau, i \nvDash \phi \rightarrow \sigma, \tau, i \nvDash \phi$
 \pagebreak
 \section{Algorithms}
 \subsection{Top-level monitoring Algorithm}
@@ -96,20 +103,23 @@ Our top level aggressive monitoring algorithm is as follows:
 \STATE Recognize formulas for which we build structures
 \STATE $\mathbb{R}^{-1} \leftarrow \emptyset$; \quad $S^{-1} \leftarrow \emptyset$; \quad $i \leftarrow 0$; \quad $\pi \leftarrow \emptyset$
 \LOOP
+\STATE $\mathbb{R}^i \leftarrow \mathbb{R}^{i-1}$
 \FOR{every $\psi \in \text{temp\_sub}(\varphi)$ in increasing size}
 	\STATE $S^i_{\psi} \leftarrow S^{i-1}_{\psi} \cup \rp{i}{\psi}$
 	\FOR{all $\rp{j}{\psi'} \in S^i_{\psi}$}
-		\STATE $\pi' \leftarrow \mathbf{reduce}(\sigma, \tau, i, \pi, \rp{j}{\psi'})$
+		\STATE $S^i_{\psi} \leftarrow \mathbf{reduce}(\sigma, \tau, i, \mathbb{R}^i, \rp{j}{\psi'})$
 	\ENDFOR
 \ENDFOR
 %\STATE Reduce all $\rp{j}{\psi} \in \mathcal{R}^i$
-\STATE $\hat{S}_{\varphi}^i \leftarrow S_{\varphi}^{i-1} \cup \rp{i}{\varphi}$
-\FOR{all $\rp{j}{\psi} \in \hat{S}_{\varphi}^i$}
-	\STATE $\pi \leftarrow \mathbf{reduce}(\sigma, \tau, i, \pi, \rp{j}{\psi})$
+\STATE ${S}_{\varphi}^i \leftarrow S_{\varphi}^{i-1} \cup \rp{i}{\varphi}$
+\FOR{all $\rp{j}{\psi} \in {S}_{\varphi}^i$}
+	\STATE $S^i_{\varphi} \leftarrow \mathbf{reduce}(\sigma, \tau, i, \mathbb{R}^i, \rp{j}{\psi})$
 \ENDFOR
 %\STATE $S^i \leftarrow \mathbf{reduce}(\sigma, \tau, i, R^i, \hat{S}^{i})$
 %\STATE Reduce all $\rp{j'}{\psi'} \in S^i$
-\STATE \texttt{Report any violations on $S^i$}
+\FOR{all $\rp{j}{\bot} \in S^i_{\varphi}$}
+\STATE \texttt{Report violation on $\sigma$ at position $j$}
+\ENDFOR
 \STATE $i \leftarrow i + 1$
 \ENDLOOP
 \end{algorithmic}
@@ -160,11 +170,20 @@ The reduce function takes a residue and returns the reduced residue:
 \end{aligned} \right. \\
 \end{align*}
 
-%%% SINCE
+%%% UNTIL
 \begin{align*}
 \mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{U}_{[l,h]} \psi_2} = \left\{
 \begin{aligned}
-&test 
+&\text{let } a_1 \leftarrow min(\{k | \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \psi' = \bot \}) \\
+&a_2 \leftarrow max(\{k | \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \forall j. (i \leq j \leq k \rightarrow \rp{j}{\top} \in S^i_{\psi_1}) \}) \\
+&b_1 \leftarrow min(\{k | \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' \neq \bot/\top \}) \\
+&b_2 \leftarrow min(\{k | \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' = \top \}) \\
+&\text{if } b_2 \leq a_2 \\
+& \quad\mathbf{return} \rp{j}{\top} \\
+&\text{else if } min(b_1,b_2) \geq a_1 \\
+& \quad\mathbf{return} \rp{j}{\bot} \\
+&\text{else} \\
+& \quad\mathbf{return} \rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2}
 \end{aligned} \right. \\
 \end{align*}
 %%% SINCE
@@ -172,13 +191,13 @@ The reduce function takes a residue and returns the reduced residue:
 \mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2} = \left\{
 \begin{aligned}
 &\text{let } a_1 \leftarrow max(\{k | \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \psi' = \bot \}) \\
-&a_2 \leftarrow min(\{k | \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \forall j \quad j > k. \exists \rp{j}{\top} \in S^i_{\psi_1} \}) \\
+&a_2 \leftarrow min(\{k | \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \forall j. (j \geq k \rightarrow \rp{j}{\top} \in S^i_{\psi_1}) \}) \\
 &b_1 \leftarrow max(\{k | \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' \neq \bot/\top \}) \\
 &b_2 \leftarrow max(\{k | \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' = \top \}) \\
-&\text{if } b_1 < a_1 \\
-& \quad\mathbf{return} \rp{j}{\bot} \\
-&\text{else if } b_2 > a_2 \\
+&\text{if } b_2 \geq a_2 \\
 & \quad\mathbf{return} \rp{j}{\top} \\
+&\text{else if } max(b_1,b_2) \leq a_1 \\
+& \quad\mathbf{return} \rp{j}{\bot} \\
 &\text{else} \\
 & \quad\mathbf{return} \rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2}
 \end{aligned} \right. \\
