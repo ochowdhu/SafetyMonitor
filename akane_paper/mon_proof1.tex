@@ -162,16 +162,25 @@ The reduce function takes a residue and returns the reduced residue:
 
 %%% SINCE
 \begin{align*}
-\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2} = \left\{
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{U}_{[l,h]} \psi_2} = \left\{
 \begin{aligned}
 &test 
 \end{aligned} \right. \\
 \end{align*}
 %%% SINCE
 \begin{align*}
-\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{U}_{[l,h]} \psi_2} = \left\{
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2} = \left\{
 \begin{aligned}
-&test 
+&\text{let } a_1 \leftarrow max(\{k | \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \psi' = \bot \}) \\
+&a_2 \leftarrow min(\{k | \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \forall j \quad j > k. \exists \rp{j}{\top} \in S^i_{\psi_1} \}) \\
+&b_1 \leftarrow max(\{k | \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' \neq \bot/\top \}) \\
+&b_2 \leftarrow max(\{k | \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' = \top \}) \\
+&\text{if } b_1 < a_1 \\
+& \quad\mathbf{return} \rp{j}{\bot} \\
+&\text{else if } b_2 > a_2 \\
+& \quad\mathbf{return} \rp{j}{\top} \\
+&\text{else} \\
+& \quad\mathbf{return} \rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2}
 \end{aligned} \right. \\
 \end{align*}
 
