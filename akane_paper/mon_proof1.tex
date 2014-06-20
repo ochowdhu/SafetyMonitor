@@ -15,7 +15,7 @@
 \usepackage{stmaryrd}
 \usepackage{bussproofs}
 
-\addtolength{\textheight}{1in}
+%\addtolength{\textheight}{1in}
 %{\voffset}{-1.5in}
 
 \newcommand{\smon}[1]{\ensuremath{smon(\sigma, \tau, #1)}}
@@ -34,6 +34,7 @@
 \newtheorem{thm}{Theorem}
 \newtheorem{tdef}{Definition}
 \newtheorem{lemma}{Lemma}
+\newtheorem{case}{Case}
 
 \title{Aggressive Monitor Proof Writeup}
 \author{Aaron Kane}
@@ -49,16 +50,31 @@ A formula structure $S_{\phi}^i = \{ r_{\phi}^0, r_{\phi}^1, \ldots r_{\phi}^i \
 
 
 
-\begin{tdef}[Soundness] For all formula $\varphi$, all $i,j \in \mathbb{N}$ with $j \leq i$, all time stamp sequences $\tau$, all traces $\sigma$, and all formula structures $S^i_{\phi}$ such that 1) $S^i_{\phi} \leftarrow \mathbf{incr}(S^{i-1}_{\phi})$ and 2) $S^{i-1}_{\phi}$ is sound, complete, and prompt, it is the case that: 
+%\begin{tdef}[Soundness] For all formula $\varphi$, all $i,j \in \mathbb{N}$ with $j \leq i$, all time stamp sequences $\tau$, all traces $\sigma$, and all formula structures $S^i_{\phi}$ such that 1) $S^i_{\phi} \leftarrow \mathbf{incr}(S^{i-1}_{\phi})$ and 2) $S^{i-1}_{\phi}$ is sound, complete, and prompt, it is the case that: 
 %
+%$\forall \rp{j}{\psi} \in S^i_{\phi}: \quad \sigma, \tau, j \vDash \psi \rightarrow \sigma, \tau, j \vDash \phi$
+%\end{tdef}
+\begin{tdef}[Soundness] For all formula $\phi$, all $i,j \in mathbb{N}$ with $j \leq i$, all time step sequences $\tau$, and all traces $\sigma$, we say a formula structure $S^i_{\phi}$ is sound iff:
 $\forall \rp{j}{\psi} \in S^i_{\phi}: \quad \sigma, \tau, j \vDash \psi \rightarrow \sigma, \tau, j \vDash \phi$
-
 \end{tdef}
 
-\begin{tdef}[Promptness] For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, all traces $\sigma$ and all formula structures $S^i_{\phi}$ such that 1) $S^i_{\phi} \leftarrow \mathbf{incr}(S^{i-1}_{\phi})$ and 2) $S^{i-1}_{\phi}$ is sound, complete, and prompt, it is the case that: $\forall j : j \leq i \wedge \tau_i - \tau_j \geq \Delta (\varphi) \rightarrow \exists \rp{j}{\psi} \in S^i_{\phi} \wedge \psi \equiv \top/\bot$
+%\begin{tdef}[Promptness] For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, all traces $\sigma$ and all formula structures $S^i_{\phi}$ such that 1) $S^i_{\phi} \leftarrow \mathbf{incr}(S^{i-1}_{\phi})$ and 2) $S^{i-1}_{\phi}$ is sound, complete, and prompt, it is the case that: $\forall j : j \leq i \wedge \tau_i - \tau_j \geq \Delta (\varphi) \rightarrow \exists \rp{j}{\psi} \in S^i_{\phi} \wedge \psi \equiv \top/\bot$
+%\end{tdef}
 
+\begin{tdef}[Promptness]
+For all formula $\phi$, all $i \in \mathbb{N}$, all traces $\sigma$, and all time sequences $\tau$, a formula structure $S^i_{\phi}$ is prompt iff: 
+$\forall \rp{j}{\psi} \in S^i_{\phi}.( \tau_i - \tau_j \geq \Delta(\phi) \rightarrow \psi \equiv \top/\bot)$
 \end{tdef}
-\begin{tdef}[Completeness] For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, all traces $\sigma$ and all formula structures $S^i_{\phi}$ such that $S^i_{\phi}$ is sound, it is the case that: 1) $\sigma, \tau, i \vDash \phi \rightarrow \exists\rp{i}{\psi} \in S^i_{\phi}: \sigma, \tau, i \vDash \psi$ and 2) $\sigma, \tau, i \nvDash \phi \rightarrow \exists\rp{i}{\psi} \in S^i_{\phi}: \sigma, \tau, i \nvDash \psi$
+
+\begin{tdef}[$\phi$-Promptness]
+A history $R^i$ is $\phi$-prompt if for all $i \in mathbb{N}$, all traces $\sigma$, and all time sequences $\tau$: for all temporal subformula and their subformula $\psi$ of $\phi$: $S^i_{\psi}$ is prompt.
+\end{tdef}
+
+\begin{tdef}[Completeness] For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, all traces $\sigma$ and all formula structures $S^i_{\phi}$ such that $S^i_{\phi}$ is sound, then we say the structure $S^i_{\phi}$ is complete if it is the case that: 
+$\forall j \leq i$:
+1) $\sigma, \tau, j \vDash \phi \rightarrow \exists\rp{j}{\psi} \in S^i_{\phi}: \sigma, \tau, j \vDash \psi$ 
+and 
+2) $\sigma, \tau, j \nvDash \phi \rightarrow \exists\rp{j}{\psi} \in S^i_{\phi}: \sigma, \tau, j \nvDash \psi$
 
 \end{tdef}
 
@@ -69,7 +85,50 @@ For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\ta
 \end{thm}
 
 \subsection{Proof of \agmon\ Correctness}
-The correctness of \agmon\ relies on the correctness of $\mathbf{reduce}$, which we show here:
+In this section we present some assisting lemmas and definitions we will use to show the correctness of \agmon.
+
+
+First, we have the fact that adding the current timestep's residue to a sound and complete formula structure leaves that structure sound and complete:
+
+\begin{lemma}[Soundness and Completeness of structure extension]
+For all well formed formula $\phi$, all $i \in \mathbb{N}$ and all formula structures $S^{i-1}_{\phi}$ such that $S^{i-1}_{\phi}$ is sound and complete then the extension $\hat{S}^{i}_{\phi} \leftarrow S^{i-1}_{\phi} \cup \rp{i}{\phi}$ is 1) Sound and 2) Complete.
+\end{lemma}
+
+\noindent \emph{Proof}. If $S^{i-1}_{\phi}$ is sound then $S^{i-1}_{\phi} \cup \rp{i}{\phi}$ is sound since $\sigma, \tau, i \vDash \phi \rightarrow \sigma, \tau, i \vDash \phi$. Similarly, if $S^{i-1}_{\phi}$ is complete than $S^{i-1}_{\phi} \cup \rp{i}{\phi}$ is complete since we know that there exists the residue $\rp{i}{\phi} \in {S}^{i}_{\phi}$ and since $\phi$ is a well formed formula, either $\sigma, \tau, i \vDash \phi \rightarrow \sigma, \tau, i \vDash \phi$ or $\sigma, \tau, i \nvDash \phi \rightarrow \sigma, \tau, i \nvDash \phi$
+
+\begin{lemma}[Correctness of $\mathbf{simplify}$]
+if $\phi$ is a well formed formula and $\phi' \leftarrow \mathbf{simplify}(\phi)$ then it is the case that $\phi \leftrightarrow \phi'$
+\end{lemma}
+
+\noindent \emph{Proof}. Trivial by the semantics of our logic. \\
+
+\begin{tdef}[Residue Soundness]
+We say a residue $\rp{j}{\psi}$ is sound with respect to a formula $\phi$ if for all traces $\sigma$ and time sequences $\tau$: $\sigma, \tau, j \vDash \psi \rightarrow \sigma, \tau, j \vDash \phi$. \\
+
+\noindent A residue $\rp{j}{\psi}$ is sound with respect to a formula structure $S^i_{\phi}$ if it is sound with respect to $\phi$.
+\end{tdef}
+
+\begin{lemma}[Sound-residue filled structures are sound]
+A formula structure $S^i_{\phi}$ is sound if all residues $\rp{j}{\psi}$ contained within it are sound with respect to $\phi$:
+%$\forall \rp{j}{\psi} \in S^i_{\phi}$, $\rp{j}{\psi}$ is sound with respect to $\phi$.
+\end{lemma}
+
+\noindent \emph{Proof}. Follows directly from the definition of soundness and residue soundness. \\
+
+
+\begin{tdef}[Residue Completeness]
+We say a residue $\rp{j}{\psi}$ is complete with respect to a formula $\phi$ if for all traces $\sigma$ and time sequences $\tau$: $\sigma,\tau, j \vDash \phi \rightarrow \sigma,\tau,j \vDash \psi$ and $\sigma,\tau,j \nvDash \phi \rightarrow \sigma, \tau, j \nvDash \psi$.
+\end{tdef}
+
+\begin{lemma}[Complete-residue filled structures are complete]
+A formula structure $S^i_{\phi}$ is complete if all residues $\rp{j}{\psi}$ contained within it are complete with respect to $\phi$ and $\forall j \leq i.(\rp{j}{\psi} \in S^i_{\psi})$.
+\end{lemma}
+
+\noindent \emph{Proof}. Follows directly from the definition of completeness and residue completeness. We require that a residue exist for all $j \leq i$ and that they all fulfill the completeness restriction. \\
+
+Next we show the correctness of the $\mathbf{reduce}$ function, which is our primary function that checks whether an individual residue is satisfied, violated, or can be reduced to a simpler formula.
+
+\subsubsection{Correctness of reduce}
 \begin{lemma}[Correctness of $\mathbf{reduce}$]
 For all traces $\sigma$, time stamp sequences $\tau$, trace positions $i \in \mathbb{N}$, residues $\rp{j}{\psi}$ where $j \in \mathbb{N}$ and $\psi$ is a wff, and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete,
 %
@@ -84,15 +143,35 @@ residues $\rp{j}{\psi} \in S^i_{\phi}$ where $j \in \mathbb{N}$ and $\psi$ is a 
 and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete, (which means $S^i_{\phi}$ is also Sound and Complete)
 %
 it is the case that $\rp{j}{\psi'} \in S^i_{\phi}$ where $ \rp{j}{\psi'} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{R}^i, \rp{j}{\psi})$ is 1) sound, 2) complete, and 3) prompt
+\end{lemma}
 
+\begin{lemma}[Residue Correctness of $\mathbf{reduce}$]
+For all formula $\phi$,
+all traces $\sigma$, 
+all time stamp sequences $\tau$, 
+all trace positions $i \in \mathbb{N}$, 
+all residues $\rp{j}{\psi} \in S^i_{\phi}$ where $j \in \mathbb{N}$ and $\psi,\phi$ are wff, 
+and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete, and 3) $\phi$-Prompt 
+%
+it is the case that $\rp{j}{\psi'} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{R}^i, \rp{j}{\psi}$ is 1) sound, 2) complete, and 3) prompt with respect to $\phi$.
 \end{lemma}
 
 
-\begin{lemma}[Soundness and Completeness of structure extension]
-For all formula $\phi$, all $i \in \mathbb{N}$ and all formula structures $S^{i-1}_{\phi}$ such that $S^{i-1}_{\phi}$ is sound and complete then the extension $\hat{S}^{i}_{\phi} \leftarrow S^{i-1}_{\phi} \cup \rp{i}{\phi}$ is 1) Sound and 2) Complete.
-\end{lemma}
+\noindent \emph{Proof}. By induction over the formula structure $\phi$.
 
-\noindent \emph{Proof}. Trivially if $S^{i-1}_{\phi}$ is sound then $S^{i-1}_{\phi} \cup \rp{i}{\phi}$ is sound since $\sigma, \tau, j \vDash \phi \rightarrow \sigma, \tau, j \vDash \phi$. Similarly, if $S^{i-1}_{\phi}$ is complete than $S^{i-1}_{\phi} \cup \rp{i}{\phi}$ is complete since we know that there exists the residue $\rp{i}{\phi} \in \hat{S}^{i}_{\phi}$ and either $\sigma, \tau, i \vDash \phi \rightarrow \sigma, \tau, i \vDash \phi$ or $\sigma, \tau, i \nvDash \phi \rightarrow \sigma, \tau, i \nvDash \phi$
+We will show all three properties separately, for each formula case, starting with soundness:
+
+\begin{proof}[Soundness]
+
+% TRUE
+\noindent \textbf{Case} $\phi \equiv \top$ \\
+In this case reduce is trivially sound, 
+
+% TRUE
+\noindent \textbf{Case} $\phi \equiv \bot$ \\
+In this case reduce is trivially sound, 
+\end{proof}
+
 \pagebreak
 \section{Algorithms}
 \subsection{Top-level monitoring Algorithm}
@@ -288,6 +367,11 @@ The reduce function takes a residue and returns the reduced residue:
 %\end{algorithmic}
 %%\end{algorithm}
 
+\end{document}
+
+
+
+%%%% old stuff, don't really need but keeping around for now...
 \section{Soundness/Completeness Proofs}
 
 The soundness and completeness of our top-level algorithm ultimately depends on the soundness and completeness of the reduce algorithm. So first, we show that reduce is sound and complete.
@@ -323,4 +407,3 @@ We summarize the relevant functions below: \\
 $\agmon(\varphi)$ is our top-level monitor function. \\
 $\mathbf{incr}(\sigma_i, \tau, i, \hat{\mathcal{R}}^i, \psi)$ updates the history structure $S^i_{\psi}$ based on the new trace entry $\sigma_i$ \\ 
 $\mathbf{reduce}(\sigma_i,\tau, i, \mathcal{R}^i, \res{\psi}{j})$ takes a residue $\res{\psi}{j}$ and returns a reduced residue based on the history $\mathcal{R}^i$ and current state $\sigma_i, \tau_i$. 
-\end{document}
