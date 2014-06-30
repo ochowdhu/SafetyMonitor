@@ -54,7 +54,7 @@ A formula structure $S_{\phi}^i = \{ r_{\phi}^0, r_{\phi}^1, \ldots r_{\phi}^i \
 %
 %$\forall \rp{j}{\psi} \in S^i_{\phi}: \quad \sigma, \tau, j \vDash \psi \rightarrow \sigma, \tau, j \vDash \phi$
 %\end{tdef}
-\begin{tdef}[Soundness] For all formula $\phi$, all $i,j \in mathbb{N}$ with $j \leq i$, all time step sequences $\tau$, and all traces $\sigma$, we say a formula structure $S^i_{\phi}$ is sound iff:
+\begin{tdef}[Soundness] For all formula $\phi$, all $i,j \in \mathbb{N}$ with $j \leq i$, all time step sequences $\tau$, and all traces $\sigma$, we say a formula structure $S^i_{\phi}$ is sound iff:
 $\forall \rp{j}{\psi} \in S^i_{\phi}: \quad \sigma, \tau, j \vDash \psi \rightarrow \sigma, \tau, j \vDash \phi$
 \end{tdef}
 
@@ -67,7 +67,7 @@ $\forall \rp{j}{\psi} \in S^i_{\phi}.( \tau_i - \tau_j \geq \Delta(\phi) \righta
 \end{tdef}
 
 \begin{tdef}[$\phi$-Promptness]
-A history $R^i$ is $\phi$-prompt if for all $i \in mathbb{N}$, all traces $\sigma$, and all time sequences $\tau$: for all temporal subformula and their subformula $\psi$ of $\phi$: $S^i_{\psi}$ is prompt.
+A history $R^i$ is $\phi$-prompt if for all $i \in \mathbb{N}$, all traces $\sigma$, and all time sequences $\tau$: for all temporal subformula and their subformula $\psi$ of $\phi$: $S^i_{\psi}$ is prompt.
 \end{tdef}
 
 \begin{tdef}[Completeness] For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, all traces $\sigma$ and all formula structures $S^i_{\phi}$ such that $S^i_{\phi}$ is sound, then we say the structure $S^i_{\phi}$ is complete if it is the case that: 
@@ -153,7 +153,7 @@ all trace positions $i \in \mathbb{N}$,
 all residues $\rp{j}{\psi} \in S^i_{\phi}$ where $j \in \mathbb{N}$ and $\psi,\phi$ are wff, 
 and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete, and 3) $\phi$-Prompt 
 %
-it is the case that $\rp{j}{\psi'} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{R}^i, \rp{j}{\psi}$ is 1) sound, 2) complete, and 3) prompt with respect to $\phi$.
+it is the case that $\rp{j}{\psi'} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{R}^i, \rp{j}{\psi})$ is 1) sound, 2) complete, and 3) prompt with respect to $\phi$.
 \end{lemma}
 
 
@@ -169,6 +169,26 @@ In this case reduce is trivially sound,
 
 % TRUE
 \noindent \textbf{Case} $\phi \equiv \bot$ \\
+In this case reduce is trivially sound, 
+
+% PROP
+\noindent \textbf{Case} $\phi \equiv p$ \\
+In this case reduce is trivially sound, 
+
+% NOT
+\noindent \textbf{Case} $\phi \equiv \neg \psi$ \\
+In this case reduce is trivially sound, 
+
+% OR
+\noindent \textbf{Case} $\phi \equiv \psi_1 \vee \psi_2$ \\
+In this case reduce is trivially sound, 
+
+% UNTIL
+\noindent \textbf{Case} $\phi \equiv \psi_1 \mathcal{U}_{[l,h]} \psi_2$ \\
+In this case reduce is trivially sound, 
+
+% SINCE
+\noindent \textbf{Case} $\phi \equiv \psi_1 \mathcal{S}_{[l,h]} \psi_2$ \\
 In this case reduce is trivially sound, 
 \end{proof}
 
