@@ -177,15 +177,20 @@ In this case reduce is trivially sound,
 
 % NOT
 \noindent \textbf{Case} $\phi \equiv \neg \psi$ \\
-In this case reduce is trivially sound, 
+Given that $\mathbf{reduce}(\psi)$ is sound and $\mathbf{simplify}$ is sound (lemma 2), then $\mathbf{reduce}$ is sound for $\neg \psi$.
 
 % OR
 \noindent \textbf{Case} $\phi \equiv \psi_1 \vee \psi_2$ \\
-In this case reduce is trivially sound, 
+Given that $\mathbf{reduce}(\psi_1)$ and $\mathbf{reduce}(\psi_2)$ are both sound and $\mathbf{simplify}$ is sound (lemma 2), then $\mathbf{reduce}(\psi_1 \vee \psi_2)$ is sound.
 
 % UNTIL
 \noindent \textbf{Case} $\phi \equiv \psi_1 \mathcal{U}_{[l,h]} \psi_2$ \\
-In this case reduce is trivially sound, 
+There are three cases for Until: \\
+\textbf{Subcase} $b_2 \neq \emptyset \wedge a_2 \neq \emptyset \wedge b_2 \leq a_2$ \\
+This is the True case for Until. If $b_2$ is non-empty then there exists a residue $\rp{j}{\top} \in S^i_{\phi_2}$ and since $S^i_{\phi_2}$ is sound we know that $\sigma, \tau, j \vDash \phi_2$ with $j \in [i+l,i+h]$. If $a_2$ is non-empty then we know that all residues in $[i,a_2]$ are true, and thus $\forall j \in [i,a_2]: \sigma, \tau, j \vDash \psi_1$. If $b_2 \leq a_2$ then there exists a $k$ such that $\sigma, \tau, k \vDash \psi_2$ ($b_2$) and for all $k' \in [i,k] \sigma, \tau, k' \vDash \psi_1$ (since $a_2 > k$). This is the semantics of Until, so we know that $\sigma, \tau, j \vDash \psi_1 \mathcal{U}_{[l,h]} \psi_2$. \\
+\textbf{Subcase} $(b_1 \neq \emptyset \vee b_2 \neq \emptyset) \wedge a_1 \neq \emptyset \wedge min(b_1,b_2) \geq a_1$ \\
+This is the False case for Until. If $b_1$ or $b_2$ is non-empty then there is a position in $[i+l,i+h]$ which could be True. If $a_1$ is non-empty then there is a position in $\psi_1$ where $\tau, \sigma, a_1 \nvDash \psi_1$. If 
+
 
 % SINCE
 \noindent \textbf{Case} $\phi \equiv \psi_1 \mathcal{S}_{[l,h]} \psi_2$ \\
@@ -271,15 +276,16 @@ The reduce function takes a residue and returns the reduced residue:
 
 %%% UNTIL
 \begin{align*}
-\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{U}_{[l,h]} \psi_2} = \left\{
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{U}_{[l,h]} \psi_2}) = \left\{
 \begin{aligned}
-&\text{let } a_1 \leftarrow min(\{k | \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \psi' = \bot \}) \\
-&a_2 \leftarrow max(\{k | \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \forall j. (i \leq j \leq k \rightarrow \rp{j}{\top} \in S^i_{\psi_1}) \}) \\
-&b_1 \leftarrow min(\{k | \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' \neq \bot/\top \}) \\
-&b_2 \leftarrow min(\{k | \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' = \top \}) \\
-&\text{if } b_2 \leq a_2 \\
+&\text{let } a_1 \leftarrow min(\{k | k \in [i+l, i+h] \wedge \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \psi' = \bot \}) \\
+&a_2 \leftarrow max(\{k | k \in [i+l, i+h] \wedge  \rp{k}{\psi'} \in S^i_{\psi_1} \\  
+	& \quad \quad \quad \quad \wedge \forall j. (i \leq j \leq k \rightarrow \rp{j}{\top} \in S^i_{\psi_1}) \}) \\
+&b_1 \leftarrow min(\{k | k \in [i+l, i+h] \wedge \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' \neq \bot/\top \}) \\
+&b_2 \leftarrow min(\{k | k \in [i+l, i+h] \wedge \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' = \top \}) \\
+&\text{if }b_2 \neq \emptyset \wedge a_2 \neq \emptyset \wedge b_2 \leq a_2 \\
 & \quad\mathbf{return} \rp{j}{\top} \\
-&\text{else if } min(b_1,b_2) \geq a_1 \\
+&\text{else if } (b_1 \neq \emptyset \vee b_2 \neq \emptyset) \wedge a_1 \neq \emptyset \wedge min(b_1,b_2) \geq a_1 \\
 & \quad\mathbf{return} \rp{j}{\bot} \\
 &\text{else} \\
 & \quad\mathbf{return} \rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2}
@@ -289,13 +295,14 @@ The reduce function takes a residue and returns the reduced residue:
 \begin{align*}
 \mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2} = \left\{
 \begin{aligned}
-&\text{let } a_1 \leftarrow max(\{k | \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \psi' = \bot \}) \\
-&a_2 \leftarrow min(\{k | \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \forall j. (j \geq k \rightarrow \rp{j}{\top} \in S^i_{\psi_1}) \}) \\
-&b_1 \leftarrow max(\{k | \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' \neq \bot/\top \}) \\
-&b_2 \leftarrow max(\{k | \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' = \top \}) \\
-&\text{if } b_2 \geq a_2 \\
+&\text{let } a_1 \leftarrow max(\{k | k \in [i-h, i-l] \wedge \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \psi' = \bot \}) \\
+&a_2 \leftarrow min(\{k | k \in [i-h, i-l] \wedge \rp{k}{\psi'} \in S^i_{\psi_1} \\
+&\quad \quad \quad \quad \wedge \forall j. (j \geq k \rightarrow \rp{j}{\top} \in S^i_{\psi_1}) \}) \\
+&b_1 \leftarrow max(\{k | k \in [i-h, i-l] \wedge \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' \neq \bot/\top \}) \\
+&b_2 \leftarrow max(\{k | k \in [i-h, i-l] \wedge \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' = \top \}) \\
+&\text{if } b_2 \neq \emptyset \wedge a_2 \neq \emptyset \wedge b_2 \geq a_2 \\
 & \quad\mathbf{return} \rp{j}{\top} \\
-&\text{else if } max(b_1,b_2) \leq a_1 \\
+&\text{else if } (b_1 \neq \emptyset \vee b_2 \neq \emptyset) \wedge a_1 \neq \emptyset \wedge max(b_1,b_2) \leq a_1 \\
 & \quad\mathbf{return} \rp{j}{\bot} \\
 &\text{else} \\
 & \quad\mathbf{return} \rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2}
