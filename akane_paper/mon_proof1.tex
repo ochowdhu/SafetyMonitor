@@ -225,12 +225,57 @@ Given that $\mathbf{reduce}(\psi)$ and $\mathbf{simplify}$ are Prompt then $\mat
 Given that $\mathbf{reduce}(\psi_1)$, $\mathbf{reduce}(\psi_2)$ and $\mathbf{simplify}$ are Prompt then $\mathbf{reduce}(\psi_1 \vee \psi_2)$ is Prompt
 
 % UNTIL
-\noindent \textbf{Case} $\phi \equiv \psi_1 \mathcal{U}_{[l,h]} \psi_2$ \\
-First, we note that because $S^i_{\psi_1}$ and $S^i_{\psi_2}$ are Prompt, they contain no unfinished residues. This means that either $a_1$ or $a_2$ must be non-empty 
-There are three cases for Until: \\
-\textbf{Subcase} $b_2 \neq \emptyset \wedge a_2 \neq \emptyset \wedge b_2 \leq a_2$ \\
-\textbf{Subcase} $(b_1 \neq \emptyset \vee b_2 \neq \emptyset) \wedge a_1 \neq \emptyset \wedge min(b_1,b_2) \geq a_1$ \\
-\textbf{Subcase} Otherwise \\
+\noindent \textbf{Case} $\phi \equiv \alpha \mathcal{U}_{[l,h]} \beta$ \\
+For $\alpha\, \mathcal{U}_{[l,h]}\, \beta$ to be prompt it must return a reduced residue (i.e. $\top/\bot$) if called at $i = j + h + max(\Delta(\alpha),\Delta(\beta))$. At time $t$, for $k \in [j+l,j+h]$ all pairs $\rp{k}{\psi'} \in S^i_{\alpha}$ and $\rp{k}{\psi'} \in S^i_\beta$ are reduced because those formula structures are sound, complete, and $\phi$-prompt.
+
+Since there are no remaining residues in the timesteps $[j+l,j+h]$ either $b_1 = b_2$ are non-empty or $b_f = \top$ and there are three possible valuations of $a_1$ and $a_2$: \{$a_1 = \emptyset; a_2 = j+h\}$, $\{a_1 = j+l; a_2 = \emptyset\}$ or $a_2 \in [j+l,j+h-1]$ and $a_1 = a_2 + 1$.
+
+If $b_f = \top$ then we return $\rp{k}{\bot}$ and thus $\mathbf{reduce}$ is prompt. Otherwise we have $a_1 = a_2+1$
+Otherwise we look at the three possible valuations for our $a$ values: \\
+\textbf{Subcase} $a_1 = \emptyset$, $a_2 = j+h$ \\
+In this case since $b_1$ is non-empty and must be in $[j+l,j+h]$, we know that $a_2 \geq b_2$ and thus $\mathbf{reduce}$ returns a $\top$ residue. \\
+\textbf{Subcase} $a_1 = j+h, a_2 = \emptyset$ \\
+In this case since $b_1$ is non-empty and must be in $[j+l,j+h]$ we know that $a_1 \leq b_1$ and thus $\mathbf{reduce}$ returns a $\bot$ residue. \\
+\textbf{Subcase} $a_2 \in [j+l,j+h-1]$ and $a_1 = a_2 + 1$ \\
+In this case either $a_2 \geq b_2$ and we return a $\top$ residue or $a_2 < b_2 \equiv a_2 + 1 \leq b_2 \equiv a_1 \leq b_2$ and then we return a $\bot$ residue. So in this case we always return a valued residue.
+\end{proof}
+
+\begin{proof}[Completeness]
+
+% TRUE
+\noindent \textbf{Case} $\phi \equiv \top$ \\
+This case is trivially Complete
+
+% FALSE 
+\noindent \textbf{Case} $\phi \equiv \bot$ \\
+This case is trivially Complete
+
+% PROP
+\noindent \textbf{Case} $\phi \equiv p$ \\
+This case is trivially Complete
+
+% NOT
+\noindent \textbf{Case} $\phi \equiv \neg \psi$ \\
+Given that $\mathbf{reduce}(\psi)$ and $\mathbf{simplify}$ are Complete then $\mathbf{reduce}(\neg \psi)$ is Complete
+
+% OR
+\noindent \textbf{Case} $\phi \equiv \psi_1 \vee \psi_2$ \\
+Given that $\mathbf{reduce}(\psi_1)$, $\mathbf{reduce}(\psi_2)$ and $\mathbf{simplify}$ are Complete then $\mathbf{reduce}(\psi_1 \vee \psi_2)$ is Complete
+
+% UNTIL
+\noindent \textbf{Case} $\phi \equiv \alpha\, \mathcal{U}_{[l,h]}\, \beta$ \\
+Returning $\phi$ is trivially complete, so we must only show that when $\top$ or $\bot$ residuals are returned that they are correct. There are three separate return cases: \\
+\textbf{Subcase} $b_f = \top$ \\
+If $b_f = \top$ then $\nexists k.(k \in [j+l,j+h] \wedge \sigma, \tau, k \vDash \beta)$ which means that $\sigma, \tau, k \nvDash \alpha\, \mathcal{U}_{[l,h]}\, \beta$ and so returning a $\bot$ residue is Complete. \\
+\textbf{Subcase} $a_2 \geq b_2$ \\
+If $a_2 \geq b_2$ then $\exists k.(\sigma, \tau, k \vDash \beta)$ (since $S^i_\beta$ is sound, complete, and prompt) and $\forall k'.(k' \in [i,a_2] \rightarrow \sigma, \tau, k' \vDash \alpha$. Since $a_2 \geq j$ this matches the semantics of until so we know that $\sigma, \tau, k \vDash \alpha\, \mathcal{U}_{[l,h]}\, \beta$ and so returning a $\top$ residue is Complete. \\
+\textbf{Subclass} $a_1 \leq b_1$ \\
+If $a_1 \leq b_1$ then $b_1$ is the lowest position $k$ where it is possible that $\sigma, \tau, k \vDash \beta$. The position $a_1$ is such that $\sigma, \tau, a_1 \nvDash \alpha$ and since $a_1 \leq b_1$ we know that it is impossible for $\sigma, \tau, k' \vDash \alpha$ for all $k'$ between $j$ and the first occurance of $\beta$ (the earliest posible position being $b_1$). This means that $\sigma, \tau, j \nvDash \alpha\, \mathcal{U}_{[l,h]}\, \beta$ and so returning a $\bot$ residue is Complete.
+
+
+% SINCE
+\noindent \textbf{Case} $\phi \equiv \alpha\, \mathcal{S}_{[l,h]}\, \beta$ \\
+The proof for Since follows from the proof for Until
 \end{proof}
 
 \pagebreak
@@ -310,40 +355,41 @@ The reduce function takes a residue and returns the reduced residue:
 \end{aligned} \right. \\
 \end{align*}
 
-%%% UNTIL
+%%% TAU UNTIL
 \begin{align*}
-\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{U}_{[l,h]} \psi_2}) = \left\{
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}) = \left\{
 \begin{aligned}
-&\text{let } a_1 \leftarrow min(\{k | k \in [i+l, i+h] \wedge \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \psi' = \bot \}) \\
-&a_2 \leftarrow max(\{k | k \in [i+l, i+h] \wedge  \rp{k}{\psi'} \in S^i_{\psi_1} \\  
-	& \quad \quad \quad \quad \wedge \forall j. (i \leq j \leq k \rightarrow \rp{j}{\top} \in S^i_{\psi_1}) \}) \\
-&b_1 \leftarrow min(\{k | k \in [i+l, i+h] \wedge \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' \neq \bot/\top \}) \\
-&b_2 \leftarrow min(\{k | k \in [i+l, i+h] \wedge \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' = \top \}) \\
-&b_f \leftarrow \top \text{ if } \forall k \in [i+l,i+h]. \rp{k}{\bot} \in S^i_{\psi_2} \\
+&\text{let } a_1 \leftarrow min(\{k | \tau_k - \tau_i \in [l, h] \wedge \rp{k}{\bot} \in S^i_{\alpha} \}) \\
+&a_2 \leftarrow max(\{k | \tau_k - \tau_i \in [l, h] \wedge  \rp{k}{\psi'} \in S^i_{\alpha} \\  
+	& \quad \quad \quad \quad \wedge \forall j. (i \leq j \leq k \rightarrow \rp{j}{\top} \in S^i_{\alpha}) \}) \\
+&b_1 \leftarrow min(\{k | \tau_k - \tau_i \in [l, h] \wedge \rp{k}{\psi'} \in S^i_{\beta} \wedge \psi' \neq \bot/\top \}) \\
+&b_2 \leftarrow min(\{k | \tau_k - \tau_i \in [l, h] \wedge \rp{k}{\top} \in S^i_{\beta} \}) \\
+&b_f \leftarrow \top \text{ if } \forall k.(\tau_k - \tau_i \in [l,h] \rightarrow \rp{k}{\bot} \in S^i_{\beta}) \\
 &\text{if }b_2 \neq \emptyset \wedge a_2 \neq \emptyset \wedge b_2 \leq a_2 \\
 & \quad\mathbf{return} \rp{j}{\top} \\
 &\text{else if } (b_1 \neq \emptyset \vee b_2 \neq \emptyset) \wedge a_1 \neq \emptyset \wedge min(b_1,b_2) \geq a_1 \text{ or } b_f = \top\\
 & \quad\mathbf{return} \rp{j}{\bot} \\
 &\text{else} \\
-& \quad\mathbf{return} \rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2}
+& \quad\mathbf{return} \rp{j}{\alpha\, \mathcal{S}_{[l,h]}\, \beta}
 \end{aligned} \right. \\
 \end{align*}
-%%% SINCE
+
+%%% TAU SINCE
 \begin{align*}
-\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2} = \left\{
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\alpha\, \mathcal{S}_{[l,h]}\, \beta}) = \left\{
 \begin{aligned}
-&\text{let } a_1 \leftarrow max(\{k | k \in [i-h, i-l] \wedge \rp{k}{\psi'} \in S^i_{\psi_1} \wedge \psi' = \bot \}) \\
-&a_2 \leftarrow min(\{k | k \in [i-h, i-l] \wedge \rp{k}{\psi'} \in S^i_{\psi_1} \\
-&\quad \quad \quad \quad \wedge \forall j. (j \geq k \rightarrow \rp{j}{\top} \in S^i_{\psi_1}) \}) \\
-&b_1 \leftarrow max(\{k | k \in [i-h, i-l] \wedge \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' \neq \bot/\top \}) \\
-&b_2 \leftarrow max(\{k | k \in [i-h, i-l] \wedge \rp{k}{\psi'} \in S^i_{\psi_2} \wedge \psi' = \top \}) \\
-&b_f \leftarrow \top \text{ if } \forall k \in [i+l,i+h]. \rp{k}{\bot} \in S^i_{\psi_2} \\
+&\text{let } a_1 \leftarrow max(\{k | \tau_i - \tau_k \in [l, h] \wedge \rp{k}{\bot} \in S^i_{\alpha} \}) \\
+&a_2 \leftarrow min(\{k | \tau_i - \tau_k \in [l, h] \wedge \rp{k}{\psi'} \in S^i_{\alpha} \\
+&\quad \quad \quad \quad \wedge \forall j. (j \geq k \rightarrow \rp{j}{\top} \in S^i_{\alpha}) \}) \\
+&b_1 \leftarrow max(\{k | \tau_i - \tau_k \in [l, h] \wedge \rp{k}{\psi'} \in S^i_{\beta} \wedge \psi' \neq \bot/\top \}) \\
+&b_2 \leftarrow max(\{k | \tau_i - \tau_k \in [l, h] \wedge \rp{k}{\top} \in S^i_{\beta} \}) \\
+&b_f \leftarrow \top \text{ if } \forall k.(\tau_i-\tau_k \in [l,h] \rightarrow \rp{k}{\bot} \in S^i_{\beta} \\
 &\text{if } b_2 \neq \emptyset \wedge a_2 \neq \emptyset \wedge b_2 \geq a_2 \\
 & \quad\mathbf{return} \rp{j}{\top} \\
 &\text{else if } (b_1 \neq \emptyset \vee b_2 \neq \emptyset) \wedge a_1 \neq \emptyset \wedge max(b_1,b_2) \leq a_1 \text{ or } b_f = \top\\
 & \quad\mathbf{return} \rp{j}{\bot} \\
 &\text{else} \\
-& \quad\mathbf{return} \rp{j}{\psi_1 \mathcal{S}_{[l,h]} \psi_2}
+& \quad\mathbf{return} \rp{j}{\alpha\, \mathcal{S}_{[l,h]}\, \beta}
 \end{aligned} \right. \\
 \end{align*}
 
@@ -361,7 +407,28 @@ The reduce function takes a residue and returns the reduced residue:
 \end{aligned} \right. \\
 \end{align*}
 
-%\end{align*}
+
+%%% Delta
+
+
+\begin{align*}
+\Delta(\phi) = \left\lbrace
+\begin{aligned}
+0 & \quad \text{ iff } \psi \equiv \top \\
+0 & \quad \text{ iff } \psi \equiv \bot \\
+0 & \quad \text{ iff } \psi \equiv p \\
+\Delta(\psi) & \quad \text{ iff } \phi \equiv \neg \psi \\
+%max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \wedge \beta \\
+max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \vee \beta \\
+%max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \rightarrow \beta \\
+%H + \Delta(\psi) & \quad \text{ iff } \phi \equiv \square_{l,H} \psi \\
+%h + \Delta(\psi) & \quad \text{ iff } \phi \equiv \lozenge_{l,h} \psi \\
+h + max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha\, \mathcal{U}_{[l,h]}\, \beta \\
+%\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacksquare_{l,H} \psi \\
+%\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacklozenge_{l,h} \psi \\
+max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha\, \mathcal{S}_{[l,h]}\, \beta \\
+\end{aligned} \right. 
+\end{align*}
 
 %%\begin{algorithm}
 %\noindent \textbf{reduce}
