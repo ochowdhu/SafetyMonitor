@@ -1298,10 +1298,10 @@ def substitute_stcons(Struct, history, eptr, formula_entry):
 	else:
 		return INVALID_T
 
-def reduce(formula):
+def simplify(formula):
 	if (ftype(formula) == EXP_T):
-		#return [formula[0], reduce(formula[1])]
-		return reduce(formula[1])
+		#return [formula[0], simplify(formula[1])]
+		return simplify(formula[1])
 	elif (ftype(formula) == VALUE_T):
 		return formula
 	elif (ftype(formula) == PROP_T):
@@ -1311,14 +1311,14 @@ def reduce(formula):
 		dprint("shouldn't get here, already sub'd", DBG_ERROR)
 		return not cstate[formula[1]]
 	elif (ftype(formula) == NOT_T):
-		child = reduce(formula[1])
+		child = simplify(formula[1])
 		if (ftype(child) == VALUE_T):
 			return not child
 		else:
 			return ['notprop', child]
 	elif (ftype(formula) == AND_T):
-		child1 = reduce(formula[1])
-		child2 = reduce(formula[2])
+		child1 = simplify(formula[1])
+		child2 = simplify(formula[2])
 		if (child1 == False or child2 == False):
 			return False
 		elif (child1 == True and child2 == True):
@@ -1326,8 +1326,8 @@ def reduce(formula):
 		else:
 			return ['andprop', child1, child2]
 	elif (ftype(formula) == OR_T):
-		child1 = reduce(formula[1])
-		child2 = reduce(formula[2])
+		child1 = simplify(formula[1])
+		child2 = simplify(formula[2])
 		if (child1 == True or child2 == True):
 			return True
 		elif (child1 == False and child2 == False):
@@ -1335,8 +1335,8 @@ def reduce(formula):
 		else:
 			return ['orprop', child1, child2]
 	elif (ftype(formula) == IMPLIES_T):
-		child1 = reduce(formula[1])
-		child2 = reduce(formula[2])
+		child1 = simplify(formula[1])
+		child2 = simplify(formula[2])
 		if (child1 == False or child2 == True):
 			return True
 		elif (child1 == True and child2 == False):
@@ -1413,6 +1413,209 @@ def sc_reduce_sub(Struct, cstate, formula_entry):
 		if (child1 == False):
 			return True
 		child2 = sc_reduce_sub(Struct, cstate, (formtime, formula[2]))
+		if (child2 == True):
+			return True
+		elif (child1 == True and child2 == False):
+			return False
+		else:
+			return ['impprop', child1, child2]
+	elif (formtype == EVENT_T): 
+		h = hbound(formula) + formtime
+		l = lbound(formula) + formtime
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		check = CInterval(l,h)
+		#
+		for i in reversed(sthist):
+			if i.intersects(check):
+				return True
+		if (subStruct.valid >= h):
+			return False
+		return formula
+	elif (formtype == ALWAYS_T):
+		h = hbound(formula) + formtime
+		l = lbound(formula) + formtime
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		check = CInterval(l,h)
+		#
+		alcheck = subStruct.alCheck(check)
+		if (alcheck == ALC_SATISFY):
+			return True
+		elif (alcheck == ALC_VIOLATE):
+			return False
+		else: # alcheck == ALC_ALIVE
+			return formula
+	elif (formtype == UNTIL_T): 
+		tags = get_tags(formula)
+		subStruct1 = Struct[tags[0]]
+		subStruct2 = Struct[tags[1]]
+		sthist1 = subStruct1.history
+		sthist2 = subStruct2.history
+		h = hbound(formula) + formtime
+		l = lbound(formula) + formtime
+		check = CInterval(l,h)
+		end = None
+		#done = True
+
+		for i in reversed(sthist2):
+			if i.intersects(check):
+				end = i.intersection(check).end
+				break	# find the most recent one
+		# didn't find P2 and past time
+		if (end is None and subStruct2.valid >= h):
+			return False
+		elif (end is None):
+			end = ctime
+
+		l = formtime	
+		h = end
+		check = CInterval(l,h)
+		alcheck = subStruct1.alCheck(check)
+
+		if (alcheck == ALC_SATISFY and subStruct2.valid >= h):
+			return True
+		elif (alcheck == ALC_VIOLATE):
+			return False
+		else: # alcheck == ALC_ALIVE or ALC_SAT and not found
+			return formula
+	elif (formtype == PEVENT_T):
+		h = formtime - lbound(formula)
+		l = formtime - hbound(formula)
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		check = CInterval(l,h)
+		#
+		for i in reversed(sthist):
+			if i.intersects(check):
+				return True
+		if subStruct.valid >= h:
+			return False
+		return formula
+	elif (formtype == PALWAYS_T):
+		h = formtime - lbound(formula)
+		l = formtime - hbound(formula)
+		subStruct = Struct[get_tags(formula)]
+		sthist = subStruct.history
+		check = CInterval(l,h)
+		#
+		alcheck = subStruct.alCheck(check)
+		if (alcheck == ALC_SATISFY):
+			return True
+		elif (alcheck == ALC_VIOLATE):
+			return False
+		else: # alcheck == ALC_ALIVE
+			return formula
+	elif (formtype == SINCE_T):
+		tags = get_tags(formula)
+		subStruct1 = Struct[tags[0]]
+		subStruct2 = Struct[tags[1]]
+		sthist1 = subStruct1.history
+		sthist2 = subStruct2.history
+		h = formtime - lbound(formula)
+		l = formtime - hbound(formula)
+		start = None
+		check = CInterval(l,h)
+		#
+		#print "checking since at %s" % check
+		#print "eventhist: %s" % sthist2
+		for i in reversed(sthist2):
+			if i.intersects(check):
+				start = i.intersection(check).end
+				break	# find the most recent one
+		if (start is None and subStruct2.valid >= h):
+			return False
+		elif (start is None):
+			# haven't seen eventually yet, can't check always
+			return formula
+
+		l = start + PERIOD
+		h = formtime
+		check = CInterval(l,h)
+		alcheck = subStruct1.alCheck(check)
+
+		#print "checking always at %s" % check
+		#print "alwayshist: %s" % sthist1
+		if (alcheck == ALC_SATISFY or alcheck == ALC_ALIVE and subStruct2.valid >= h):
+			return True
+		elif (alcheck == ALC_VIOLATE):
+			return False
+		else: # alcheck == ALC_ALIVE or ALC_SAT and not found
+			return formula
+	else:
+		return INVALID_T
+
+
+
+def ag_simplify(formula):
+	if (ftype(formula) == VALUE_T):
+		return formula
+	elif (ftype(formula) == NOT_T):
+		child = simplify(formula[1])
+		if (ftype(child) == VALUE_T):
+			return not child
+		else:
+			return ['notprop', child]
+	elif (ftype(formula) == OR_T):
+		child1 = simplify(formula[1])
+		child2 = simplify(formula[2])
+		if (child1 == True or child2 == True):
+			return True
+		elif (child1 == False and child2 == False):
+			return False
+		else:
+			return ['orprop', child1, child2]
+	else:
+		return residue
+
+def ag_reduce(Struct, cstate, formula_entry):
+	ctime = cstate["time"]
+	formtime = formula_entry[0]
+	formula = formula_entry[1]
+	formtype = ftype(formula)
+	if (formtype == EXP_T):
+		return ag_reduce(Struct, cstate, (formtime, formula[1]))
+	elif (formtype == VALUE_T):
+		return formula
+	elif (formtype == PROP_T):
+		if (cstate[formula[1]]):
+			return True
+		else:
+			return False
+	elif (formtype == NPROP_T):
+		if (cstate[formula[1]]):
+			return False
+		else:
+			return True
+	elif (formtype == NOT_T):
+		child = simplify(ag_reduce(Struct, cstate, (formtime, formula[1])))
+		if (ftype(child) == VALUE_T):
+			return not child
+		else:
+			return ['notprop', child]
+	elif (formtype == AND_T):
+		child1 = ag_reduce(Struct, cstate, (formtime, formula[1]))
+		child2 = ag_reduce(Struct, cstate, (formtime, formula[2]))
+		simp = simplify(['andprop', child1, child2])
+		if (ftype(simp) == VALUE_T):
+			return simp;
+	elif (formtype == OR_T):
+		child1 = ag_reduce(Struct, cstate, (formtime, formula[1]))
+
+		if (child1 == True):
+			return True
+		child2 = ag_reduce(Struct, cstate, (formtime, formula[2]))
+		if (child2 == True):
+			return True
+		elif (child1 == False and child2 == False):
+			return False
+		else:
+			return ['orprop', child1, child2]
+	elif (formtype == IMPLIES_T):
+		child1 = ag_reduce(Struct, cstate, (formtime, formula[1]))
+		if (child1 == False):
+			return True
+		child2 = ag_reduce(Struct, cstate, (formtime, formula[2]))
 		if (child2 == True):
 			return True
 		elif (child1 == True and child2 == False):

@@ -128,22 +128,22 @@ A formula structure $S^i_{\phi}$ is complete if all residues $\rp{j}{\psi}$ cont
 
 Next we show the correctness of the $\mathbf{reduce}$ function, which is our primary function that checks whether an individual residue is satisfied, violated, or can be reduced to a simpler formula.
 
-\subsubsection{Correctness of reduce}
-\begin{lemma}[Correctness of $\mathbf{reduce}$]
-For all traces $\sigma$, time stamp sequences $\tau$, trace positions $i \in \mathbb{N}$, residues $\rp{j}{\psi}$ where $j \in \mathbb{N}$ and $\psi$ is a wff, and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete,
+%\subsubsection{Correctness of reduce}
+%\begin{lemma}[Correctness of $\mathbf{reduce}$]
+%For all traces $\sigma$, time stamp sequences $\tau$, trace positions $i \in \mathbb{N}$, residues $\rp{j}{\psi}$ where $j \in \mathbb{N}$ and $\psi$ is a wff, and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete,
+%%
+%it is the case that $\rp{j}{\psi'} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{R}^i, \rp{j}{\psi})$ is 1) sound, 2) complete, and 3) prompt
+%\end{lemma}
 %
-it is the case that $\rp{j}{\psi'} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{R}^i, \rp{j}{\psi})$ is 1) sound, 2) complete, and 3) prompt
-\end{lemma}
-
-\begin{lemma}[Better Correctness of $\mathbf{reduce}$?]
-For all traces $\sigma$, 
-time stamp sequences $\tau$, 
-trace positions $i \in \mathbb{N}$, 
-residues $\rp{j}{\psi} \in S^i_{\phi}$ where $j \in \mathbb{N}$ and $\psi$ is a wff, 
-and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete, (which means $S^i_{\phi}$ is also Sound and Complete)
-%
-it is the case that $\rp{j}{\psi'} \in S^i_{\phi}$ where $ \rp{j}{\psi'} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{R}^i, \rp{j}{\psi})$ is 1) sound, 2) complete, and 3) prompt
-\end{lemma}
+%\begin{lemma}[Better Correctness of $\mathbf{reduce}$?]
+%For all traces $\sigma$, 
+%time stamp sequences $\tau$, 
+%trace positions $i \in \mathbb{N}$, 
+%residues $\rp{j}{\psi} \in S^i_{\phi}$ where $j \in \mathbb{N}$ and $\psi$ is a wff, 
+%and all histories $\mathbb{R}^i$ which are 1) Sound and 2) Complete, (which means $S^i_{\phi}$ is also Sound and Complete)
+%%
+%it is the case that $\rp{j}{\psi'} \in S^i_{\phi}$ where $ \rp{j}{\psi'} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{R}^i, \rp{j}{\psi})$ is 1) sound, 2) complete, and 3) prompt
+%\end{lemma}
 
 \begin{lemma}[Residue Correctness of $\mathbf{reduce}$]
 For all formula $\phi$,
@@ -429,75 +429,6 @@ h + max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha\, 
 max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha\, \mathcal{S}_{[l,h]}\, \beta \\
 \end{aligned} \right. 
 \end{align*}
-
-%%\begin{algorithm}
-%\noindent \textbf{reduce}
-%\begin{algorithmic}[1]
-%\IF{$\res{\phi}{j} \equiv \top \vee \res{\phi}{j} \equiv \bot$}
-%\RETURN $\res{\phi}{j}$
-%%%%%% PROP %%%%%
-%\ELSIF{$\res{\phi}{j} \equiv p$}
-%\RETURN $\rp{j}{\sigma(p)}$
-%%%%%% NOT %%%%%%%%
-%\ELSIF{$\res{\phi}{j} \equiv \neg \psi$}
-%\STATE $\psi' \leftarrow reduce(\psi)$
-%\RETURN $\rp{j}{\neg \psi'}$
-%%%%%% OR %%%%%%%%%%
-%\ELSIF{$\res{\phi}{j} \equiv \psi_1 \vee \psi_2$}
-%\STATE $\psi_1' \leftarrow reduce(\psi_1)$
-%\STATE $\psi_2' \leftarrow reduce(\psi_2)$
-%\RETURN $\rp{j}{\psi_1' \vee \psi_2'}$
-%%%%%% UNTIL %%%%%%%%%%%%%%%
-%\ELSIF{$\res{\phi}{j} \equiv \psi_1 \mathcal{U}_{[l,h]} \psi_2$}
-%\STATE $e \leftarrow \text{smallest } k \in [j+l,j+h] \text{ s.t. } \res{\psi_2}{k} = \top$
-%\IF{$e \equiv \emptyset$}
-%\STATE $v \leftarrow \text{largest } k \in S_{\psi_2}^i \text{ s.t. } \res{\psi_2}{k} = \top/\bot$
-%\IF{$v \geq j+h$}
-%\RETURN $\rp{j}{\bot}$
-%\ELSE
-%\RETURN $\res{\phi}{j}$
-%\ENDIF
-%\ENDIF % if no e
-%\STATE unfinished $\leftarrow \bot$
-%\FOR{all $ k \in S_{\psi_2} \text{ s.t. } k \in [j, e]$}
-%\IF{$\res{\psi_2}{k} \equiv \bot$}
-%\RETURN $\rp{j}{\bot}$
-%\ELSIF{$\res{\psi_2}{k} \not\equiv \top$}
-%\STATE unfinished $\leftarrow \top$
-%\ENDIF % checking psi_1
-%\ENDFOR
-%\IF{unfinished $\equiv \top$}
-%\RETURN $\res{\phi}{j}$
-%\ELSE
-%\RETURN $\rp{j}{\top}$
-%\ENDIF
-%%%%%%%% SINCE
-%\ELSIF{$\res{\phi}{j} \equiv \psi_1 \mathcal{S}_{[l,h]} \psi_2$}
-%\STATE $s \leftarrow \text{largest } k \in [j+l,j+h] \text{ s.t. } \res{\psi_2}{k} = \top$
-%\IF{$s \equiv \emptyset$}
-%\STATE $v \leftarrow \text{largest } k \in S_{\psi_2}^i \text{ s.t. } \res{\psi_2}{k} = \top/\bot$
-%\IF{$v \geq j+h$}
-%\RETURN $\rp{j}{\bot}$
-%\ELSE
-%\RETURN $\res{\phi}{j}$
-%\ENDIF
-%\ENDIF % if no s
-%\STATE unfinished $\leftarrow \bot$
-%\FOR{all $k \in S_{\psi_2}: k \in [s, j]$}
-%\IF{$\res{\psi_2}{k} \equiv \bot$}
-%\RETURN $\rp{j}{\bot}$
-%\ELSIF{$\res{\psi_2}{k} \not\equiv \top$}
-%\STATE unfinished $\leftarrow \top$
-%\ENDIF % checking psi_1
-%\ENDFOR
-%\IF{unfinished $= \top$}
-%\RETURN $\res{\phi}{j}$
-%\ELSE
-%\RETURN $\rp{j}{\top}$
-%\ENDIF
-%\ENDIF % outer if
-%\end{algorithmic}
-%%\end{algorithm}
 
 \end{document}
 
