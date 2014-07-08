@@ -333,16 +333,8 @@ def smon_purecons(cstep, history, formula):
 ########## FULL STRUCT ############
 def add_struct(Struct, tag, delay, formula):
 	global algChoose
-	if (algChoose == ALG_RES or algChoose == ALG_RESCONS):
-		newSt = istructure(tag, formula, delay)
-	elif (algChoose == ALG_STCONS):
-		newSt = ipstructure(tag, formula, delay)
-	elif (algChoose == ALG_FSTCONS):
-		newSt = istructure(tag, formula, delay)
-	elif (algChoose == ALG_ASTCONS or algChoose == ALG_ARES):
+	if (algChoose == ALG_RES):
 		newSt = aStructure(tag, formula, delay)
-	elif (algChoose == ALG_AIRES):
-		newSt = iStructure(tag, formula, delay)
 	else:
 		dprint("!!!!SHOULD NOT GET HERE....!!!", DBG_ERROR)
 		sys.exit(2)

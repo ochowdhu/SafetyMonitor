@@ -176,6 +176,25 @@ class structure:
 	def __str__(self):
 		return "Struct: [%d|| DEL: %d FORM: %s VAL: %d :: HIST: %s, RES: %s]" % (self.tag, self.delay, self.formula, self.valid, self.history, self.residues)
 
+class resStructure:
+	def __init__(self, tag, formula=[], delay=0):
+		self.tag = tag
+		self.formula = formula
+		self.ctime = 0
+		self.delay = delay
+		self.residues = []
+	# don't need addHist
+	def addRes(self, time, formula):
+		self.residues.append([time, formula])
+		ctime = max(self.ctime, time)
+	def cleanRes(self):
+		self.residues = [f for f in self.residues if (f[0] > (self.ctime - self.delay))]
+	def incrRes(self, Struct, cstate):
+		for i,f in enumerate(self.residues):
+			self.residues[i] = (f[0], simplify(ag_reduce(Struct, cstate, f)))
+	def __str__(self):
+		return "resStruct: [%d|| DEL: %d FORM: %s CTIME: %d :: RES: %s]" % (self.tag, self.delay, self.formula, self.valid, self.history, self.residues)
+
 class aStructure:
 	def __init__(self, tag, formula=[], delay=0):
 		self.tag = tag
