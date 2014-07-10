@@ -228,8 +228,7 @@ def mon_residue(inFile, inFormula, traceOrder):
 			updateState(cstate, traceOrder, line)
 			with Timer() as t:
 				incr_aStruct(Struct, cstate)
-			incrtime = incrtime + t.secs
-			incrcount = incrcount + 1
+			TimeData.addStIncTime(t.secs)
 
 			dprint("Adding current formula", DBG_SMON)
 			formulas.append((cstate["time"], inFormula))
@@ -268,6 +267,63 @@ def mon_residue(inFile, inFormula, traceOrder):
 	dprint("total red time: %s, # red: %s, avg red time: %s" % (redtime, redcount, redtime/redcount),DBG_TIME)
 	print "#### finished, trace satisfies formula"
 
+
+def simplify(formula):
+	if (ftype(formula) == VALUE_T):
+		return formula
+	elif (ftype(formula) == PROP_T):
+		dprint("shouldn't get here, already sub'd", DBG_ERROR)
+		return cstate[formula[1]]
+	elif (ftype(formula) == NOT_T):
+		child = simplify(formula[1])
+		if (ftype(child) == VALUE_T):
+			return not child
+		else:
+			return ['notprop', child]
+	elif (ftype(formula) == OR_T):
+		child1 = simplify(formula[1])
+		child2 = simplify(formula[2])
+		if (child1 == True or child2 == True):
+			return True
+		elif (child1 == False and child2 == False):
+			return False
+		else:
+			return ['orprop', child1, child2]
+	elif (ftype(formula) == UNTIL_T): 
+		## Fill in with check and return formula if not sure yet
+		return formula
+	elif (ftype(formula) == SINCE_T):
+		return formula
+	else:
+		return INVALID_T
+
+
+def ag_reduce(Struct, cstate, formula_entry):
+	ctime = cstate["time"]
+	formtime = formula_entry[0]
+	formula = formula_entry[1]
+	formtype = ftype(formula)
+	if (formtype == VALUE_T):
+		return (formtime, formula)
+	elif (formtype == PROP_T):
+		if (cstate[formula[1]]):
+			return (formtime, True)
+		else:
+			return (formtime, False)
+	elif (formtype == NOT_T):
+		child = ag_reduce(Struct, cstate, (formtime, formula[1]))
+		child = simplify(['notprop', child])
+		return (formtime, child)
+	elif (formtype == OR_T):
+		child1 = ag_reduce(Struct, cstate, (formtime, formula[1]))
+		child2 = ag_reduce(Struct, cstate, (formtime, formula[2]))
+		ans = simplify(['orprop', child1, child2])
+		return (formtime, ans)
+	elif (formtype == UNTIL_T): 
+
+	elif (formtype == SINCE_T):
+	else:
+		return INVALID_T
 
 def build_structure(Struct, formula, extbound=0):
 	if (ftype(formula) == PROP_T):
