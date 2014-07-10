@@ -19,6 +19,7 @@ DBG_STRUCT = 0x02
 DBG_SMON = 0x04
 DBG_STATE = 0x08
 DBG_TIME = 0x10
+DBG_SAT = 0x20
 #DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
 DBG_MASK = DBG_ERROR | DBG_TIME #| DBG_SMON | DBG_STRUCT
 
@@ -177,8 +178,7 @@ class structure:
 		return "Struct: [%d|| DEL: %d FORM: %s VAL: %d :: HIST: %s, RES: %s]" % (self.tag, self.delay, self.formula, self.valid, self.history, self.residues)
 
 class resStructure:
-	def __init__(self, tag, formula=[], delay=0):
-		self.tag = tag
+	def __init__(self, formula=[], delay=0):
 		self.formula = formula
 		self.ctime = 0
 		self.delay = delay
