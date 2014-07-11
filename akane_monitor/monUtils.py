@@ -185,15 +185,15 @@ class resStructure:
 		self.residues = []
 	# don't need addHist
 	def addRes(self, time, formula):
-		self.residues.append([time, formula])
+		self.residues.append((time, formula))
 		ctime = max(self.ctime, time)
 	def cleanRes(self):
 		self.residues = [f for f in self.residues if (f[0] > (self.ctime - self.delay))]
 	def incrRes(self, Struct, cstate):
 		for i,f in enumerate(self.residues):
-			self.residues[i] = (f[0], simplify(ag_reduce(Struct, cstate, f)))
+			self.residues[i] = (f[0], ag_reduce(Struct, cstate, f))
 	def __str__(self):
-		return "resStruct: [%d|| DEL: %d FORM: %s CTIME: %d :: RES: %s]" % (self.tag, self.delay, self.formula, self.valid, self.history, self.residues)
+		return "resStruct: [DEL: %d FORM: %s CTIME: %d :: RES: %s]" % (self.delay, self.formula, self.ctime, self.residues)
 
 class aStructure:
 	def __init__(self, tag, formula=[], delay=0):
@@ -2028,3 +2028,7 @@ def lbound(formula):
 # get higher temporal bound
 def hbound(formula):
 	return formula[2]
+def rform(residue):
+	return residue[1]
+def rstep(residue):
+	return residue[0]
