@@ -64,7 +64,7 @@ expression:
 
 %%
 
-main(int argc, char** argv) {
+int main(int argc, char** argv) {
 	FILE *myfile;
 	if (argc > 1) {
 		yyin = fopen(argv[1], "r");
@@ -78,7 +78,7 @@ main(int argc, char** argv) {
 	if (ast) {
 		pprintTree(ast);
 		std::cout << "Trying lisp print" << std::endl;
-		//lispPrint(ast);
+		lispPrint(ast);
 		std::cout << std::endl;
 	}
 }
@@ -126,13 +126,13 @@ void pprintTree(Node* root) {
 void lispPrint(Node* root) {
 	switch (root->type) {
 		case VALUE_T:
-			std::cout << "['prop', '" << root->val.value << "']";
+			std::cout << root->val.value;
 			break;
 		case PROP_T:
 			std::cout << "['prop', '" << root->val.propName << "']";
 			break;
 		case NOT_T:
-			std::cout << "['not', ";
+			std::cout << "['notprop', ";
 			lispPrint(root->val.child);
 			std::cout << "]";
 			break;

@@ -42,7 +42,9 @@ traceDir=omarTraces
 echo "OMAR SINCE REGRESSION...."
 
 #invar="x -> (p) \$0,5\$ ([[1,1]] (q))"
-invar="x -> (p) \$0,5\$ ((q))"
+#invar="x -> (p) \$0,5\$ ((q))"
+#invar="~x || (p) \$0,5\$ ((q))"
+invar="['orprop', ['notprop', ['prop', 'x']], ['sinceprop', 0, 5, ['prop', 'p'], ['prop', 'q']]]"
 ./runMon.sh "$invar" "$traceDir/S1-S-1.csv" $1 1
 echo "@@@@ TRACE 1: Should be SATISFIED"
 ./runMon.sh "$invar" "$traceDir/S1-S-2.csv" $1 1
@@ -71,8 +73,10 @@ echo "!!!! TRACE 5: Should be VIOLATED"
 echo "====================================="
 echo "END S1, NOW S3 (S2 broken traces...)"
 echo "====================================="
-invar="x -> ((p) \$0,5\$ (q)) \$0,5\$ ((r) \$0,5\$ (t))"
+#invar="x -> ((p) \$0,5\$ (q)) \$0,5\$ ((r) \$0,5\$ (t))"
+#invar="~x || ((p) \$0,5\$ (q)) \$0,5\$ ((r) \$0,5\$ (t))"
 #invar="x -> ( ((p) \$0,5\$ ([[1,1]] (q))) \$0,5\$ ([[1,1]] ((r) \$0,5\$ ([[1,1]] (t)))))"
+invar="['orprop', ['notprop', ['prop', 'x']], ['sinceprop', 0, 5, ['sinceprop', 0, 5, ['prop', 'p'], ['prop', 'q']], ['sinceprop', 0, 5, ['prop', 'r'], ['prop', 't']]]]"
 ./runMon.sh "$invar" "$traceDir/S3-S-1.csv" $1 1
 echo "@@@@ TRACE 1: Should be SATISFIED"
 ./runMon.sh "$invar" "$traceDir/S3-S-2.csv" $1 1

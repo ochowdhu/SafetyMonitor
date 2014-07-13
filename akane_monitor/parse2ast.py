@@ -16,7 +16,8 @@ def ASTreduce(tree):
 	#print "Running TEST( %s )" % (tree,)
 	# Remove single child nodes that aren't expr or proposition -- Do this first
 	if (len(tree) == 2):
-		if (tree[0] == 'exp' or tree[0] == 'prop'):
+		#if (tree[0] == 'exp' or tree[0] == 'prop'):
+		if (tree[1] == 'prop'):
 			#print "hit exp or prop"
 			return [tree[0], ASTreduce(tree[1])]
 		else: 
@@ -28,7 +29,8 @@ def ASTreduce(tree):
 	# get rid of not label on nprop's
 	if (tree[0] == 'nprop'):
 		#print "in nprop"
-		return [tree[0], ASTreduce(tree[-1])]
+		#return [tree[0], ASTreduce(tree[-1])]
+		return ['notprop', ['prop', ASTreduce(tree[-1])]]
 	# base case -- not a list means we hit a prop label
 	if (not isinstance(tree, list)):
 		#print "Not instance, ending recursion"

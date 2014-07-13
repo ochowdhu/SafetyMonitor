@@ -67,14 +67,14 @@ Node *makeTwoTempNode(enum nodeType type, int lbound, int hbound, Node* lchild, 
 
 Node *makeEventNode(int lbound, int hbound, Node* child) {
 	if (RESTRICT_LOGIC) {
-		return makeTwoTempNode(UNTIL_T, lbound, hbound, makeNotNode(makeValueNode(true)), child);
+		return makeTwoTempNode(UNTIL_T, lbound, hbound, makeValueNode(true), child);
 	} else {
 		return makeTempNode(EVENT_T, lbound, hbound, child);
 	}
 }
 Node *makePEventNode(int lbound, int hbound, Node* child) {
 	if (RESTRICT_LOGIC) {
-		return makeTwoTempNode(SINCE_T, lbound, hbound, makeNotNode(makeValueNode(true)), child);
+		return makeTwoTempNode(SINCE_T, lbound, hbound, makeValueNode(true), child);
 	} else {
 		return makeTempNode(PEVENT_T, lbound, hbound, child);
 	}

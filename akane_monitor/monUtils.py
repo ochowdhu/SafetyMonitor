@@ -21,7 +21,8 @@ DBG_STATE = 0x08
 DBG_TIME = 0x10
 DBG_SAT = 0x20
 #DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
-DBG_MASK = DBG_ERROR | DBG_TIME #| DBG_SMON | DBG_STRUCT
+#DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SMON | DBG_STRUCT | DBG_SAT
+DBG_MASK = DBG_ERROR | DBG_TIME
 
 # global constants
 PERIOD = 1
@@ -189,9 +190,9 @@ class resStructure:
 		ctime = max(self.ctime, time)
 	def cleanRes(self):
 		self.residues = [f for f in self.residues if (f[0] > (self.ctime - self.delay))]
-	def incrRes(self, Struct, cstate):
+	def incrRes(self, Struct, cstate, taulist):
 		for i,f in enumerate(self.residues):
-			self.residues[i] = (f[0], ag_reduce(Struct, cstate, f))
+			self.residues[i] = ag_reduce(Struct, cstate, taulist, f)
 	def __str__(self):
 		return "resStruct: [DEL: %d FORM: %s CTIME: %d :: RES: %s]" % (self.delay, self.formula, self.ctime, self.residues)
 
@@ -1380,6 +1381,154 @@ def simplify(formula):
 	else:
 		return INVALID_T
 
+def ag_reduce(Struct, cstate, taulist, formula_entry):
+	ctime = cstate["time"]
+	formtime = formula_entry[0]
+	formula = formula_entry[1]
+	formtype = ftype(formula)
+	if (formtype == VALUE_T):
+		return (formtime, formula)
+	elif (formtype == PROP_T):
+		if (cstate[formula[1]]):
+			return (formtime, True)
+		else:
+			return (formtime, False)
+	elif (formtype == NOT_T):
+		child = ag_reduce(Struct, cstate, taulist, (formtime, formula[1]))
+		child = simplify(['notprop', child[1]])
+		return (formtime, child)
+	elif (formtype == OR_T):
+		child1 = ag_reduce(Struct, cstate, taulist, (formtime, formula[1]))
+		child2 = ag_reduce(Struct, cstate, taulist, (formtime, formula[2]))
+		ans = simplify(['orprop', child1[1], child2[1]])
+		return (formtime, ans)
+	elif (formtype == UNTIL_T): 
+		tags = get_tags(formula)
+		st_alpha = Struct[tags[0]].residues
+		st_beta = Struct[tags[1]].residues
+		st_betatime = Struct[tags[1]].ctime
+		#hst_alpha = st_alpha.history
+		#hst_beta = st_beta.history
+		h = hbound(formula) + taulist[formtime]
+		l = lbound(formula) + taulist[formtime]
+
+		# get spot alpha is alive until
+		st_alpha_bound = sorted([i for i in st_alpha if rstep(i) in taulist and taulist[formtime] <= taulist[rstep(i)] <= h])
+		st_beta_bound = sorted([i for i in st_beta if rstep(i) in taulist and l <= taulist[rstep(i)] <= h])
+
+		# find the spot alpha could be true until
+		a_alive = None
+		for i in st_alpha_bound:
+			if (rform(i) == False):
+				a_alive = rstep(i)
+				break
+		# get spot alpha is true until
+		a_until = formtime - 1 
+		for i in st_alpha_bound:
+			if (rform(i) == True):
+				a_until = rstep(i)
+			else:
+				break	# quit once we find a not-true
+		# find the lowest possible time for beta
+		b_alive = None
+		for i in st_beta_bound:
+			if (rform(i) != False):
+				b_alive = rstep(i)
+				break
+		# find the lowest actual beta
+		b_actual = None
+		for i in st_beta_bound:
+			if (rform(i) == True):
+				b_actual = rstep(i)
+				break
+		# all beta's false?
+		b_none = None
+		if (ctime >= h):
+			b_none = True
+			for i in st_beta_bound:
+				if (rform(i) != False):
+					b_none = False
+					break
+
+		#dprint("beta: %s" % (st_beta,))
+		#dprint("checking until at %i" % formtime)
+		#dprint("bbound: %s" % (st_beta_bound,))
+		#dprint("abound: %s" % (st_alpha_bound,))
+		#dprint("until debug: a_al: %s, a_u: %s, b_al: %s, b_ac: %s, b_none: %s" % (a_alive, a_until, b_alive, b_actual, b_none))
+		if (b_actual is not None and a_until is not None and b_actual-1 <= a_until):
+			return (formtime, True)
+		# first a false can be = to first be non-false, but can't be before
+		elif (b_alive is not None and a_alive is not None and a_alive < b_alive):
+			return (formtime, False)
+		elif (b_none == True):
+			return (formtime, False)
+		else:
+			return (formtime, formula)
+	elif (formtype == SINCE_T):
+		tags = get_tags(formula)
+		st_alpha = Struct[tags[0]].residues
+		st_beta = Struct[tags[1]].residues
+		st_betatime = Struct[tags[1]].ctime
+		#hst_alpha = st_alpha.history
+		#hst_beta = st_beta.history
+		h = taulist[formtime] - lbound(formula)
+		l = taulist[formtime] - hbound(formula)
+
+		# get spot alpha is alive until
+		st_alpha_bound = sorted([i for i in st_alpha if (rstep(i) in taulist and l <= taulist[rstep(i)] <= formtime)])
+		st_beta_bound = sorted([i for i in st_beta if (rstep(i) in taulist and l <= taulist[rstep(i)] <= h)])
+
+		st_alpha_bound.reverse()	
+		st_beta_bound.reverse()
+		# find the spot alpha could be true since (highest false in range)
+		a_alive = None
+		for i in st_alpha_bound:
+			if (rform(i) == False):
+				a_alive = rstep(i)
+				break
+		# get spot alpha is true since (lowest value in chain of true's)
+		#a_since = None
+		a_since = formtime + 1
+		for i in st_alpha_bound:
+			if (rform(i) == True):
+				a_since = rstep(i)
+			else:
+				break	# quit once we find a not-true
+		# find the most recent possible time for beta (highest)
+		b_alive = None
+		for i in st_beta_bound:
+			if (rform(i) != False):
+				b_alive = rstep(i)
+				break
+		# find the most recent actual beta (highest)
+		b_actual = None
+		for i in st_beta_bound:
+			if (rform(i) == True):
+				b_actual = rstep(i)
+				break
+		# all beta's false?
+		b_none = None
+		if (ctime >= h):
+			b_none = True
+			for i in st_beta_bound:
+				if (rform(i) != False):
+					b_none = False
+					break
+
+		#dprint("bbound: %s" % (st_beta_bound,))
+		#dprint("abound: %s" % (st_alpha_bound,))
+		#dprint("since debug: a_al: %s, a_s: %s, b_al: %s, b_ac: %s, b_none: %s" % (a_alive, a_since, b_alive, b_actual, b_none))
+		if (b_actual is not None and a_since is not None and b_actual+1 >= a_since):# or b_actual == formtime):
+			return (formtime, True)
+		elif (b_alive is not None and a_alive is not None and a_alive > b_alive):
+			return (formtime, False)
+		elif (b_none == True):
+			return (formtime, False)
+		else:
+			return (formtime, formula)
+	else:
+		return INVALID_T
+
 def sc_reduce_sub(Struct, cstate, formula_entry):
 	ctime = cstate["time"]
 	formtime = formula_entry[0]
@@ -1587,185 +1736,185 @@ def ag_simplify(formula):
 	else:
 		return residue
 
-def ag_reduce(Struct, cstate, formula_entry):
-	ctime = cstate["time"]
-	formtime = formula_entry[0]
-	formula = formula_entry[1]
-	formtype = ftype(formula)
-	if (formtype == EXP_T):
-		return ag_reduce(Struct, cstate, (formtime, formula[1]))
-	elif (formtype == VALUE_T):
-		return formula
-	elif (formtype == PROP_T):
-		if (cstate[formula[1]]):
-			return True
-		else:
-			return False
-	elif (formtype == NPROP_T):
-		if (cstate[formula[1]]):
-			return False
-		else:
-			return True
-	elif (formtype == NOT_T):
-		child = simplify(ag_reduce(Struct, cstate, (formtime, formula[1])))
-		if (ftype(child) == VALUE_T):
-			return not child
-		else:
-			return ['notprop', child]
-	elif (formtype == AND_T):
-		child1 = ag_reduce(Struct, cstate, (formtime, formula[1]))
-		child2 = ag_reduce(Struct, cstate, (formtime, formula[2]))
-		simp = simplify(['andprop', child1, child2])
-		if (ftype(simp) == VALUE_T):
-			return simp;
-	elif (formtype == OR_T):
-		child1 = ag_reduce(Struct, cstate, (formtime, formula[1]))
-
-		if (child1 == True):
-			return True
-		child2 = ag_reduce(Struct, cstate, (formtime, formula[2]))
-		if (child2 == True):
-			return True
-		elif (child1 == False and child2 == False):
-			return False
-		else:
-			return ['orprop', child1, child2]
-	elif (formtype == IMPLIES_T):
-		child1 = ag_reduce(Struct, cstate, (formtime, formula[1]))
-		if (child1 == False):
-			return True
-		child2 = ag_reduce(Struct, cstate, (formtime, formula[2]))
-		if (child2 == True):
-			return True
-		elif (child1 == True and child2 == False):
-			return False
-		else:
-			return ['impprop', child1, child2]
-	elif (formtype == EVENT_T): 
-		h = hbound(formula) + formtime
-		l = lbound(formula) + formtime
-		subStruct = Struct[get_tags(formula)]
-		sthist = subStruct.history
-		check = CInterval(l,h)
-		#
-		for i in reversed(sthist):
-			if i.intersects(check):
-				return True
-		if (subStruct.valid >= h):
-			return False
-		return formula
-	elif (formtype == ALWAYS_T):
-		h = hbound(formula) + formtime
-		l = lbound(formula) + formtime
-		subStruct = Struct[get_tags(formula)]
-		sthist = subStruct.history
-		check = CInterval(l,h)
-		#
-		alcheck = subStruct.alCheck(check)
-		if (alcheck == ALC_SATISFY):
-			return True
-		elif (alcheck == ALC_VIOLATE):
-			return False
-		else: # alcheck == ALC_ALIVE
-			return formula
-	elif (formtype == UNTIL_T): 
-		tags = get_tags(formula)
-		subStruct1 = Struct[tags[0]]
-		subStruct2 = Struct[tags[1]]
-		sthist1 = subStruct1.history
-		sthist2 = subStruct2.history
-		h = hbound(formula) + formtime
-		l = lbound(formula) + formtime
-		check = CInterval(l,h)
-		end = None
-		#done = True
-
-		for i in reversed(sthist2):
-			if i.intersects(check):
-				end = i.intersection(check).end
-				break	# find the most recent one
-		# didn't find P2 and past time
-		if (end is None and subStruct2.valid >= h):
-			return False
-		elif (end is None):
-			end = ctime
-
-		l = formtime	
-		h = end
-		check = CInterval(l,h)
-		alcheck = subStruct1.alCheck(check)
-
-		if (alcheck == ALC_SATISFY and subStruct2.valid >= h):
-			return True
-		elif (alcheck == ALC_VIOLATE):
-			return False
-		else: # alcheck == ALC_ALIVE or ALC_SAT and not found
-			return formula
-	elif (formtype == PEVENT_T):
-		h = formtime - lbound(formula)
-		l = formtime - hbound(formula)
-		subStruct = Struct[get_tags(formula)]
-		sthist = subStruct.history
-		check = CInterval(l,h)
-		#
-		for i in reversed(sthist):
-			if i.intersects(check):
-				return True
-		if subStruct.valid >= h:
-			return False
-		return formula
-	elif (formtype == PALWAYS_T):
-		h = formtime - lbound(formula)
-		l = formtime - hbound(formula)
-		subStruct = Struct[get_tags(formula)]
-		sthist = subStruct.history
-		check = CInterval(l,h)
-		#
-		alcheck = subStruct.alCheck(check)
-		if (alcheck == ALC_SATISFY):
-			return True
-		elif (alcheck == ALC_VIOLATE):
-			return False
-		else: # alcheck == ALC_ALIVE
-			return formula
-	elif (formtype == SINCE_T):
-		tags = get_tags(formula)
-		subStruct1 = Struct[tags[0]]
-		subStruct2 = Struct[tags[1]]
-		sthist1 = subStruct1.history
-		sthist2 = subStruct2.history
-		h = formtime - lbound(formula)
-		l = formtime - hbound(formula)
-		start = None
-		check = CInterval(l,h)
-		#
-		#print "checking since at %s" % check
-		#print "eventhist: %s" % sthist2
-		for i in reversed(sthist2):
-			if i.intersects(check):
-				start = i.intersection(check).end
-				break	# find the most recent one
-		if (start is None and subStruct2.valid >= h):
-			return False
-		elif (start is None):
-			# haven't seen eventually yet, can't check always
-			return formula
-
-		l = start + PERIOD
-		h = formtime
-		check = CInterval(l,h)
-		alcheck = subStruct1.alCheck(check)
-
-		#print "checking always at %s" % check
-		#print "alwayshist: %s" % sthist1
-		if (alcheck == ALC_SATISFY or alcheck == ALC_ALIVE and subStruct2.valid >= h):
-			return True
-		elif (alcheck == ALC_VIOLATE):
-			return False
-		else: # alcheck == ALC_ALIVE or ALC_SAT and not found
-			return formula
-	else:
-		return INVALID_T
+#def ag_reduce(Struct, cstate, formula_entry):
+#	ctime = cstate["time"]
+#	formtime = formula_entry[0]
+#	formula = formula_entry[1]
+#	formtype = ftype(formula)
+#	if (formtype == EXP_T):
+#		return ag_reduce(Struct, cstate, (formtime, formula[1]))
+#	elif (formtype == VALUE_T):
+#		return formula
+#	elif (formtype == PROP_T):
+#		if (cstate[formula[1]]):
+#			return True
+#		else:
+#			return False
+#	elif (formtype == NPROP_T):
+#		if (cstate[formula[1]]):
+#			return False
+#		else:
+#			return True
+#	elif (formtype == NOT_T):
+#		child = simplify(ag_reduce(Struct, cstate, (formtime, formula[1])))
+#		if (ftype(child) == VALUE_T):
+#			return not child
+#		else:
+#			return ['notprop', child]
+#	elif (formtype == AND_T):
+#		child1 = ag_reduce(Struct, cstate, (formtime, formula[1]))
+#		child2 = ag_reduce(Struct, cstate, (formtime, formula[2]))
+#		simp = simplify(['andprop', child1, child2])
+#		if (ftype(simp) == VALUE_T):
+#			return simp;
+#	elif (formtype == OR_T):
+#		child1 = ag_reduce(Struct, cstate, (formtime, formula[1]))
+#
+#		if (child1 == True):
+#			return True
+#		child2 = ag_reduce(Struct, cstate, (formtime, formula[2]))
+#		if (child2 == True):
+#			return True
+#		elif (child1 == False and child2 == False):
+#			return False
+#		else:
+#			return ['orprop', child1, child2]
+#	elif (formtype == IMPLIES_T):
+#		child1 = ag_reduce(Struct, cstate, (formtime, formula[1]))
+#		if (child1 == False):
+#			return True
+#		child2 = ag_reduce(Struct, cstate, (formtime, formula[2]))
+#		if (child2 == True):
+#			return True
+#		elif (child1 == True and child2 == False):
+#			return False
+#		else:
+#			return ['impprop', child1, child2]
+#	elif (formtype == EVENT_T): 
+#		h = hbound(formula) + formtime
+#		l = lbound(formula) + formtime
+#		subStruct = Struct[get_tags(formula)]
+#		sthist = subStruct.history
+#		check = CInterval(l,h)
+#		#
+#		for i in reversed(sthist):
+#			if i.intersects(check):
+#				return True
+#		if (subStruct.valid >= h):
+#			return False
+#		return formula
+#	elif (formtype == ALWAYS_T):
+#		h = hbound(formula) + formtime
+#		l = lbound(formula) + formtime
+#		subStruct = Struct[get_tags(formula)]
+#		sthist = subStruct.history
+#		check = CInterval(l,h)
+#		#
+#		alcheck = subStruct.alCheck(check)
+#		if (alcheck == ALC_SATISFY):
+#			return True
+#		elif (alcheck == ALC_VIOLATE):
+#			return False
+#		else: # alcheck == ALC_ALIVE
+#			return formula
+#	elif (formtype == UNTIL_T): 
+#		tags = get_tags(formula)
+#		subStruct1 = Struct[tags[0]]
+#		subStruct2 = Struct[tags[1]]
+#		sthist1 = subStruct1.history
+#		sthist2 = subStruct2.history
+#		h = hbound(formula) + formtime
+#		l = lbound(formula) + formtime
+#		check = CInterval(l,h)
+#		end = None
+#		#done = True
+#
+#		for i in reversed(sthist2):
+#			if i.intersects(check):
+#				end = i.intersection(check).end
+#				break	# find the most recent one
+#		# didn't find P2 and past time
+#		if (end is None and subStruct2.valid >= h):
+#			return False
+#		elif (end is None):
+#			end = ctime
+#
+#		l = formtime	
+#		h = end
+#		check = CInterval(l,h)
+#		alcheck = subStruct1.alCheck(check)
+#
+#		if (alcheck == ALC_SATISFY and subStruct2.valid >= h):
+#			return True
+#		elif (alcheck == ALC_VIOLATE):
+#			return False
+#		else: # alcheck == ALC_ALIVE or ALC_SAT and not found
+#			return formula
+#	elif (formtype == PEVENT_T):
+#		h = formtime - lbound(formula)
+#		l = formtime - hbound(formula)
+#		subStruct = Struct[get_tags(formula)]
+#		sthist = subStruct.history
+#		check = CInterval(l,h)
+#		#
+#		for i in reversed(sthist):
+#			if i.intersects(check):
+#				return True
+#		if subStruct.valid >= h:
+#			return False
+#		return formula
+#	elif (formtype == PALWAYS_T):
+#		h = formtime - lbound(formula)
+#		l = formtime - hbound(formula)
+#		subStruct = Struct[get_tags(formula)]
+#		sthist = subStruct.history
+#		check = CInterval(l,h)
+#		#
+#		alcheck = subStruct.alCheck(check)
+#		if (alcheck == ALC_SATISFY):
+#			return True
+#		elif (alcheck == ALC_VIOLATE):
+#			return False
+#		else: # alcheck == ALC_ALIVE
+#			return formula
+#	elif (formtype == SINCE_T):
+#		tags = get_tags(formula)
+#		subStruct1 = Struct[tags[0]]
+#		subStruct2 = Struct[tags[1]]
+#		sthist1 = subStruct1.history
+#		sthist2 = subStruct2.history
+#		h = formtime - lbound(formula)
+#		l = formtime - hbound(formula)
+#		start = None
+#		check = CInterval(l,h)
+#		#
+#		#print "checking since at %s" % check
+#		#print "eventhist: %s" % sthist2
+#		for i in reversed(sthist2):
+#			if i.intersects(check):
+#				start = i.intersection(check).end
+#				break	# find the most recent one
+#		if (start is None and subStruct2.valid >= h):
+#			return False
+#		elif (start is None):
+#			# haven't seen eventually yet, can't check always
+#			return formula
+#
+#		l = start + PERIOD
+#		h = formtime
+#		check = CInterval(l,h)
+#		alcheck = subStruct1.alCheck(check)
+#
+#		#print "checking always at %s" % check
+#		#print "alwayshist: %s" % sthist1
+#		if (alcheck == ALC_SATISFY or alcheck == ALC_ALIVE and subStruct2.valid >= h):
+#			return True
+#		elif (alcheck == ALC_VIOLATE):
+#			return False
+#		else: # alcheck == ALC_ALIVE or ALC_SAT and not found
+#			return formula
+#	else:
+#		return INVALID_T
 
 def tau(history, cptr):
 	return int(history[cptr]['time'])
@@ -1780,6 +1929,8 @@ def dprint(string, lvl=0xFF):
 def delay(formula):
 	if (ftype(formula) == EXP_T):
 		return delay(rchild(formula))
+	elif (ftype(formula) == VALUE_T):
+		return 0
 	elif (ftype(formula) == PROP_T):
 		return 0
 	elif (ftype(formula) == NPROP_T):
@@ -1812,6 +1963,8 @@ def delay(formula):
 def past_delay(formula):
 	if (ftype(formula) == EXP_T):
 		return past_delay(rchild(formula))
+	elif (ftype(formula) == VALUE_T):
+		return 0
 	elif (ftype(formula) == PROP_T):
 		return 0
 	elif (ftype(formula) == NPROP_T):
@@ -1842,9 +1995,10 @@ def past_delay(formula):
 	# shouldn't get here
 	return None
 def wdelay(formula):
-	#print "wdelay %s" % formula
 	if (ftype(formula) == EXP_T):
 		return wdelay(rchild(formula))
+	elif (ftype(formula) == VALUE_T):
+		return 0
 	elif (ftype(formula) == PROP_T):
 		return 0
 	elif (ftype(formula) == NPROP_T):

@@ -134,6 +134,8 @@ def smon_purecons(cstep, history, formula):
 		return True
 	elif (formtype == PROP_T):
 		return history[cstep][rchild(formula)]
+	elif (formtype == VALUE_T):
+		return formula
 	elif (formtype == NOT_T):
 		return not smon_purecons(cstep, history, rchild(formula))
 	elif (formtype == OR_T):
@@ -158,11 +160,10 @@ def smon_purecons(cstep, history, formula):
 		l = tau(history, cstep)
 		h = tau(history, end)
 		for i in history:
-			if (tau(history, i) > h):
+			if (tau(history, i) >= h):
 				break
-			#elif (l <= tau(history,i)): # guaranteed tau <= h 
-			# apparently the usual semantics is l < tau, so using that
-			elif (l < tau(history,i)): # guaranteed tau <= h 
+			# want from current to end-1, so >= break up top and >= here
+			elif (l <= tau(history,i)): # guaranteed tau <= h 
 				if not smon_purecons(i, history, untilP1(formula)):
 					return False
 		# didn't find point where subform was false
@@ -205,13 +206,15 @@ def smon_purecons(cstep, history, formula):
 
 def mon_residue(inFile, inFormula, traceOrder):
 	global TimeData
+	allPass = True
 	# some algorithm local variables
 	cstate = {}
 	formulas = []
 	Struct = {}
+	taulist = {}
 	# build struct and save delay
-	#D = delay(inFormula)
-	#DP = past_delay(inFormula)
+	D = delay(inFormula)
+	PD = past_delay(inFormula)
 	WD = wdelay(inFormula)
 	with Timer() as t:
 		build_structure(Struct, inFormula)
@@ -222,23 +225,34 @@ def mon_residue(inFile, inFormula, traceOrder):
 		dprint("%s" % (Struct[s],), DBG_STRUCT)
 		
 	dprint("Formula wait delay %d" % (WD,), DBG_SMON)
-	#dprint("Formula delay is %d, %d :: wait delay %d" % (D,DP,WD), DBG_SMON)
+	dprint("Formula delay is %d, %d :: wait delay %d" % (D,PD,WD), DBG_SMON)
 	# wait for new data...
+	step = 0
 	for line in inFile:
 			with Timer() as tt:
 				dprint("###### New event received",DBG_SMON)
 				updateState(cstate, traceOrder, line)
+				# keep list of actual times
+				taulist[step] = cstate['time']
+				# clean up taulist
+				#tlremove = [k for k in taulist if (taulist[k]+PD+D) < cstate['time']]
+				#for k in tlremove:
+				#	dprint("removing %s from tlist" % (k,))
+				#	del taulist[k]
+
 				with Timer() as t:
-					incr_resStruct(Struct, cstate)
+					incr_resStruct(Struct, cstate, taulist, step)
 				TimeData.addStIncTime(t.secs)
 
+			
+
 				dprint("Adding current formula", DBG_SMON)
-				formulas.append((cstate["time"], inFormula))
+				formulas.append((step, inFormula))
 				dprint(formulas, DBG_SMON)
 				dprint("reducing all formulas", DBG_SMON)
 				for i,f in enumerate(formulas[:]):
 					#formulas[i] = (f[0], reduce(substitute_as(Struct, cstate, f)))
-					formulas[i] = ag_reduce(Struct, cstate, f)
+					formulas[i] = ag_reduce(Struct, cstate, taulist, f)
 				dprint(formulas, DBG_SMON)
 				dprint("removing finished formulas and check violations...", DBG_SMON)
 				# count avg reduction time
@@ -252,20 +266,27 @@ def mon_residue(inFile, inFormula, traceOrder):
 				# skip actually checking while we see if struct build works
 				for i,f in enumerate(formulas[:]):
 					if (f[1] == False):
+							allPass = False
 							#dprint("TimeData: %s" % TimeData, DBG_TIME)
-							print "Violator %s" % (f,)
+							dprint("Violator %s" % (f,), DBG_SAT)
 							del formulas[i]
 							#sys.exit(1)
 					else:	# eventually never satisfied
 						if (f[0]+WD <= cstate["time"]):
+							allPass = False		# should probably just fill a list with violation times...
 							#dprint("TimeData: %s" % TimeData, DBG_TIME)
-							print "VIOLATOR: %s" % (f,)
-							print "!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],)
-							del formulas[i]
+							dprint("VIOLATOR: %s" % (f,), DBG_SAT)
+							dprint("!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],), DBG_SAT)
+							#del formulas[i]
 							#sys.exit(1)
 			TimeData.addLoopTime(tt.secs)
+			# next step...
+			step = step + 1
 	dprint("TimeData: %s" % TimeData, DBG_TIME)
-	print "#### finished, trace satisfies formula"
+	if allPass:
+		print "#### finished, trace satisfies formula"
+	else:
+		print "### Finished, Trace Violated Formula"
 
 
 
@@ -299,154 +320,17 @@ def simplify(formula):
 		return INVALID_T
 
 
-def ag_reduce(Struct, cstate, formula_entry):
-	ctime = cstate["time"]
-	formtime = formula_entry[0]
-	formula = formula_entry[1]
-	formtype = ftype(formula)
-	if (formtype == VALUE_T):
-		return (formtime, formula)
-	elif (formtype == PROP_T):
-		if (cstate[formula[1]]):
-			return (formtime, True)
-		else:
-			return (formtime, False)
-	elif (formtype == NOT_T):
-		child = ag_reduce(Struct, cstate, (formtime, formula[1]))
-		child = simplify(['notprop', child[1]])
-		return (formtime, child)
-	elif (formtype == OR_T):
-		child1 = ag_reduce(Struct, cstate, (formtime, formula[1]))
-		child2 = ag_reduce(Struct, cstate, (formtime, formula[2]))
-		ans = simplify(['orprop', child1[1], child2[1]])
-		return (formtime, ans)
-	elif (formtype == UNTIL_T): 
-		tags = get_tags(formula)
-		st_alpha = Struct[tags[0]].residues
-		st_beta = Struct[tags[1]].residues
-		st_betatime = Struct[tags[1]].ctime
-		#hst_alpha = st_alpha.history
-		#hst_beta = st_beta.history
-		h = hbound(formula) + formtime
-		l = lbound(formula) + formtime
-
-		# get spot alpha is alive until
-		st_alpha_bound = sorted([i for i in st_alpha if formtime <= rstep(i) and rstep(i) <= h])
-		st_beta_bound = sorted([i for i in st_alpha if l <= rstep(i) and rstep(i) <= h])
-
-		# find the spot alpha could be true until
-		a_alive = None
-		for i in st_alpha_bound:
-			if (rform(i) == False):
-				a_alive = rstep(i)
-				break
-		# get spot alpha is true until
-		a_until = None
-		for i in st_alpha_bound:
-			if (rform(i) == True):
-				a_until = rstep(i)
-			else:
-				break	# quit once we find a not-true
-		# find the lowest possible time for beta
-		b_alive = None
-		for i in st_beta_bound:
-			if (rform(i) != False):
-				b_alive = rstep(i)
-				break
-		# find the lowest actual beta
-		b_actual = None
-		for i in st_beta_bound:
-			if (rform(i) == True):
-				b_actual = rstep(i)
-				break
-		# all beta's false?
-		b_none = None
-		if (ctime > h):
-			b_none = True
-			for i in st_beta_bound:
-				if (rform(i) != False):
-					b_none = False
-					break
-		if (b_actual is not None and a_until is not None and b_actual <= a_until):
-			return (formtime, True)
-		elif (b_alive is not None and a_alive is not None and a_alive <= b_alive):
-			return (formtime, False)
-		elif (b_none == True):
-			return (formtime, False)
-		else:
-			return (formtime, formula)
-	elif (formtype == SINCE_T):
-		tags = get_tags(formula)
-		st_alpha = Struct[tags[0]].residues
-		st_beta = Struct[tags[1]].residues
-		st_betatime = Struct[tags[1]].ctime
-		#hst_alpha = st_alpha.history
-		#hst_beta = st_beta.history
-		h = formtime - lbound(formula)
-		l = formtime - hbound(formula)
-
-		# get spot alpha is alive until
-		st_alpha_bound = sorted([i for i in st_alpha if l <= rstep(i) and rstep(i) <= formtime])
-		st_beta_bound = sorted([i for i in st_alpha if l <= rstep(i) and rstep(i) <= h])
-
-		st_alpha_bound.reverse()	
-		st_beta_bound.reverse()
-		# find the spot alpha could be true since (highest false in range)
-		a_alive = None
-		for i in st_alpha_bound:
-			if (rform(i) == False):
-				a_alive = rstep(i)
-				break
-		# get spot alpha is true since (lowest value in chain of true's)
-		a_since = None
-		for i in st_alpha_bound:
-			if (rform(i) == True):
-				a_since = rstep(i)
-			else:
-				break	# quit once we find a not-true
-		# find the most recent possible time for beta (highest)
-		b_alive = None
-		for i in st_beta_bound:
-			if (rform(i) != False):
-				b_alive = rstep(i)
-				break
-		# find the most recent actual beta (highest)
-		b_actual = None
-		for i in st_beta_bound:
-			if (rform(i) == True):
-				b_actual = rstep(i)
-				break
-		# all beta's false?
-		b_none = None
-		if (ctime > h):
-			b_none = True
-			for i in st_beta_bound:
-				if (rform(i) != False):
-					b_none = False
-					break
-		if (b_actual is not None and a_since is not None and b_actual >= a_since):
-			return (formtime, True)
-		elif (b_alive is not None and a_alive is not None and a_alive >= b_alive):
-			return (formtime, False)
-		elif (b_none == True):
-			return (formtime, False)
-		else:
-			return (formtime, formula)
-	else:
-		return INVALID_T
-
-def incr_resStruct(Struct, cstate):
-	ctime = cstate["time"]
+def incr_resStruct(Struct, cstate, taulist, step):
 	taglist = list(Struct.keys())
 	taglist.sort()
 	taglist.reverse()
 	# in increasing formula size...
 	for t in taglist:
 		cStruct = Struct[t]
-		# add (ctime, formula) to struct
-		cStruct.addRes(ctime, cStruct.formula)
+		# add (step, formula) to struct
+		cStruct.addRes(step, cStruct.formula)
 		# call reduce on all residues
-		cStruct.incrRes(Struct, cstate)
+		cStruct.incrRes(Struct, cstate, taulist)
 		# remove old stuff
 		cStruct.cleanRes()
 		dprint("Incremented and cleaned: %s" % (cStruct,), DBG_STRUCT)
@@ -519,8 +403,8 @@ def add_struct(Struct, tag, delay, formula):
 		dprint("!!!!SHOULD NOT GET HERE....!!!", DBG_ERROR)
 		sys.exit(2)
 	# Add interval that fills entire past bound 
-	for i in range(0-delay, 0):
-		newSt.addRes(i, True)
+#	for i in range(0-delay, 0):
+#		newSt.addRes(i, True)
 	Struct[tag] = newSt
 	dprint("Added %s to %s" % (newSt, Struct), DBG_STRUCT)
 	return
@@ -530,6 +414,14 @@ def updateState(cstate, traceOrder, line):
 	for i in range(0, len(vals)):
 		dprint("%d| Updating %s to %s" % (i, traceOrder[i], vals[i]), DBG_STATE)
 		cstate[traceOrder[i]] = int(vals[i])
+
+def virtUpdateState(cstate, traceOrder, line):
+	vals = line.strip().split(delim)
+	# get indices for all the values we want
+	meye_pos = traceOrder.index('MEYElala')
+	# generate cstate values from messages
+	cstate["meye_pos"] = (vals[meye_pos] == 8)
+	pass
 
 def signal_handler(signal, frame):
 	print "Caught ctrl-c, exiting..."
