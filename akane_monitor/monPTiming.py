@@ -69,6 +69,9 @@ def main():
 	elif (algChoose == "purecons"):
 		algChoose = ALG_PURECONS
 		mon_purecons(inFile, inFormula, traceOrder)
+	elif (algChoose == "ires"):
+		algChoose = ALG_IRES
+		mon_intresidue(inFile, inFormula, traceOrder)
 	else:
 		print "No algorithm chosen, quitting..."
 ############# END MAIN ############
@@ -258,7 +261,7 @@ def mon_residue(inFile, inFormula, traceOrder):
 				# count avg reduction time
 				rform = [f[0] for f in formulas if f[1] == True]
 				for i in rform:
-					TimeData.addReduceTime(int(cstate["time"] - int(i)))
+					TimeData.addReduceTime(int(cstate["time"] - taulist[int(i)]))
 				# check for max number of carried residues before we remove good ones
 				TimeData.checkMaxRes(len(formulas))
 				# remove any True formulas from the list
@@ -269,14 +272,16 @@ def mon_residue(inFile, inFormula, traceOrder):
 							allPass = False
 							#dprint("TimeData: %s" % TimeData, DBG_TIME)
 							dprint("Violator %s" % (f,), DBG_SAT)
-							del formulas[i]
+							formulas.remove(f)
+							#del formulas[i]
 							#sys.exit(1)
 					else:	# eventually never satisfied
-						if (f[0]+WD <= cstate["time"]):
+						if (taulist[f[0]]+WD <= cstate["time"]):
 							allPass = False		# should probably just fill a list with violation times...
 							#dprint("TimeData: %s" % TimeData, DBG_TIME)
 							dprint("VIOLATOR: %s" % (f,), DBG_SAT)
 							dprint("!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],), DBG_SAT)
+							formulas.remove(f)
 							#del formulas[i]
 							#sys.exit(1)
 			TimeData.addLoopTime(tt.secs)
@@ -288,6 +293,91 @@ def mon_residue(inFile, inFormula, traceOrder):
 	else:
 		print "### Finished, Trace Violated Formula"
 
+def mon_intresidue(inFile, inFormula, traceOrder):
+	global TimeData
+	allPass = True
+	# some algorithm local variables
+	cstate = {}
+	formulas = []
+	Struct = {}
+	taulist = {}
+	# build struct and save delay
+	D = delay(inFormula)
+	PD = past_delay(inFormula)
+	WD = wdelay(inFormula)
+	with Timer() as t:
+		build_structure(Struct, inFormula)
+	print "Build Structure took %s ms" % (t.msecs,)
+
+	dprint("Struct is: ", DBG_STRUCT)
+	for s in Struct:
+		dprint("%s" % (Struct[s],), DBG_STRUCT)
+		
+	dprint("Formula wait delay %d" % (WD,), DBG_SMON)
+	dprint("Formula delay is %d, %d :: wait delay %d" % (D,PD,WD), DBG_SMON)
+	# wait for new data...
+	step = 0
+	for line in inFile:
+			with Timer() as tt:
+				dprint("###### New event received",DBG_SMON)
+				updateState(cstate, traceOrder, line)
+				# keep list of actual times
+				taulist[step] = cstate['time']
+				# clean up taulist
+				#tlremove = [k for k in taulist if (taulist[k]+PD+D) < cstate['time']]
+				#for k in tlremove:
+				#	dprint("removing %s from tlist" % (k,))
+				#	del taulist[k]
+
+				with Timer() as t:
+					incr_resStruct(Struct, cstate, taulist, step)
+				TimeData.addStIncTime(t.secs)
+
+			
+
+				dprint("Adding current formula", DBG_SMON)
+				formulas.append((step, inFormula))
+				dprint(formulas, DBG_SMON)
+				dprint("reducing all formulas", DBG_SMON)
+				for i,f in enumerate(formulas[:]):
+					#formulas[i] = (f[0], reduce(substitute_as(Struct, cstate, f)))
+					formulas[i] = ag_reduce(Struct, cstate, taulist, f)
+				dprint(formulas, DBG_SMON)
+				dprint("removing finished formulas and check violations...", DBG_SMON)
+				# count avg reduction time
+				rform = [f[0] for f in formulas if f[1] == True]
+				for i in rform:
+					TimeData.addReduceTime(int(cstate["time"] - taulist[int(i)]))
+				# check for max number of carried residues before we remove good ones
+				TimeData.checkMaxRes(len(formulas))
+				# remove any True formulas from the list
+				formulas[:] = [f for f in formulas if f[1] != True]
+				# skip actually checking while we see if struct build works
+				for i,f in enumerate(formulas[:]):
+					if (f[1] == False):
+							allPass = False
+							#dprint("TimeData: %s" % TimeData, DBG_TIME)
+							dprint("Violator %s" % (f,), DBG_SAT)
+							formulas.remove(f)
+							#del formulas[i]
+							#sys.exit(1)
+					else:	# eventually never satisfied
+						if (taulist[f[0]]+WD <= cstate["time"]):
+							allPass = False		# should probably just fill a list with violation times...
+							#dprint("TimeData: %s" % TimeData, DBG_TIME)
+							dprint("VIOLATOR: %s" % (f,), DBG_SAT)
+							dprint("!!!! VIOLATION DETECTED AT %s@%s" % (f[0],cstate["time"],), DBG_SAT)
+							formulas.remove(f)
+							#del formulas[i]
+							#sys.exit(1)
+			TimeData.addLoopTime(tt.secs)
+			# next step...
+			step = step + 1
+	dprint("TimeData: %s" % TimeData, DBG_TIME)
+	if allPass:
+		print "#### finished, trace satisfies formula"
+	else:
+		print "### Finished, Trace Violated Formula"
 
 
 def simplify(formula):
@@ -332,7 +422,7 @@ def incr_resStruct(Struct, cstate, taulist, step):
 		# call reduce on all residues
 		cStruct.incrRes(Struct, cstate, taulist)
 		# remove old stuff
-		cStruct.cleanRes()
+		cStruct.cleanRes(taulist)
 		dprint("Incremented and cleaned: %s" % (cStruct,), DBG_STRUCT)
 	return
 
@@ -353,10 +443,16 @@ def build_structure(Struct, formula, extbound=0):
 		dprint("BUILDING: got an until, ADDING STRUCT and recursing both", DBG_STRUCT)
 		# Tags get put into formula[2] so tagging P2 then P1 makes formula into
 		# [bound, bound, tagP1, tagP2, P1, P2]
-		d = hbound(formula) + extbound
+		#d = hbound(formula) + extbound
+		d = wdelay(formula)
+		#d = max(hbound(formula), extbound)
+		dprint("got d: %s with hbound: %s and ext: %s" % (d, hbound(formula), extbound))
+		#d = hbound(formula)
 		# do P2
 		cTag = tag_formula(formula)
+		#add_struct(Struct, cTag, d, untilP2(formula))
 		add_struct(Struct, cTag, d, untilP2(formula))
+		
 		# do P1
 		cTag = tag_formula(formula)
 		add_struct(Struct, cTag, d, untilP1(formula))
@@ -379,7 +475,8 @@ def build_structure(Struct, formula, extbound=0):
 		dprint("BUILDING: got a since, ADDING BOTH STRUCTS and recursing both", DBG_STRUCT)
 		# Tags get put into formula[2] so tagging P2 then P1 makes formula into
 		# [bound, bound, tagP1, tagP2, P1, P2]
-		d = past_delay(formula) + extbound
+		#d = past_delay(formula) + extbound
+		d = max(past_delay(formula),extbound)
 		# do P2
 		cTag = tag_formula(formula)
 		add_struct(Struct, cTag, d, untilP2(formula))
@@ -399,6 +496,8 @@ def add_struct(Struct, tag, delay, formula):
 	global algChoose
 	if (algChoose == ALG_RES):
 		newSt = resStructure(formula, delay)
+	elif (algChoose == ALG_IRES):
+		newSt = resIntStructure(formula, delay)
 	else:
 		dprint("!!!!SHOULD NOT GET HERE....!!!", DBG_ERROR)
 		sys.exit(2)

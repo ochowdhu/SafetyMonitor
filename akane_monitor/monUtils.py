@@ -11,7 +11,7 @@ EXP_T, PROP_T, NPROP_T, NOT_T, AND_T, OR_T, IMPLIES_T, EVENT_T, ALWAYS_T, UNTIL_
 TAGi, FORMULAi, DELAYi, VALIDi, LISTi, FLISTi = range(0,6) 
 
 ALC_ALIVE, ALC_VIOLATE, ALC_SATISFY = range(0,3)
-ALG_RES, ALG_STCONS, ALG_PURECONS, ALG_FSTCONS, ALG_RESCONS, ALG_ASTCONS, ALG_ARES, ALG_AIRES = range(0,8)
+ALG_RES, ALG_STCONS, ALG_PURECONS, ALG_FSTCONS, ALG_RESCONS, ALG_ASTCONS, ALG_ARES, ALG_AIRES, ALG_IRES = range(0,9)
 
 ## debug constants
 DBG_ERROR = 0x01
@@ -22,7 +22,7 @@ DBG_TIME = 0x10
 DBG_SAT = 0x20
 #DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
 #DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SMON | DBG_STRUCT | DBG_SAT
-DBG_MASK = DBG_ERROR | DBG_TIME
+DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SAT | DBG_SMON | DBG_STRUCT
 
 # global constants
 PERIOD = 1
@@ -187,14 +187,88 @@ class resStructure:
 	# don't need addHist
 	def addRes(self, time, formula):
 		self.residues.append((time, formula))
-		ctime = max(self.ctime, time)
-	def cleanRes(self):
-		self.residues = [f for f in self.residues if (f[0] > (self.ctime - self.delay))]
+		self.ctime = max(self.ctime, time)
+	def cleanRes(self, taulist):
+		self.residues = [f for f in self.residues if (taulist[f[0]] >= (taulist[self.ctime] - self.delay))]
 	def incrRes(self, Struct, cstate, taulist):
 		for i,f in enumerate(self.residues):
 			self.residues[i] = ag_reduce(Struct, cstate, taulist, f)
 	def __str__(self):
 		return "resStruct: [DEL: %d FORM: %s CTIME: %d :: RES: %s]" % (self.delay, self.formula, self.ctime, self.residues)
+
+class resIntStructure:
+	def __init__(self, formula=[], delay=0):
+		self.formula = formula
+		self.ctime = 0
+		self.delay = delay
+		self.residues = []
+		self.tint = []
+		self.fint = []
+	# don't need addHist
+	def addRes(self, time, formula):
+		self.residues.append((time, formula))
+		self.ctime = max(self.ctime, time)
+	def cleanRes(self, taulist):
+		self.residues = [f for f in self.residues if (taulist[f[0]] >= (taulist[self.ctime] - self.delay))]
+		self.tint = [t for t in self.tint if (taulist[t[1]] >= taulist[self.ctime] - self.delay)]
+		self.fint = [f for f in self.fint if (taulist[f[1]] >= taulist[self.ctime] - self.delay)]
+	def incrRes(self, Struct, cstate, taulist):
+		for i,f in enumerate(self.residues):
+			resi = ag_reduce(Struct, cstate, taulist, f)
+			if (resi[1] == True):
+				self.addTrueTime(resi[0])
+				self.residues.remove(f)
+			elif (resi[1] == False):
+				self.addFalseTime(resi[0])
+				self.residues.remove(f)
+			else:
+				self.residues[i] = resi
+	def addTrueTime(self, time):
+		added = False
+		merge = None
+		for i,t in enumerate(self.tint):
+			if (time-1 == t[1]):
+				self.tint[i] = (t[0], time)
+				added = True
+			elif (time+1 == t[0]):
+				if (added):
+					# merge!
+					merge = i
+				else:
+					self.tint[i] = (time, t[1]) 
+					added = True
+		if (merge is not None):
+			# need to merge i-1 and i
+			newInt = (self.tint[merge-1][0], self.tint[merge][1])
+			self.tint[merge-1] = newInt
+			del self.tint[merge]
+		elif (not added):
+			self.tint.append((time,time))
+			self.tint.sort()		# stay sorted
+	def addFalseTime(self, time):
+		added = False
+		merge = None
+		for i,t in enumerate(self.fint):
+			if (time-1 == t[1]):
+				self.fint[i] = (t[0], time)
+				added = True
+			elif (time+1 == t[0]):
+				if (added):
+					# merge!
+					merge = i
+				else:
+					self.fint[i] = (time, t[1]) 
+					added = True
+		if (merge is not None):
+			# need to merge i-1 and i
+			newInt = (self.fint[merge-1][0], self.fint[merge][1])
+			self.fint[merge-1] = newInt
+			del self.fint[merge]
+		elif (not added):
+			self.fint.append((time,time))
+			self.fint.sort()		# stay sorted
+	def __str__(self):
+		return "resStruct: [DEL: %d FORM: %s CTIME: %d :: RES: %s || T: %s || F: %s]" % (self.delay, self.formula, self.ctime, self.residues, self.tint, self.fint)
 
 class aStructure:
 	def __init__(self, tag, formula=[], delay=0):
