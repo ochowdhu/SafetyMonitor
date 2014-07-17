@@ -1476,7 +1476,7 @@ def ag_reduce(Struct, cstate, taulist, formula_entry):
 		child2 = ag_reduce(Struct, cstate, taulist, (formtime, formula[2]))
 		ans = simplify(['orprop', child1[1], child2[1]])
 		return (formtime, ans)
-	elif (formtype == UNTIL_T): 
+	elif (False and formtype == UNTIL_T): 
 		tags = get_tags(formula)
 		st_alpha = Struct[tags[0]].residues
 		st_beta = Struct[tags[1]].residues
@@ -1538,6 +1538,49 @@ def ag_reduce(Struct, cstate, taulist, formula_entry):
 			return (formtime, False)
 		else:
 			return (formtime, formula)
+	elif (formtype == UNTIL_T): 
+		tags = get_tags(formula)
+		st_alpha = Struct[tags[0]]
+		st_beta = Struct[tags[1]]
+		#hst_alpha = st_alpha.history
+		#hst_beta = st_beta.history
+		h = hbound(formula) + taulist[formtime]
+		l = lbound(formula) + taulist[formtime]
+
+		bint = (l,h)
+
+		# no Beta case
+		for bi in st_beta.fint:
+			if bi[0] <= l and bi[1] >= h:	# bi superset of (l,h)
+				return (formtime, False)
+			elif (bi[0] > h):	# don't keep checking outside range
+				break
+
+		# alpha not until possible beta case
+		minRes = None
+		for ri in st_beta.residues:
+			if l <= ri[0] <= h:
+				minRes = ri[0]
+				break
+		minTrue = None
+		# True case
+		isect = None
+		for bi in st_beta.tint:
+			isect = (max(bi[0],l), min(bi[1],h))
+			if (isect[0] <= isect[1]):
+				######################################
+				# sneak a not until b check in here -- reuse of loop
+				if minTrue is None:
+					minTrue = min(isect[0], minRes)
+					for ai in st_alpha.fint:
+						aisect = (max(ai[0],formtime), min(ai[1],minTrue))
+						if (aisect[0] <= aisect[1]):
+							return (formtime, False)
+				#####################################
+				for ai in st_alpha.tint:
+					if ai[0] <= formtime and ai[1] >= isect[0]:
+						return (formtime, True)
+		return (formtime, formula)
 	elif (formtype == SINCE_T):
 		tags = get_tags(formula)
 		st_alpha = Struct[tags[0]].residues
