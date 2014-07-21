@@ -478,7 +478,7 @@ def build_structure(Struct, formula, extbound=0):
 		# [bound, bound, tagP1, tagP2, P1, P2]
 		#d = past_delay(formula) + extbound
 		#d = max(past_delay(formula),extbound)
-		d = wdelay(formula)
+		d = hbound(formula) + wdelay(formula)
 		# do P2
 		cTag = tag_formula(formula)
 		add_struct(Struct, cTag, d, untilP2(formula))

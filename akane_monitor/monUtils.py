@@ -24,7 +24,7 @@ DBG_TIME = 0x10
 DBG_SAT = 0x20
 #DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
 #DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SMON | DBG_STRUCT | DBG_SAT
-DBG_MASK = DBG_ERROR | DBG_TIME #| DBG_SAT | DBG_SMON | DBG_STRUCT
+DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SAT 
 
 # global constants
 PERIOD = 1
@@ -1582,6 +1582,55 @@ def ag_reduce(Struct, cstate, taulist, formula_entry):
 				for ai in st_alpha.tint:
 					if ai[0] <= formtime and ai[1] >= isect[0]:
 						return (formtime, True)
+				if (isect[0] <= formtime and isect[1] >= formtime):
+					return (formtime, True)
+		return (formtime, formula)
+	elif (shared.algChoose == ALG_IRES and formtype == SINCE_T):
+		tags = get_tags(formula)
+		st_alpha = Struct[tags[0]]
+		st_beta = Struct[tags[1]]
+		#hst_alpha = st_alpha.history
+		#hst_beta = st_beta.history
+		h = taulist[formtime] - lbound(formula)
+		l = taulist[formtime] - hbound(formula)
+
+		bint = (l,h)
+
+		# no Beta case
+		for bi in st_beta.fint:
+			if bi[0] <= l and bi[1] >= h:	# bi superset of (l,h)
+				return (formtime, False)
+			elif (bi[0] > h):	# don't keep checking outside range
+				break
+
+		# alpha not since possible beta case
+		maxRes = None
+		for ri in reversed(st_beta.residues):
+			if l <= ri[0] <= h:
+				maxRes = ri[0]
+				break
+		maxTrue = None
+		# True case
+		isect = None
+		for bi in reversed(st_beta.tint):
+			isect = (max(bi[0],l), min(bi[1],h))
+			if (isect[0] <= isect[1]):
+				######################################
+				# sneak a not since b check in here -- reuse of loop
+				if maxTrue is None:
+					maxTrue = max(isect[1], maxRes)
+					for ai in st_alpha.fint:
+						aisect = (max(ai[0],maxTrue), min(ai[1],formtime))
+						# less than since a is allowed to start the step after q
+						if (aisect[0] < aisect[1]):
+							return (formtime, False)
+				#####################################
+				for ai in reversed(st_alpha.tint):	 # this reverse is unnecessary but should be faster (expect to match with later intervals)
+					if ai[0] <= isect[1]+1 and ai[1] >= formtime:
+						return (formtime, True)
+				if (isect[0] <= formtime and isect[1] >= formtime):
+					return (formtime, True)
+
 		return (formtime, formula)
 	elif (formtype == SINCE_T):
 		tags = get_tags(formula)
