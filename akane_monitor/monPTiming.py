@@ -12,10 +12,11 @@ import signal
 # Get some stuff out of here, easier to deal with
 from monUtils import *
 from timer import Timer
+import shared
 
 # global constants
 delim = ','
-algChoose = None 
+#shared.algChoose = None 
 # benchmarking variables
 TimeData = monTimeData()
 # time/count for total execution time
@@ -34,7 +35,7 @@ memorycount = 0
 
 ###### Keeping this script compatible with resMonitor for now
 def main():
-	global algChoose
+	#global shared.algChoose
 	# do setup
 	signal.signal(signal.SIGINT, signal_handler)
 	#### Handle input parameters
@@ -42,9 +43,9 @@ def main():
 	if len(sys.argv) > 3:
 		inFormula = eval(sys.argv[1])	# DANGEROUS. DON'T PASS ME ARBITRARY CODE
 		inFile = open(sys.argv[2], "r")
-		algChoose = sys.argv[3]
+		shared.algChoose = sys.argv[3]
 	else:
-		print "Bad Usage: python monitor.py <formula> <tracefile> <algChoose>"
+		print "Bad Usage: python monitor.py <formula> <tracefile> <shared.algChoose>"
 		sys.exit(1)
 	print "using %s" % (inFormula)
 
@@ -61,16 +62,16 @@ def main():
 
 	###### All set up, call one of the monitoring algorithms	
 	print "############## Finished setting up"
-	print "############## Beginning monitor algorithm: %s" % algChoose
+	print "############## Beginning monitor algorithm: %s" % shared.algChoose
 	#mon_residue(inFile, inFormula, traceOrder)
-	if (algChoose == "res"):
-		algChoose = ALG_RES
+	if (shared.algChoose == "res"):
+		shared.algChoose = ALG_RES
 		mon_residue(inFile, inFormula, traceOrder)
-	elif (algChoose == "purecons"):
-		algChoose = ALG_PURECONS
+	elif (shared.algChoose == "purecons"):
+		shared.algChoose = ALG_PURECONS
 		mon_purecons(inFile, inFormula, traceOrder)
-	elif (algChoose == "ires"):
-		algChoose = ALG_IRES
+	elif (shared.algChoose == "ires"):
+		shared.algChoose = ALG_IRES
 		mon_intresidue(inFile, inFormula, traceOrder)
 	else:
 		print "No algorithm chosen, quitting..."
@@ -476,7 +477,8 @@ def build_structure(Struct, formula, extbound=0):
 		# Tags get put into formula[2] so tagging P2 then P1 makes formula into
 		# [bound, bound, tagP1, tagP2, P1, P2]
 		#d = past_delay(formula) + extbound
-		d = max(past_delay(formula),extbound)
+		#d = max(past_delay(formula),extbound)
+		d = wdelay(formula)
 		# do P2
 		cTag = tag_formula(formula)
 		add_struct(Struct, cTag, d, untilP2(formula))
@@ -493,10 +495,10 @@ def build_structure(Struct, formula, extbound=0):
 	return False
 
 def add_struct(Struct, tag, delay, formula):
-	global algChoose
-	if (algChoose == ALG_RES):
+	#global shared.algChoose
+	if (shared.algChoose == ALG_RES):
 		newSt = resStructure(formula, delay)
-	elif (algChoose == ALG_IRES):
+	elif (shared.algChoose == ALG_IRES):
 		newSt = resIntStructure(formula, delay)
 	else:
 		dprint("!!!!SHOULD NOT GET HERE....!!!", DBG_ERROR)

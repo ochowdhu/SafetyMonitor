@@ -51,7 +51,7 @@ expression:
 	| PROP { $$ = makePropNode($1); } // std::cout << "bison got prop: " << $1 << std::endl; }
 	| '(' expression ')' {$$ = $2; } // std::cout << "parenthesized expression -- keep going" <<  std::endl; }
 	| NOT expression { $$ = makeNotNode($2); } //  std::cout << "bison got not" << std::endl; }
-	| expression AND expression { $$ = makeBinNode(OR_T, makeNotNode($1), makeNotNode($3)); } // std::cout << "bison got and" << std::endl; }
+	| expression AND expression { $$ = makeNotNode(makeBinNode(OR_T, makeNotNode($1), makeNotNode($3))); } // std::cout << "bison got and" << std::endl; }
 	| expression OR expression { $$ = makeBinNode(OR_T, $1, $3); } //std::cout << "bison got or" << std::endl; }
 	| expression IMPLIES expression { $$ = makeBinNode(OR_T, makeNotNode($1), $3); } // std::cout << "bison got implies" << std::endl; }
 	| ALWAYS_L BOUND ',' BOUND ALWAYS_R expression	{ $$ = makeAlwaysNode($2, $4, $6); } // std::cout << "bison got always" << std::endl; }

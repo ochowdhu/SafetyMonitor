@@ -5,6 +5,8 @@
 ##
 ## Pulling some utility functions into a module to use across monitor algorithms
 
+import shared
+
 ## Some constants
 EXP_T, PROP_T, NPROP_T, NOT_T, AND_T, OR_T, IMPLIES_T, EVENT_T, ALWAYS_T, UNTIL_T, PALWAYS_T, PEVENT_T, SINCE_T, VALUE_T, INVALID_T = range(15)
 
@@ -22,7 +24,7 @@ DBG_TIME = 0x10
 DBG_SAT = 0x20
 #DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
 #DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SMON | DBG_STRUCT | DBG_SAT
-DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SAT | DBG_SMON | DBG_STRUCT
+DBG_MASK = DBG_ERROR | DBG_TIME #| DBG_SAT | DBG_SMON | DBG_STRUCT
 
 # global constants
 PERIOD = 1
@@ -1476,7 +1478,7 @@ def ag_reduce(Struct, cstate, taulist, formula_entry):
 		child2 = ag_reduce(Struct, cstate, taulist, (formtime, formula[2]))
 		ans = simplify(['orprop', child1[1], child2[1]])
 		return (formtime, ans)
-	elif (False and formtype == UNTIL_T): 
+	elif (shared.algChoose == ALG_RES and formtype == UNTIL_T): 
 		tags = get_tags(formula)
 		st_alpha = Struct[tags[0]].residues
 		st_beta = Struct[tags[1]].residues
@@ -1538,7 +1540,7 @@ def ag_reduce(Struct, cstate, taulist, formula_entry):
 			return (formtime, False)
 		else:
 			return (formtime, formula)
-	elif (formtype == UNTIL_T): 
+	elif (shared.algChoose == ALG_IRES and formtype == UNTIL_T): 
 		tags = get_tags(formula)
 		st_alpha = Struct[tags[0]]
 		st_beta = Struct[tags[1]]
