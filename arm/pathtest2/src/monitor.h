@@ -15,6 +15,7 @@
 #define getProp(m) (cstate & m)
 
 extern volatile int cstate, nstate; // current/next start -- just a set of bits for now
+extern volatile int estep, instep;
 
 typedef struct {
 	int ctime;

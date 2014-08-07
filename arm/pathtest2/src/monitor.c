@@ -17,6 +17,8 @@
 
 
 volatile int cstate, nstate; // current/next start -- just a set of bits for now
+volatile int estep, instep;
+
 
 int untilCheck(residue* res);
 int sinceCheck(residue* res);
@@ -56,11 +58,10 @@ void reduce(residue *res) {
 				res->form = FORM_FALSE;
 			return;
 		case (NOT_T):
-			root = formulas[res->form];
+			//root = formulas[res->form];
 			// get child
-			root = *(root.val.child);
 			child1.step = res->step;
-			child1.form = root.theFormula;
+			child1.form = formulas[res->form].val.child;
 			reduce(&child1);
 			if (ftype[child1.form] == VALUE_T) {
 				// Got a value, so our root node is [NOT VAL], so return correctly
@@ -78,10 +79,12 @@ void reduce(residue *res) {
 			root = formulas[res->form];
 			// grab child1
 			child1.step = res->step;
-			child1.form = root.val.children.lchild->theFormula;
+			child1.form = root.val.children.lchild;
+			//child1.form = root.val.children.lchild->theFormula;
 			// grab child2
 			child2.step = res->step;
-			child2.form = root.val.children.rchild->theFormula;
+			child2.form = root.val.children.rchild;
+			//child2.form = root.val.children.rchild->theFormula;
 			reduce(&child1);
 			reduce(&child2);
 			// we can optimize by reducing and checking individual steps
@@ -132,11 +135,13 @@ int untilCheck(residue* res) {
 	b_alive = -1;
 	b_actual = -1;
 	b_none = -1;
+	temp_bits = 0;
 	BIT_SET(temp_bits, (AL_MASK | UN_MASK) );
 	
 	////////////////////////////////////////////////
 	// loop over alpha list	
-	reslist = theStruct[formulas[res->form].val.t_children.lchild->structidx].residues;
+	reslist = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].residues;
+	//reslist = theStruct[formulas[res->form].val.t_children.lchild->structidx].residues;
 	ls = reslist->start;
 	le = reslist->end;
 	while (ls != le) {
@@ -169,9 +174,11 @@ int untilCheck(residue* res) {
 	}
 	//////////////////////////////////////////////////
 	// loop over beta list
-	reslist = theStruct[formulas[res->form].val.t_children.rchild->structidx].residues;
+	reslist = theStruct[formulas[formulas[res->form].val.t_children.rchild].structidx].residues;
+	//reslist = theStruct[formulas[res->form].val.t_children.rchild->structidx].residues;
 	ls = reslist->start;
 	le = reslist->end;
+	temp_bits = 0;
 	BIT_SET(temp_bits, (AL_MASK | UN_MASK) );
 	if (res->step >= h) 
 		b_none = 1;	// past time, looking for none now
@@ -187,10 +194,12 @@ int untilCheck(residue* res) {
 				b_none = 0;
 				BIT_CLEAR(temp_bits, AL_MASK);
 			// got a true, set b_actual and stop looking for first true
-			} else if (resp->form == FORM_TRUE && (temp_bits & UN_MASK)) {
+			} 
+			if (resp->form == FORM_TRUE && (temp_bits & UN_MASK)) {
 					b_actual = rbGet(reslist, ls)->step;
 					BIT_CLEAR(temp_bits, UN_MASK);
-			} else if (!temp_bits) {
+			} 
+			if (!temp_bits) {
 				break;	// got all three values, done searching
 			} // no else...
 		}
@@ -204,7 +213,7 @@ int untilCheck(residue* res) {
 		return TEMP_TRUE;
 	} else if (b_alive != -1 && a_alive != -1 && a_alive < b_actual) {
 		return TEMP_FALSE;
-	} else if (b_none) {
+	} else if (b_none == 1) {
 		return TEMP_FALSE;
 	} else {
 		return TEMP_RES;

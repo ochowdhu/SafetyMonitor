@@ -20,10 +20,24 @@ typedef struct fNode {
 	union {
 		char value;		// for true/false
 		int propMask;	// for proposition
+		formula child;	// for NOT
+		struct {formula lchild; formula rchild;} children;	// for OR
+		struct {formula lchild; formula rchild; int lbound; int hbound;} t_children; // for until/since
+	} val;
+} fNode;
+
+/*
+typedef struct fNode {
+	enum nodeType type;
+	formula theFormula;
+	int structidx;
+	union {
+		char value;		// for true/false
+		int propMask;	// for proposition
 		struct fNode* child;	// for NOT
 		struct {struct fNode* lchild; struct fNode* rchild;} children;	// for OR
 		struct {struct fNode* lchild; struct fNode* rchild; int lbound; int hbound;} t_children; // for until/since
 	} val;
 } fNode;
-
+*/
 #endif

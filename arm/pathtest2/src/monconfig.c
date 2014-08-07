@@ -43,6 +43,10 @@ fNode formulas[NFORMULAS];
 resbuf rbuffers[NSTRUCT];
 interval ibuffers[NSTRUCT][NBUFLEN*2];
 residue resbuffers[NSTRUCT][NBUFLEN];
+
+// main list of residues
+resbuf mainresbuf;
+residue mainresbuffers[NBUFLEN];
 																							
 /* Using a -> b U_0,1s c  for now so I can fill everything in and get an understanding */
 /////// build formula
@@ -74,20 +78,25 @@ void build_formula(void) {
 	// b U c
 	formulas[3].type = UNTIL_T;
 	formulas[3].val.t_children.hbound = 40;
-	formulas[3].val.t_children.lbound = 40;
-	formulas[3].val.t_children.lchild = &formulas[1];
-	formulas[3].val.t_children.rchild = &formulas[2];
+	formulas[3].val.t_children.lbound = 0;
+	formulas[3].val.t_children.lchild = FORM_B; //1;
+	formulas[3].val.t_children.rchild = FORM_C; //2;
+	//formulas[3].val.t_children.lchild = &formulas[1];
+	//formulas[3].val.t_children.rchild = &formulas[2];
 	formulas[3].theFormula = 3;
 	// a -> b U c ====> ~a || b U c
 	// First
 	// ~a
 	formulas[4].type = NOT_T;
-	formulas[4].val.child = &formulas[0];
+	formulas[4].val.child = FORM_A; // 0 &formulas[0];
+	//formulas[4].val.child = &formulas[0];
 	formulas[4].theFormula = 4;
 	// then need ~a || b U c
 	formulas[5].type = OR_T;
-	formulas[5].val.children.lchild = &formulas[4];
-	formulas[5].val.children.rchild = &formulas[3];
+	formulas[5].val.children.lchild = FORM_NA; // 4
+	formulas[5].val.children.rchild = FORM_BUC; // 3
+	//formulas[5].val.children.lchild = &formulas[4];
+	//formulas[5].val.children.rchild = &formulas[3];
 	formulas[5].theFormula = 5;
 }
 
@@ -95,10 +104,14 @@ void build_formula(void) {
 ////// ORDER MATTERS: struct should be built with smaller formulas at smaller offsets
 void build_struct(void) {
 	int i;
+	// we'll put together mainresbuf here for now
+	resbInit(&mainresbuf, NBUFLEN, mainresbuffers);
+
+	
 	for (i = 0; i < NSTRUCT; i++) {
 		//rbuffers[i].size = formulas[resbuffers[i]->form].val.t_children.hbound;
 		// should be able to put delay in formula struct so we can set the delay per-formula
-		rbuffers[i].size = FORM_DELAY;
+		rbuffers[i].size = NBUFLEN;
 		rbuffers[i].buf = resbuffers[i];
 	}
 	// just need to build B and C

@@ -23,7 +23,7 @@
 #define TDATASIZE	1200
 
 int testdata[TDATASIZE];
-
+int sim = TRUE;
 
 // What we'll eventually need:
 // moved state to monitor.c
@@ -32,7 +32,6 @@ int testdata[TDATASIZE];
 // taulist	-- resbuf of (step,time) pairs
 int delay;
 int cstep;	// current step count
-int estep, instep;
 int lcount;
 
 void fillData() {
@@ -47,6 +46,25 @@ void fillData() {
 		if ((i % 30) == 0)
 			testdata[i] |= MASK_C;
 	}
+}
+
+void fillData2() {
+	int i;
+	testdata[0] = 0x00;
+	testdata[1] = 0x00;
+	testdata[2] = 0x00;
+	testdata[3] |= MASK_A | MASK_B;
+	testdata[4] |= MASK_B;
+	testdata[5] |= MASK_B;
+	testdata[6] |= MASK_B;
+	testdata[7] |= MASK_B;
+	testdata[8] |= MASK_B;
+	testdata[9] |= 0;//MASK_B;
+	testdata[10] |= MASK_C;
+	for (i = 11; i < 200; i++) {
+		testdata[i] = 0x00;
+	}
+	
 }
 void InitializeTimer()
 {
@@ -86,7 +104,7 @@ void EnableTimerInterrupt()
     nvicStructure.NVIC_IRQChannelSubPriority = 2;
     nvicStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&nvicStructure);
-	
+
 		// and enable TIM3
 		// should be higher urgency (lower "priority" number)
     nvicStructure.NVIC_IRQChannel = TIM3_IRQn;
@@ -99,15 +117,8 @@ void EnableTimerInterrupt()
 //extern "C" 
 void TIM2_IRQHandler()
 {
-    if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
+    if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET || sim)
     {
-				// need to copy nstate to cstate and update instep
-				///// led stuff to keep track of timing...
-				lcount <<= 1;
-				if (lcount > 8)
-					lcount = 1;
-				LED_Out(lcount);
-				//////////////////////////////////////////////////
 				cstate = nstate;
 				instep++;
         TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
@@ -117,15 +128,8 @@ void TIM2_IRQHandler()
 //extern "C" 
 void TIM3_IRQHandler()
 {
-    if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
+    if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET || sim)
     {
-			// update nstate somehow
-				/*if (instep & 0x20) {
-					nstate ^= 0x01;	// alternate A
-				}
-				if (instep & 0x08) {
-					nstate ^= 0x04;
-				}*/
 				if (instep + 1 < TDATASIZE) 
 					nstate = testdata[instep+1];
 				else
@@ -138,11 +142,12 @@ void TIM3_IRQHandler()
 int main() {
 	// local variables
 	residue cons_res;
-	int cptr, eptr;
-	
+	residue* resp;
+	//int cptr, eptr;
+	int start, end;
 	// cons variables
-	cptr = 0;
-	eptr = 0;
+	//cptr = 0;
+	//eptr = 0;
 	delay = FORM_DELAY;
 	// global variable initialization
 	instep = 0;
@@ -157,7 +162,8 @@ int main() {
 	EnableTimerInterrupt();
 	
 	// Fill test data -- let's see what's going on
-	fillData();
+	//fillData();
+	fillData2();
 	
 	///////// Start monitor ///////////////////
 	// build structure
@@ -167,6 +173,11 @@ int main() {
 	// start the loop
 	cstep = 0;
 	while (1) {
+		// can't simulator timer interrupts, just call them instead...
+		if (sim) {
+			TIM3_IRQHandler();
+			TIM2_IRQHandler();
+		}
 		// state is updated by interrupts, check if we should be going or not?
 		// if the last step we checked (estep) is less than the most recent step 
 		// we've received (instep) then run the checker again
@@ -175,22 +186,31 @@ int main() {
 			incrStruct(estep);
 		
 			// run conservative
+			cons_res.step = estep;
+			cons_res.form = FORM_NAOBUC;
+			reduce(&cons_res);
+			rbInsert(&mainresbuf, cons_res.step, cons_res.form);
 			
-			while ((eptr <= cptr) && ((cptr - eptr) >= delay)) {
-				cons_res.step = eptr;
-				cons_res.form = FORM_NAOBUC;
-				reduce(&cons_res);
-				if (cons_res.form == FORM_TRUE) {
-					// LEDS?
-				} else if (cons_res.form == FORM_FALSE) {
-					// LEDS?
-				} else {	// not possible...
-					// LEDS?
+			start = mainresbuf.start;
+			end = mainresbuf.end;
+			while (start != end) {
+				resp = rbGet(&mainresbuf, start);
+				//cons_res = *(rbGet(&mainresbuf, start));
+				if ((estep - resp->step) >= delay) {
+					reduce(resp);
+					if (resp->form == FORM_TRUE) {
+						// LEDS?
+					} else if (resp->form == FORM_FALSE) {
+						// LEDS?
+					} else {	// not possible...
+						// LEDS?
+					}
+				} else {
+					// mainresbuf is ordered, later residues can't be from earlier
+					break;
 				}
-				eptr++;
+				start = (start + 1) % mainresbuf.size;
 			}
-			cptr++;
-			
 			// run aggressive
 		
 			// checked current step, increment

@@ -14,7 +14,7 @@
 #define NVALBUFS (NSTRUCT * 2)
 
 // buffer len -- delay
-#define NBUFLEN 40
+#define NBUFLEN 50
 
 // True/False
 #define TRUE 1
@@ -39,6 +39,8 @@
 
 extern const int ftype[NFORMULAS];
 
+///a -> b U_0,1s c
+
 // structure table
 extern resStructure theStruct[NSTRUCT];
 // formula table
@@ -48,6 +50,10 @@ extern resbuf rbuffers[NSTRUCT];
 // interval buffer table
 extern interval ibuffers[NSTRUCT][NBUFLEN*2];
 extern residue resbuffers[NSTRUCT][NBUFLEN];
+
+// main list of residues
+extern resbuf mainresbuf;
+extern residue mainresbuffers[NBUFLEN];
 
 // formula simplify lookup tables for reduce
 extern const formula notForms[NFORMULAS];
