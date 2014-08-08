@@ -3,6 +3,8 @@
 #include <iostream>
 #include <cstdio>
 #include "bmtlTree.h"
+#include <map>
+#include <algorithm>
 
 // flex stuff
 extern "C" int yylex();
@@ -11,9 +13,17 @@ extern "C" FILE *yyin;
 
 void yyerror(const char* s);
 
+std::map<tag, Node*> nodeMap;
 Node* ast;
+tag GTAG;
 void pprintTree(Node *n);
 void lispPrint(Node *n);
+void tagAndBuild(Node *n);
+void tagAndBuild2(Node *n);
+bool sortNList(Node* lhs, Node* rhs);
+void confFormPrint(std::vector<Node*> forms, std::ostream &os); 
+void confPrintMasks(std::vector<Node*> forms, std::ostream &os); 
+void confBuildStruct(std::vector<Node*> forms, std::ostream &os);
 %}
 
 %union {
@@ -86,6 +96,7 @@ expression:
 */
 
 int main(int argc, char** argv) {
+	GTAG = 0;
 	FILE *myfile;
 	if (argc > 1) {
 		yyin = fopen(argv[1], "r");
@@ -97,13 +108,177 @@ int main(int argc, char** argv) {
 	} while (!feof(yyin));
 	std::cout << "ok, let's check this tree..." << std::endl;
 	if (ast) {
-		pprintTree(ast);
+		//pprintTree(ast);
 		std::cout << "Trying lisp print" << std::endl;
 		lispPrint(ast);
 		std::cout << std::endl;
+		std::cout << "trying tag&build" << std::endl;
+		tagCount = 0;
+		tagAndBuild2(ast);
+		std::cout << "sorting tagged list..." << std::endl;
+		std::sort(ast->nList.begin(), ast->nList.end(), sortNList);
+		std::sort(ast->gList.begin(), ast->gList.end(), sortNList);
+		std::cout << "tagged, top list?" << std::endl;
+		std::vector<Node*>::iterator it;
+		int count = 0;
+		for (it = ast->nList.begin(); it != ast->nList.end(); it++) {
+			std::cout << count++ << "@" << (*it)->nodeTag << "|Node: ";  
+			lispPrint(*it);
+			std::cout << std::endl;
+		}
+		std::cout << "and, global list?" << std::endl;
+		count = 0;
+		for (it = ast->gList.begin(); it != ast->gList.end(); it++) {
+			std::cout << count++ << "@" << (*it)->nodeTag << "|gNode: ";  
+			lispPrint(*it);
+			std::cout << std::endl;
+		}
+
+		std::vector<Node*> all(ast->nList);
+		all.insert(all.end(), ast->gList.begin(), ast->gList.end());
+
+		std::cout << "joined list:" << std::endl;
+		std::sort(all.begin(), all.end(), sortNList);
+		for (it = all.begin(); it != all.end(); it++) {
+			std::cout << (*it)->nodeTag << "|gNode: ";
+			lispPrint(*it);
+			std::cout << std::endl;
+		}
+		std::cout << "JOINED LIST CONFIG PRINT: " << std::endl;
+		confPrintMasks(all, std::cout);
+		confFormPrint(all, std::cout);
+		confBuildStruct(ast->gList, std::cout);
+		std::cout << "DONE!!!!!!!!!!!!" << std::endl;
 	}
 }
 
+bool sortNList(Node* lhs, Node*rhs) {
+	return (lhs->nodeTag < rhs->nodeTag);
+}
+
+void tagAndBuild2(Node* root) {
+	std::vector<Node *>::iterator itl, itr;
+	Node* np;
+	switch (root->type) {
+		case VALUE_T:
+			break;
+		case PROP_T:
+			root->nodeTag = GTAG++;
+			//uniqueAdd(&root->nList, makePropNode(root->val.propName), &root->gList);
+			uniqueAdd(&root->nList, makePropNode(root->val.propName));
+			break;
+		case NOT_T:
+			// build children
+			tagAndBuild2(root->val.child);
+			// copy child list
+			root->gList.insert(root->nList.end(), root->val.child->nList.begin(), root->val.child->nList.end());
+			// copy global (hidden temporal) list
+			root->gList.insert(root->gList.end(), root->val.child->gList.begin(), root->val.child->gList.end());
+			/*for (itr = root->val.child->gList.begin(); itr != root->val.child->gList.end(); irt++) {
+				uniqueAdd(&root->gList, *itr, &root->nList);
+			}*/
+			// add all possible children to childList
+			for (itl = root->val.child->nList.begin(); itl != root->val.child->nList.end(); itl++) {
+				//uniqueAdd(&root->nList, *itl);
+				uniqueAdd(&root->nList, makeNotNode(*itl));
+			}
+			break;
+		case OR_T:
+		case AND_T:
+		case IMPLIES_T:
+			// build children
+			tagAndBuild2(root->val.binOp.lchild);
+			tagAndBuild2(root->val.binOp.rchild);
+			// copy children lists
+			root->nList.insert(root->nList.end(), root->val.binOp.lchild->nList.begin(), root->val.binOp.lchild->nList.end());
+			root->nList.insert(root->nList.end(), root->val.binOp.rchild->nList.begin(), root->val.binOp.rchild->nList.end());
+			// copy global (hidden temporal) list
+			root->gList.insert(root->gList.end(), root->val.binOp.lchild->gList.begin(), root->val.binOp.lchild->gList.end());
+			root->gList.insert(root->gList.end(), root->val.binOp.rchild->gList.begin(), root->val.binOp.rchild->gList.end());
+			// add all possible children
+			for (itl = root->val.binOp.lchild->nList.begin(); itl != root->val.binOp.lchild->nList.end(); itl++) {
+				for (itr = root->val.binOp.rchild->nList.begin(); itr != root->val.binOp.rchild->nList.end(); itr++) {
+					//uniqueAdd(&root->nList, *itl, &root->gList);
+					//uniqueAdd(&root->nList, *itr, &root->gList);
+					uniqueAdd(&root->nList, makeBinNode(root->type, *itl, *itr), &root->gList);
+				}
+			}
+			break;
+		case ALWAYS_T:
+		case EVENT_T:
+		case PALWAYS_T:
+		case PEVENT_T:
+			break;
+		case SINCE_T:
+		case UNTIL_T:
+			// build children
+			tagAndBuild2(root->val.twotempOp.lchild);
+			tagAndBuild2(root->val.twotempOp.rchild);
+			// copy children lists to global list
+			root->gList.insert(root->gList.end(), root->val.twotempOp.lchild->nList.begin(), root->val.twotempOp.lchild->nList.end());
+			root->gList.insert(root->gList.end(), root->val.twotempOp.rchild->nList.begin(), root->val.twotempOp.rchild->nList.end());
+			// add all possible children -- just ourself
+			uniqueAdd(&root->nList, makeTwoTempNode(root->type, root->val.twotempOp.lbound, root->val.twotempOp.hbound, root->val.twotempOp.lchild, root->val.twotempOp.rchild), &root->gList);
+			break;
+	}
+}
+
+void tagAndBuild(Node* root) {
+	confNode c;
+	switch (root->type) {
+		case VALUE_T:
+			break;
+		case PROP_T:
+			// add confNode to list
+			c.type = PROP_T;
+			c.pname = root->val.propName;
+			c.nodetag = GTAG;
+			c.lchild = NONE;
+			c.rchild = NONE;
+			// add confNode to child list
+			root->childList.insert(c);
+			nodeMap[GTAG++] = copyNode(root);
+			break;
+		case NOT_T:
+			// build children
+			tagAndBuild(root->val.child);
+			// add self to nodeMap
+			nodeMap[GTAG++] = copyNode(root);
+			// add all possible children to childList
+			root->childList.insert(root->val.child->childList.begin(),root->val.child->childList.end());
+			for (std::set<confNode,confCompare>::iterator n = root->childList.begin(); n != root->childList.end(); n++) {
+				c.type = NOT_T;
+				c.pname = "";
+				c.nodetag = GTAG++;
+				c.lchild = n->nodetag;
+				c.rchild = NONE;
+				root->childList.insert(c);
+			}
+			break;
+		case OR_T:
+		case AND_T:
+		case IMPLIES_T:
+			tagAndBuild(root->val.binOp.lchild);
+			tagAndBuild(root->val.binOp.rchild);
+			break;
+		case ALWAYS_T:
+		case EVENT_T:
+		case PALWAYS_T:
+		case PEVENT_T:
+			std::cout << "Temporal Bin node, type: " << root->type << ", bounds: [" << root->val.tempOp.lbound << ", " << root->val.tempOp.hbound << "] and children:" << std::endl;
+			std::cout << "child:";
+			pprintTree(root->val.tempOp.child);
+			break;
+		case SINCE_T:
+		case UNTIL_T:
+			std::cout << "Since/Until Bin node, type: " << root->type << ", bounds: [" << root->val.twotempOp.lbound << ", " << root->val.twotempOp.hbound << "] and children:" << std::endl;
+			std::cout << "lchild:";
+			pprintTree(root->val.twotempOp.lchild);
+			std::cout << "rchild:";
+			pprintTree(root->val.twotempOp.rchild);
+			break;
+	}
+}
 void pprintTree(Node* root) {
 	switch (root->type) {
 		case VALUE_T:
@@ -215,6 +390,77 @@ void lispPrint(Node* root) {
 		default:
 			std::cout << "ERROR!";
 			break;
+	}
+}
+
+void confPrintMasks(std::vector<Node*> forms, std::ostream &os) {
+	int index = 0;
+	std::vector<Node*>::iterator it;
+	for (it = forms.begin(); it != forms.end(); it++) {
+		if ((*it)->type == PROP_T) { 
+			os << "#define MASK_" << (*it)->val.propName << " (1<<(" << index << "))" << std::endl;
+			index++;
+		}
+	}
+}
+
+void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
+	int index = 0;
+	std::vector<Node*>::iterator it;
+	// INVALID/TRUE/FALSE come from template...
+	for (it = forms.begin(); it != forms.end(); it++) {
+		switch ((*it)->type) {
+			case VALUE_T:
+				os << "formulas[" << index << "].type = VALUE_T;" << std::endl;
+				os << "formulas[" << index << "].val.value = " << (*it)->val.value << ";" << std::endl;
+				index++;
+				break;
+			case PROP_T:
+				os << "formulas[" << index << "].type = PROP_T;" << std::endl;
+				os << "formulas[" << index << "].val.propMask = MASK_" << (*it)->val.propName << ";" << std::endl;
+				index++;
+				break;
+			case NOT_T:
+				os << "formulas[" << index << "].type = NOT_T;" << std::endl;
+				os << "formulas[" << index << "].val.child = " << (*it)->val.child->nodeTag << ";" << std::endl;
+				index++;
+				break;
+			case OR_T:
+				os << "formulas[" << index << "].type = OR_T;" << std::endl;
+				os << "formulas[" << index << "].val.children.lchild = " << (*it)->val.binOp.lchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << index << "].val.children.rchild = " << (*it)->val.binOp.rchild->nodeTag << ";" << std::endl;
+				index++;
+				break;
+			case UNTIL_T:
+				os << "formulas[" << index << "].type = UNTIL_T;" << std::endl;
+				os << "formulas[" << index << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << index << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << index << "].val.t_children.hbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
+				os << "formulas[" << index << "].val.t_children.lbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
+				index++;
+				break;
+			case SINCE_T:
+				os << "formulas[" << index << "].type = SINCE_T;" << std::endl;
+				os << "formulas[" << index << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << index << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << index << "].val.t_children.hbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
+				os << "formulas[" << index << "].val.t_children.lbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
+				index++;
+				break;
+			default:
+				break;
+
+		}
+	}
+		
+}
+
+void confBuildStruct(std::vector<Node*> forms, std::ostream &os) {
+	int index = 0;
+	std::vector<Node*>::iterator it;
+	for (it = forms.begin(); it != forms.end(); it++) {
+		os << "initResStruct(&theStruct[" << index << "], " << (*it)->nodeTag << ", FORM_DELAY, &rbuffers[" << index << "], &ibuffers[" << index << "][0], &ibuffers[" << index << "][1]);" << std::endl;
+		index++;
 	}
 }
 void yyerror(const char *s) {
