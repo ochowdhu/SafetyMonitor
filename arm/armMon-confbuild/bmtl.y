@@ -24,6 +24,7 @@ bool sortNList(Node* lhs, Node* rhs);
 void confFormPrint(std::vector<Node*> forms, std::ostream &os); 
 void confPrintMasks(std::vector<Node*> forms, std::ostream &os); 
 void confBuildStruct(std::vector<Node*> forms, std::ostream &os);
+void confBuildSimpTables(int nform, std::vector<Node*> list, std::ostream &os);
 %}
 
 %union {
@@ -57,7 +58,7 @@ formula:
 	;
 
 expression:
-	VALUE { $$ = makeValueNode($1); } //std::cout << " bison got val: " << $1 << std::endl; }
+	VALUE { $$ = getValueNode($1); } //std::cout << " bison got val: " << $1 << std::endl; }
 	| PROP { $$ = makePropNode($1); } // std::cout << "bison got prop: " << $1 << std::endl; }
 	| '(' expression ')' {$$ = $2; } // std::cout << "parenthesized expression -- keep going" <<  std::endl; }
 	| NOT expression { $$ = makeNotNode($2); } //  std::cout << "bison got not" << std::endl; }
@@ -95,9 +96,22 @@ expression:
 
 */
 
+struct findNode {
+	Node* node;
+	findNode(Node* node) : node(node) {}
+	bool operator()(Node *n) { 
+		std::cout << "matching " << node->nodeTag << " against " << n->nodeTag << std::endl;
+		return matchNodes(node, n);
+	}
+};
+
 int main(int argc, char** argv) {
 	GTAG = 0;
 	FILE *myfile;
+	// create value nodes
+	invalNode = makeValueNode(2);
+	trueNode = makeValueNode(1);
+	falseNode = makeValueNode(0);
 	if (argc > 1) {
 		yyin = fopen(argv[1], "r");
 		//yyin = myfile;
@@ -109,15 +123,18 @@ int main(int argc, char** argv) {
 	std::cout << "ok, let's check this tree..." << std::endl;
 	if (ast) {
 		//pprintTree(ast);
-		std::cout << "Trying lisp print" << std::endl;
+		std::cout << "Using formula" << std::endl;
 		lispPrint(ast);
 		std::cout << std::endl;
 		std::cout << "trying tag&build" << std::endl;
-		tagCount = 0;
+		tagCount = 3;
 		tagAndBuild2(ast);
 		std::cout << "sorting tagged list..." << std::endl;
 		std::sort(ast->nList.begin(), ast->nList.end(), sortNList);
 		std::sort(ast->gList.begin(), ast->gList.end(), sortNList);
+
+		std::vector<Node*>::iterator it;
+		/*
 		std::cout << "tagged, top list?" << std::endl;
 		std::vector<Node*>::iterator it;
 		int count = 0;
@@ -133,7 +150,7 @@ int main(int argc, char** argv) {
 			lispPrint(*it);
 			std::cout << std::endl;
 		}
-
+		*/
 		std::vector<Node*> all(ast->nList);
 		all.insert(all.end(), ast->gList.begin(), ast->gList.end());
 
@@ -143,14 +160,82 @@ int main(int argc, char** argv) {
 			std::cout << (*it)->nodeTag << "|gNode: ";
 			lispPrint(*it);
 			std::cout << std::endl;
+
 		}
 		std::cout << "JOINED LIST CONFIG PRINT: " << std::endl;
+		std::cout << "NFORMULAS: " << all.size()+2 <<  std::endl;
+		std::cout << "NSTRUCT: " << ast->gList.size() << std::endl;
+
+
+///////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+		std::cout << "AUTO-GENERATE CONFIG:" << std::endl;
+		// First, into gendefs.h we need NFORMULAS, NSTRUCT, NBUFLEN, FORMDELAY
+		std::cout << "/** Auto Generated definitions */" << std::endl
+				  << "#define NFORMULAS (" << all.size()+2 << ")" << std::endl
+				  << "#define NSTRUCT (" << ast->gList.size() << ")" << std::endl
+				  << "#define NBUFLEN (" << 0 << ")" << std::endl
+				  << "#define FORM_DELAY (" << 0 << ")" << std::endl;
+		// throw masks into gendefs for now
 		confPrintMasks(all, std::cout);
+		// Now, monconfig.c
+		std::cout << "/** Auto Generated monitor configuration */" << std::endl;
+		std::cout << "#include \"monconfig.h\"" << std::endl;
+		confBuildSimpTables(all.size()+2, all, std::cout);
+		// fill in definitions
+		std::cout << "// structure table" << std::endl 
+				  << "resStructure theStruct[NSTRUCT];" << std::endl
+				  << "// formula table" << std::endl
+				  << "fNode formulas[NFORMULAS];" << std::endl
+				  << "// buffer table" << std::endl
+				  << "resbuf rbuffers[NSTRUCT];" << std::endl
+				  << "interval ibuffers[NSTRUCT][NBUFLEN*2];" << std::endl
+				  << "residue resbuffers[NSTRUCT][NBUFLEN];" << std::endl
+				  << "// main list of residues" << std::endl
+				  << "resbuf mainresbuf;" << std::endl 
+				  << "residue mainresbuffers[NBUFLEN];" << std::endl;
+
+		// print formulas
+		std::cout << "// build formulas" << std::endl << "void build_formula(void) {" << std::endl;
 		confFormPrint(all, std::cout);
+		std::cout << "}" << std::endl << std::endl;
+
+		// print structures
+		std::cout << "// build structures" << std::endl << "void build_struct(void) {" << std::endl;
+		//@TODO should put actual delay per structure in here eventually
+		std::cout << "int i;" << std::endl
+				  << "resbInit(&mainresbuf, NBUFLEN, mainresbuffers);" << std::endl
+				  << "for (i = 0; i < NSTRUCT; i++) { rbuffers[i].size = NBUFLEN; rbuffers[i].buf = resbuffers[i]; }";
 		confBuildStruct(ast->gList, std::cout);
+		std::cout <<"}" << std::endl << std::endl;
+
+		// and lastly dump incr_struct here
+		std::cout << "void incrStruct(int step) { " << std::endl
+				  << "// loop over struct (make sure struct is built smallest to largest...) " << std::endl
+				  << "int i, cres, eres;" << std::endl
+				  << "for (i = 0; i < NSTRUCT; i++) {" << std::endl
+				  << "resStructure *cStruct = &theStruct[i];" << std::endl
+				  << "// add residue to structure" << std::endl 
+				  << "rbInsert(cStruct->residues, step, cStruct->formula);" << std::endl
+				  << "// call reduce on all residues" << std::endl
+				  << "cres = cStruct->residues->start;" << std::endl
+				  << "eres = cStruct->residues->end;" << std::endl
+				  << "// loop over every residue" << std::endl
+				  << "while (cres != eres) {" << std::endl
+				  << "reduce(stGetRes(cStruct, cres));" << std::endl
+				  << "// increment" << std::endl
+				  << "cres = (cres + 1) % theStruct[i].residues->size;" << std::endl
+				  << "}" << std::endl
+				  << "// could clean up extra stuff that's past time, but shouldn't ever really have any" << std::endl
+				  << "}}" << std::endl;
+																																									
+		}
+
+
 		std::cout << "DONE!!!!!!!!!!!!" << std::endl;
+
+
 	}
-}
 
 bool sortNList(Node* lhs, Node*rhs) {
 	return (lhs->nodeTag < rhs->nodeTag);
@@ -159,6 +244,7 @@ bool sortNList(Node* lhs, Node*rhs) {
 void tagAndBuild2(Node* root) {
 	std::vector<Node *>::iterator itl, itr;
 	Node* np;
+	Node* np2;
 	switch (root->type) {
 		case VALUE_T:
 			break;
@@ -171,7 +257,7 @@ void tagAndBuild2(Node* root) {
 			// build children
 			tagAndBuild2(root->val.child);
 			// copy child list
-			root->gList.insert(root->nList.end(), root->val.child->nList.begin(), root->val.child->nList.end());
+			root->nList.insert(root->nList.end(), root->val.child->nList.begin(), root->val.child->nList.end());
 			// copy global (hidden temporal) list
 			root->gList.insert(root->gList.end(), root->val.child->gList.begin(), root->val.child->gList.end());
 			/*for (itr = root->val.child->gList.begin(); itr != root->val.child->gList.end(); irt++) {
@@ -218,7 +304,21 @@ void tagAndBuild2(Node* root) {
 			root->gList.insert(root->gList.end(), root->val.twotempOp.lchild->nList.begin(), root->val.twotempOp.lchild->nList.end());
 			root->gList.insert(root->gList.end(), root->val.twotempOp.rchild->nList.begin(), root->val.twotempOp.rchild->nList.end());
 			// add all possible children -- just ourself
-			uniqueAdd(&root->nList, makeTwoTempNode(root->type, root->val.twotempOp.lbound, root->val.twotempOp.hbound, root->val.twotempOp.lchild, root->val.twotempOp.rchild), &root->gList);
+			if (root->val.twotempOp.lchild->type == VALUE_T) {
+				np = getValueNode(root->val.twotempOp.lchild->val.value);
+			} else {
+				itl = find_if(root->gList.begin(), root->gList.end(), findNode(root->val.twotempOp.lchild));
+				np = *itl;
+			}
+
+			if (root->val.twotempOp.rchild->type == VALUE_T) {
+				np2 = getValueNode(root->val.twotempOp.rchild->val.value);
+			} else {
+				itr = find_if(root->gList.begin(), root->gList.end(), findNode(root->val.twotempOp.rchild));
+				np2 = *itr;
+			}
+			//uniqueAdd(&root->nList, makeTwoTempNode(root->type, root->val.twotempOp.lbound, root->val.twotempOp.hbound, root->val.twotempOp.lchild, root->val.twotempOp.rchild), &root->gList);
+			uniqueAdd(&root->nList, makeTwoTempNode(root->type, root->val.twotempOp.lbound, root->val.twotempOp.hbound, np, np2), &root->gList);
 			break;
 	}
 }
@@ -405,9 +505,12 @@ void confPrintMasks(std::vector<Node*> forms, std::ostream &os) {
 }
 
 void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
-	int index = 0;
+	int index = 3;
 	std::vector<Node*>::iterator it;
 	// INVALID/TRUE/FALSE come from template...
+	os << "formulas[0].type = VALUE_T;" << std::endl << "formulas[0].val.value = INVALID;" << std::endl;
+	os << "formulas[1].type = VALUE_T;" << std::endl << "formulas[1].val.value = FALSE;" << std::endl;
+	os << "formulas[2].type = VALUE_T;" << std::endl << "formulas[2].val.value = TRUE;" << std::endl;
 	for (it = forms.begin(); it != forms.end(); it++) {
 		switch ((*it)->type) {
 			case VALUE_T:
@@ -462,6 +565,96 @@ void confBuildStruct(std::vector<Node*> forms, std::ostream &os) {
 		os << "initResStruct(&theStruct[" << index << "], " << (*it)->nodeTag << ", FORM_DELAY, &rbuffers[" << index << "], &ibuffers[" << index << "][0], &ibuffers[" << index << "][1]);" << std::endl;
 		index++;
 	}
+}
+
+void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) {
+		///// SIMPLIFICATION TABLE STUFF
+		std::vector<Node*>::iterator it;
+		int NFORMULAS = nforms;
+		int notForms[NFORMULAS];
+		int orForms[NFORMULAS][NFORMULAS];
+		int untilForms[NFORMULAS][NFORMULAS];
+		int sinceForms[NFORMULAS][NFORMULAS];
+		int si, si2;
+		// initialize simplification tables:
+		for (si = 0; si < NFORMULAS; si++) {
+			notForms[si] = 0;
+			// 2-dimensional ones
+			for (si2 = 0; si2 < NFORMULAS; si2++) {
+				orForms[si][si2] = 0;
+				untilForms[si][si2] = 0;
+				sinceForms[si][si2] = 0;
+			}
+		}
+
+		// do true/false filling:
+		// fill NOT 1/2
+		notForms[1] = 2; // not false is true
+		notForms[2] = 1; // not true is false
+		// fill OR:
+		// true row is true
+		// DON'T DO 0 -- we want to leave INVALID invalid
+		for (si = 1; si < NFORMULAS; si++) {
+			orForms[2][si] = 2;
+			orForms[si][2] = 2;
+		}
+		// false row is pass-through
+		// DON'T DO 0 -- we want to leave INVALID invalid
+		for (si = 1; si < NFORMULAS; si++) {
+			orForms[1][si] = si;
+			orForms[si][1] = si;
+		}
+
+		// fill simplification tables
+		for (it = list.begin(); it!=list.end(); it++) {
+			if ((*it)->type == NOT_T) {
+				notForms[(*it)->val.child->nodeTag] = (*it)->nodeTag;
+			} else if ((*it)->type == OR_T) {
+				orForms[(*it)->val.binOp.lchild->nodeTag][(*it)->val.binOp.rchild->nodeTag] = (*it)->nodeTag;
+			} else if ((*it)->type == UNTIL_T) {
+				untilForms[(*it)->val.twotempOp.lchild->nodeTag][(*it)->val.twotempOp.rchild->nodeTag] = (*it)->nodeTag;
+			} else if ((*it)->type == SINCE_T) {
+				sinceForms[(*it)->val.twotempOp.lchild->nodeTag][(*it)->val.twotempOp.rchild->nodeTag] = (*it)->nodeTag;
+			}
+		}
+		// PRINT NOT
+		std::cout << "const formula notForms[NFORMULAS] = {";
+		for (si = 0; si < NFORMULAS; si++) {
+			std::cout << notForms[si] << ",";
+		}
+		std::cout << "};" << std::endl;
+		// PRINT OR
+		std::cout << "const formula orForms[NFORMULAS][NFORMULAS] = {";
+		for (si = 0; si < NFORMULAS; si++) {
+			std::cout << "{";
+			for (si2 = 0; si2 < NFORMULAS; si2++) {
+				std::cout << orForms[si][si2] << ",";
+			}
+			std::cout << "}," << std::endl;
+		}
+		std::cout << "};" << std::endl;
+		// PRINT UNTIL
+		std::cout << "const formula untilForms[NFORMULAS][NFORMULAS] = {";
+		for (si = 0; si < NFORMULAS; si++) {
+			std::cout << "{";
+			for (si2 = 0; si2 < NFORMULAS; si2++) {
+				std::cout << untilForms[si][si2] << ",";
+			}
+			std::cout << "}," << std::endl;
+		}
+		std::cout << "};" << std::endl;
+
+		// PRINT SINCE
+		std::cout << "const formula sinceForms[NFORMULAS][NFORMULAS] = {";
+		for (si = 0; si < NFORMULAS; si++) {
+			std::cout << "{";
+			for (si2 = 0; si2 < NFORMULAS; si2++) {
+				std::cout << sinceForms[si][si2] << ",";
+			}
+			std::cout << "}," << std::endl;
+		}
+		std::cout << "};" << std::endl;
+
 }
 void yyerror(const char *s) {
 	std::cout << "!! Parser error! Message " << s << std::endl;

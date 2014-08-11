@@ -34,6 +34,44 @@ typedef struct Node {
 	std::vector<Node*> gList;
 } Node;
 
+// Global value nodes -- only want one copy of true/false
+Node* trueNode;
+Node* falseNode;
+Node* invalNode;
+
+
+bool matchNodes(Node* n1, Node* n2) {
+	if (n1->type == n2->type) {
+		switch (n1->type) {
+			case PROP_T:
+				if (strcmp(n1->val.propName, n2->val.propName) == 0) {
+					return true;  
+				}
+				return false;
+			case VALUE_T:
+				if (n1->val.value == n2->val.value) {
+					return true;  
+				}
+				return false;
+			case NOT_T:
+				return matchNodes(n1->val.child, n2->val.child);
+			case AND_T:
+			case OR_T:
+			case IMPLIES_T:
+				return matchNodes(n1->val.binOp.lchild, n2->val.binOp.lchild) 
+					   && matchNodes(n1->val.binOp.rchild, n2->val.binOp.rchild);
+			case UNTIL_T:
+			case SINCE_T:
+				if (n1->val.twotempOp.lbound == n2->val.twotempOp.lbound 
+					&& n1->val.twotempOp.hbound == n2->val.twotempOp.hbound) {
+					//
+					return matchNodes(n1->val.twotempOp.lchild, n2->val.twotempOp.lchild) 
+					   && matchNodes(n1->val.twotempOp.rchild, n2->val.twotempOp.rchild);
+				}
+		}
+	}
+	return false;
+}
 void uniqueAdd(std::vector<Node*>* v, Node* n) {
 	std::vector<Node*>::iterator it;
 	bool found = false;
@@ -51,7 +89,8 @@ void uniqueAdd(std::vector<Node*>* v, Node* n) {
 					}
 					break;
 				case NOT_T:
-					if ((*it)->val.child == n->val.child) {
+					//if ((*it)->val.child == n->val.child) {
+					if (matchNodes(*it,n)) {
 						found = true;
 					}
 					break;
@@ -176,6 +215,13 @@ Node *copyNode(Node *n) {
 	n2->tempList = std::set<confNode, confCompare>(n->tempList);
 	return n2;
 }
+
+Node *getValueNode(bool nval) {
+	if (nval) {
+		return trueNode;
+	}
+	return falseNode;
+}
 Node *makeValueNode(bool nval) {
 	Node *n = new Node();
 	n->type = VALUE_T;
@@ -228,14 +274,14 @@ Node *makeTwoTempNode(enum nodeType type, int lbound, int hbound, Node* lchild, 
 
 Node *makeEventNode(int lbound, int hbound, Node* child) {
 	if (RESTRICT_LOGIC) {
-		return makeTwoTempNode(UNTIL_T, lbound, hbound, makeValueNode(true), child);
+		return makeTwoTempNode(UNTIL_T, lbound, hbound, getValueNode(true), child);
 	} else {
 		return makeTempNode(EVENT_T, lbound, hbound, child);
 	}
 }
 Node *makePEventNode(int lbound, int hbound, Node* child) {
 	if (RESTRICT_LOGIC) {
-		return makeTwoTempNode(SINCE_T, lbound, hbound, makeValueNode(true), child);
+		return makeTwoTempNode(SINCE_T, lbound, hbound, getValueNode(true), child);
 	} else {
 		return makeTempNode(PEVENT_T, lbound, hbound, child);
 	}
