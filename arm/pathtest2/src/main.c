@@ -39,12 +39,12 @@ void fillData() {
 	for (i = 0; i < TDATASIZE; i++) {
 		testdata[i] = 0x00;
 		if (i > 400 && i < 600) {
-			testdata[i] |= MASK_B;
+			testdata[i] |= MASK_b;
 			if (i < 500) 
-				testdata[i] |= MASK_A;
+				testdata[i] |= MASK_a;
 		}
 		if ((i % 30) == 0)
-			testdata[i] |= MASK_C;
+			testdata[i] |= MASK_c;
 	}
 }
 
@@ -53,14 +53,14 @@ void fillData2() {
 	testdata[0] = 0x00;
 	testdata[1] = 0x00;
 	testdata[2] = 0x00;
-	testdata[3] |= MASK_A | MASK_B;
-	testdata[4] |= MASK_B;
-	testdata[5] |= MASK_B;
-	testdata[6] |= MASK_B;
-	testdata[7] |= MASK_B;
-	testdata[8] |= MASK_B;
+	testdata[3] |= MASK_a | MASK_b;
+	testdata[4] |= MASK_b;
+	testdata[5] |= MASK_b;
+	testdata[6] |= MASK_b;
+	testdata[7] |= MASK_b;
+	testdata[8] |= MASK_b | MASK_c;
 	testdata[9] |= 0;//MASK_B;
-	testdata[10] |= MASK_C;
+	testdata[10] |= MASK_c;
 	for (i = 11; i < 200; i++) {
 		testdata[i] = 0x00;
 	}
@@ -187,7 +187,7 @@ int main() {
 		
 			// run conservative
 			cons_res.step = estep;
-			cons_res.form = FORM_NAOBUC;
+			cons_res.form = POLICY;
 			reduce(&cons_res);
 			rbInsert(&mainresbuf, cons_res.step, cons_res.form);
 			

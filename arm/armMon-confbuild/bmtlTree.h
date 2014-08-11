@@ -32,6 +32,7 @@ typedef struct Node {
 	tag nodeTag;
 	std::vector<Node*> nList;
 	std::vector<Node*> gList;
+	int stidx;
 } Node;
 
 // Global value nodes -- only want one copy of true/false
@@ -227,6 +228,7 @@ Node *makeValueNode(bool nval) {
 	n->type = VALUE_T;
 	n->val.value = nval;
 	n->nodeTag = tagCount++;
+	n->stidx = -1;
 	return n;
 }
 
@@ -235,6 +237,7 @@ Node *makePropNode(char* name) {
 	n->type = PROP_T;
 	n->val.propName = name;
 	n->nodeTag = tagCount++;
+	n->stidx = -1;
 	return n;
 }
 
@@ -243,6 +246,7 @@ Node *makeNotNode(Node* child) {
 	n->type = NOT_T;
 	n->val.child = child;
 	n->nodeTag = tagCount++;
+	n->stidx = -1;
 	return n;
 }
 Node *makeBinNode(enum nodeType type, Node* lchild, Node* rchild) {
@@ -251,6 +255,7 @@ Node *makeBinNode(enum nodeType type, Node* lchild, Node* rchild) {
 	n->val.binOp.lchild = lchild;
 	n->val.binOp.rchild = rchild;
 	n->nodeTag = tagCount++;
+	n->stidx = -1;
 	return n;
 }
 Node *makeTempNode(enum nodeType type, int lbound, int hbound, Node* child) {
@@ -269,6 +274,7 @@ Node *makeTwoTempNode(enum nodeType type, int lbound, int hbound, Node* lchild, 
 	n->val.twotempOp.lbound = lbound;
 	n->val.twotempOp.hbound = hbound;
 	n->nodeTag = tagCount++;
+	n->stidx = -1;
 	return n;
 }
 

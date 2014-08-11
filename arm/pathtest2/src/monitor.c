@@ -150,7 +150,7 @@ int untilCheck(residue* res) {
 			break;
 		}
 		// Already guaranteed <= h from above
-		if (l <= resp->step) { 
+		if (res->step <= resp->step) { 	// check alpha from res->step onwards
 			// keep updating a_until with current val as long as we keep seeing true
 			if (resp->form == FORM_TRUE && (temp_bits & UN_MASK)) {
 				a_until = resp->step;

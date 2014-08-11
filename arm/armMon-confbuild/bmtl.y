@@ -5,6 +5,7 @@
 #include "bmtlTree.h"
 #include <map>
 #include <algorithm>
+#include <fstream>
 
 // flex stuff
 extern "C" int yylex();
@@ -25,6 +26,7 @@ void confFormPrint(std::vector<Node*> forms, std::ostream &os);
 void confPrintMasks(std::vector<Node*> forms, std::ostream &os); 
 void confBuildStruct(std::vector<Node*> forms, std::ostream &os);
 void confBuildSimpTables(int nform, std::vector<Node*> list, std::ostream &os);
+void confBuildFtype(int nform, std::vector<Node*> list, std::ostream &os);
 %}
 
 %union {
@@ -108,6 +110,10 @@ struct findNode {
 int main(int argc, char** argv) {
 	GTAG = 0;
 	FILE *myfile;
+	std::ofstream gendefs;
+	std::ofstream monconfig;
+	gendefs.open("gendefs.h");
+	monconfig.open("genmonconfig.c");
 	// create value nodes
 	invalNode = makeValueNode(2);
 	trueNode = makeValueNode(1);
@@ -171,19 +177,33 @@ int main(int argc, char** argv) {
 /////////////////////////////////////////////////////////////////////////
 		std::cout << "AUTO-GENERATE CONFIG:" << std::endl;
 		// First, into gendefs.h we need NFORMULAS, NSTRUCT, NBUFLEN, FORMDELAY
-		std::cout << "/** Auto Generated definitions */" << std::endl
-				  << "#define NFORMULAS (" << all.size()+2 << ")" << std::endl
+		gendefs << "/** Auto Generated definitions */" << std::endl
+				  << "#define NFORMULAS (" << all.size()+3 << ")" << std::endl
 				  << "#define NSTRUCT (" << ast->gList.size() << ")" << std::endl
 				  << "#define NBUFLEN (" << 0 << ")" << std::endl
 				  << "#define FORM_DELAY (" << 0 << ")" << std::endl;
 		// throw masks into gendefs for now
-		confPrintMasks(all, std::cout);
+		confPrintMasks(all, gendefs);
 		// Now, monconfig.c
-		std::cout << "/** Auto Generated monitor configuration */" << std::endl;
-		std::cout << "#include \"monconfig.h\"" << std::endl;
-		confBuildSimpTables(all.size()+2, all, std::cout);
+		monconfig << "/** Auto Generated monitor configuration */" << std::endl;
+		monconfig << "#include \"monconfig.h\"" << std::endl;
+		confBuildFtype(all.size()+3, all, monconfig);
+		confBuildSimpTables(all.size()+3, all, monconfig);
+
+		///// STRUCTURES HAVE TO BE BEFORE FORMULAS
+		///// confBuildStruct loads the structidx's into the nodes!!
+		// print structures
+		monconfig << "// build structures" << std::endl << "void build_struct(void) {" << std::endl;
+		//@TODO should put actual delay per structure in here eventually
+		monconfig  << "int i;" << std::endl
+				  << "resbInit(&mainresbuf, NBUFLEN, mainresbuffers);" << std::endl
+				  << "for (i = 0; i < NSTRUCT; i++) { rbuffers[i].size = NBUFLEN; rbuffers[i].buf = resbuffers[i]; }";
+		confBuildStruct(ast->gList, monconfig);
+		monconfig <<"}" << std::endl << std::endl;
+
+
 		// fill in definitions
-		std::cout << "// structure table" << std::endl 
+		monconfig << "// structure table" << std::endl 
 				  << "resStructure theStruct[NSTRUCT];" << std::endl
 				  << "// formula table" << std::endl
 				  << "fNode formulas[NFORMULAS];" << std::endl
@@ -196,21 +216,13 @@ int main(int argc, char** argv) {
 				  << "residue mainresbuffers[NBUFLEN];" << std::endl;
 
 		// print formulas
-		std::cout << "// build formulas" << std::endl << "void build_formula(void) {" << std::endl;
-		confFormPrint(all, std::cout);
-		std::cout << "}" << std::endl << std::endl;
+		monconfig << "// build formulas" << std::endl << "void build_formula(void) {" << std::endl;
+		confFormPrint(all, monconfig);
+		monconfig << "}" << std::endl << std::endl;
 
-		// print structures
-		std::cout << "// build structures" << std::endl << "void build_struct(void) {" << std::endl;
-		//@TODO should put actual delay per structure in here eventually
-		std::cout << "int i;" << std::endl
-				  << "resbInit(&mainresbuf, NBUFLEN, mainresbuffers);" << std::endl
-				  << "for (i = 0; i < NSTRUCT; i++) { rbuffers[i].size = NBUFLEN; rbuffers[i].buf = resbuffers[i]; }";
-		confBuildStruct(ast->gList, std::cout);
-		std::cout <<"}" << std::endl << std::endl;
 
 		// and lastly dump incr_struct here
-		std::cout << "void incrStruct(int step) { " << std::endl
+		monconfig << "void incrStruct(int step) { " << std::endl
 				  << "// loop over struct (make sure struct is built smallest to largest...) " << std::endl
 				  << "int i, cres, eres;" << std::endl
 				  << "for (i = 0; i < NSTRUCT; i++) {" << std::endl
@@ -234,8 +246,9 @@ int main(int argc, char** argv) {
 
 		std::cout << "DONE!!!!!!!!!!!!" << std::endl;
 
-
-	}
+	gendefs.close();
+	monconfig.close();
+}
 
 bool sortNList(Node* lhs, Node*rhs) {
 	return (lhs->nodeTag < rhs->nodeTag);
@@ -516,38 +529,44 @@ void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
 			case VALUE_T:
 				os << "formulas[" << index << "].type = VALUE_T;" << std::endl;
 				os << "formulas[" << index << "].val.value = " << (*it)->val.value << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				index++;
 				break;
 			case PROP_T:
 				os << "formulas[" << index << "].type = PROP_T;" << std::endl;
 				os << "formulas[" << index << "].val.propMask = MASK_" << (*it)->val.propName << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				index++;
 				break;
 			case NOT_T:
 				os << "formulas[" << index << "].type = NOT_T;" << std::endl;
 				os << "formulas[" << index << "].val.child = " << (*it)->val.child->nodeTag << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				index++;
 				break;
 			case OR_T:
 				os << "formulas[" << index << "].type = OR_T;" << std::endl;
 				os << "formulas[" << index << "].val.children.lchild = " << (*it)->val.binOp.lchild->nodeTag << ";" << std::endl;
 				os << "formulas[" << index << "].val.children.rchild = " << (*it)->val.binOp.rchild->nodeTag << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				index++;
 				break;
 			case UNTIL_T:
 				os << "formulas[" << index << "].type = UNTIL_T;" << std::endl;
 				os << "formulas[" << index << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->nodeTag << ";" << std::endl;
 				os << "formulas[" << index << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->nodeTag << ";" << std::endl;
-				os << "formulas[" << index << "].val.t_children.hbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
-				os << "formulas[" << index << "].val.t_children.lbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
+				os << "formulas[" << index << "].val.t_children.lbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
+				os << "formulas[" << index << "].val.t_children.hbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				index++;
 				break;
 			case SINCE_T:
 				os << "formulas[" << index << "].type = SINCE_T;" << std::endl;
 				os << "formulas[" << index << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->nodeTag << ";" << std::endl;
 				os << "formulas[" << index << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->nodeTag << ";" << std::endl;
-				os << "formulas[" << index << "].val.t_children.hbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
-				os << "formulas[" << index << "].val.t_children.lbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
+				os << "formulas[" << index << "].val.t_children.lbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
+				os << "formulas[" << index << "].val.t_children.hbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				index++;
 				break;
 			default:
@@ -563,6 +582,7 @@ void confBuildStruct(std::vector<Node*> forms, std::ostream &os) {
 	std::vector<Node*>::iterator it;
 	for (it = forms.begin(); it != forms.end(); it++) {
 		os << "initResStruct(&theStruct[" << index << "], " << (*it)->nodeTag << ", FORM_DELAY, &rbuffers[" << index << "], &ibuffers[" << index << "][0], &ibuffers[" << index << "][1]);" << std::endl;
+		(*it)->stidx = index;
 		index++;
 	}
 }
@@ -618,43 +638,54 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 			}
 		}
 		// PRINT NOT
-		std::cout << "const formula notForms[NFORMULAS] = {";
+		os << "const formula notForms[NFORMULAS] = {";
 		for (si = 0; si < NFORMULAS; si++) {
-			std::cout << notForms[si] << ",";
+			os << notForms[si] << ",";
 		}
-		std::cout << "};" << std::endl;
+		os << "};" << std::endl;
 		// PRINT OR
-		std::cout << "const formula orForms[NFORMULAS][NFORMULAS] = {";
+		os << "const formula orForms[NFORMULAS][NFORMULAS] = {";
 		for (si = 0; si < NFORMULAS; si++) {
-			std::cout << "{";
+			os << "{";
 			for (si2 = 0; si2 < NFORMULAS; si2++) {
-				std::cout << orForms[si][si2] << ",";
+				os << orForms[si][si2] << ",";
 			}
-			std::cout << "}," << std::endl;
+			os << "}," << std::endl;
 		}
-		std::cout << "};" << std::endl;
+		os << "};" << std::endl;
 		// PRINT UNTIL
-		std::cout << "const formula untilForms[NFORMULAS][NFORMULAS] = {";
+		os << "const formula untilForms[NFORMULAS][NFORMULAS] = {";
 		for (si = 0; si < NFORMULAS; si++) {
-			std::cout << "{";
+			os << "{";
 			for (si2 = 0; si2 < NFORMULAS; si2++) {
-				std::cout << untilForms[si][si2] << ",";
+				os << untilForms[si][si2] << ",";
 			}
-			std::cout << "}," << std::endl;
+			os << "}," << std::endl;
 		}
-		std::cout << "};" << std::endl;
+		os << "};" << std::endl;
 
 		// PRINT SINCE
-		std::cout << "const formula sinceForms[NFORMULAS][NFORMULAS] = {";
+		os << "const formula sinceForms[NFORMULAS][NFORMULAS] = {";
 		for (si = 0; si < NFORMULAS; si++) {
-			std::cout << "{";
+			os << "{";
 			for (si2 = 0; si2 < NFORMULAS; si2++) {
-				std::cout << sinceForms[si][si2] << ",";
+				os << sinceForms[si][si2] << ",";
 			}
-			std::cout << "}," << std::endl;
+			os << "}," << std::endl;
 		}
-		std::cout << "};" << std::endl;
+		os << "};" << std::endl;
 
+}
+
+std::string ftypeMap[12] = {"VALUE_T", "PROP_T", "NOT_T", "OR_T", "AND_T", "IMPLIES_T", "ALWAYS_T", "EVENT_T", "PALWAYS_T", "PEVENT_T", "UNTIL_T", "SINCE_T" };
+void confBuildFtype(int nforms, std::vector<Node*> list, std::ostream &os) {
+	std::vector<Node*>::iterator it;
+	os << "const int ftype[NFORMULAS] = { VALUE_T, VALUE_T, VALUE_T, ";
+	for (it = list.begin(); it != list.end(); it++) {
+		os << ftypeMap[(*it)->type] << ", ";
+	}
+	os << "};" << std::endl;
+	return;
 }
 void yyerror(const char *s) {
 	std::cout << "!! Parser error! Message " << s << std::endl;
