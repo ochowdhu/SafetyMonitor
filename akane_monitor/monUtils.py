@@ -13,7 +13,7 @@ EXP_T, PROP_T, NPROP_T, NOT_T, AND_T, OR_T, IMPLIES_T, EVENT_T, ALWAYS_T, UNTIL_
 TAGi, FORMULAi, DELAYi, VALIDi, LISTi, FLISTi = range(0,6) 
 
 ALC_ALIVE, ALC_VIOLATE, ALC_SATISFY = range(0,3)
-ALG_RES, ALG_STCONS, ALG_PURECONS, ALG_FSTCONS, ALG_RESCONS, ALG_ASTCONS, ALG_ARES, ALG_AIRES, ALG_IRES = range(0,9)
+ALG_RES, ALG_STCONS, ALG_PURECONS, ALG_FSTCONS, ALG_RESCONS, ALG_ASTCONS, ALG_ARES, ALG_AIRES, ALG_IRES, ALG_CIRES = range(0,10)
 
 ## debug constants
 DBG_ERROR = 0x01
@@ -24,7 +24,7 @@ DBG_TIME = 0x10
 DBG_SAT = 0x20
 #DBG_MASK = DBG_ERROR | DBG_STRUCT | DBG_SMON | DBG_STATE 
 #DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SMON | DBG_STRUCT | DBG_SAT
-DBG_MASK = DBG_ERROR | DBG_TIME | DBG_SAT 
+DBG_MASK = DBG_ERROR | DBG_TIME #| DBG_SAT 
 
 # global constants
 PERIOD = 1
@@ -1540,7 +1540,7 @@ def ag_reduce(Struct, cstate, taulist, formula_entry):
 			return (formtime, False)
 		else:
 			return (formtime, formula)
-	elif (shared.algChoose == ALG_IRES and formtype == UNTIL_T): 
+	elif ((shared.algChoose == ALG_IRES or shared.algChoose == ALG_CIRES) and formtype == UNTIL_T): 
 		tags = get_tags(formula)
 		st_alpha = Struct[tags[0]]
 		st_beta = Struct[tags[1]]
@@ -1553,39 +1553,39 @@ def ag_reduce(Struct, cstate, taulist, formula_entry):
 
 		# no Beta case
 		for bi in st_beta.fint:
-			if bi[0] <= l and bi[1] >= h:	# bi superset of (l,h)
+			if taulist[bi[0]] <= l and taulist[bi[1]] >= h:	# bi superset of (l,h)
 				return (formtime, False)
-			elif (bi[0] > h):	# don't keep checking outside range
+			elif (taulist[bi[0]] > h):	# don't keep checking outside range
 				break
 
 		# alpha not until possible beta case
 		minRes = None
 		for ri in st_beta.residues:
-			if l <= ri[0] <= h:
-				minRes = ri[0]
+			if l <= taulist[ri[0]] <= h:
+				minRes = taulist[ri[0]]
 				break
 		minTrue = None
 		# True case
 		isect = None
 		for bi in st_beta.tint:
-			isect = (max(bi[0],l), min(bi[1],h))
+			isect = (max(taulist[bi[0]],l), min(taulist[bi[1]],h))
 			if (isect[0] <= isect[1]):
 				######################################
 				# sneak a not until b check in here -- reuse of loop
 				if minTrue is None:
 					minTrue = min(isect[0], minRes)
 					for ai in st_alpha.fint:
-						aisect = (max(ai[0],formtime), min(ai[1],minTrue))
+						aisect = (max(taulist[ai[0]],taulist[formtime]), min(taulist[ai[1]],minTrue))
 						if (aisect[0] <= aisect[1]):
 							return (formtime, False)
 				#####################################
 				for ai in st_alpha.tint:
-					if ai[0] <= formtime and ai[1] >= isect[0]:
+					if taulist[ai[0]] <= taulist[formtime] and taulist[ai[1]] >= isect[0]:
 						return (formtime, True)
-				if (isect[0] <= formtime and isect[1] >= formtime):
+				if (isect[0] <= taulist[formtime] and isect[1] >= taulist[formtime]):
 					return (formtime, True)
 		return (formtime, formula)
-	elif (shared.algChoose == ALG_IRES and formtype == SINCE_T):
+	elif ((shared.algChoose == ALG_IRES or shared.algChoose == ALG_CIRES) and formtype == SINCE_T):
 		tags = get_tags(formula)
 		st_alpha = Struct[tags[0]]
 		st_beta = Struct[tags[1]]
@@ -1598,37 +1598,39 @@ def ag_reduce(Struct, cstate, taulist, formula_entry):
 
 		# no Beta case
 		for bi in st_beta.fint:
-			if bi[0] <= l and bi[1] >= h:	# bi superset of (l,h)
+			if taulist[bi[0]] <= l and taulist[bi[1]] >= h:	# bi superset of (l,h)
 				return (formtime, False)
-			elif (bi[0] > h):	# don't keep checking outside range
+			elif (taulist[bi[0]] > h):	# don't keep checking outside range
 				break
 
 		# alpha not since possible beta case
 		maxRes = None
 		for ri in reversed(st_beta.residues):
-			if l <= ri[0] <= h:
-				maxRes = ri[0]
+			if l <= taulist[ri[0]] <= h:
+				maxRes = taulist[ri[0]]
 				break
 		maxTrue = None
 		# True case
 		isect = None
 		for bi in reversed(st_beta.tint):
-			isect = (max(bi[0],l), min(bi[1],h))
+			isect = (max(taulist[bi[0]],l), min(taulist[bi[1]],h))
 			if (isect[0] <= isect[1]):
 				######################################
 				# sneak a not since b check in here -- reuse of loop
 				if maxTrue is None:
 					maxTrue = max(isect[1], maxRes)
 					for ai in st_alpha.fint:
-						aisect = (max(ai[0],maxTrue), min(ai[1],formtime))
+						aisect = (max(taulist[ai[0]],maxTrue), min(taulist[ai[1]],formtime))
 						# less than since a is allowed to start the step after q
 						if (aisect[0] < aisect[1]):
 							return (formtime, False)
 				#####################################
 				for ai in reversed(st_alpha.tint):	 # this reverse is unnecessary but should be faster (expect to match with later intervals)
-					if ai[0] <= isect[1]+1 and ai[1] >= formtime:
+					# not exactly correct to do +1 here, but it'll work as a hack for now (changed from steps to time for all this because we don't have l/h in steps -- we probably should just take them as that
+					# we don't really do between-resolution l/h so this should be ok for this current round of testing
+					if taulist[ai[0]] <= isect[1]+1 and taulist[ai[1]] >= taulist[formtime]:
 						return (formtime, True)
-				if (isect[0] <= formtime and isect[1] >= formtime):
+				if (isect[0] <= taulist[formtime] and isect[1] >= taulist[formtime]):
 					return (formtime, True)
 
 		return (formtime, formula)
