@@ -28,7 +28,7 @@ typedef struct {
 
 extern void initResStruct(resStructure* st, formula form, int delay, resbuf *res, interval *t, interval *f);
 extern residue* stGetRes(resStructure *st, int pos);
-extern void reduce(residue *res);
+extern void reduce(int step, residue *res);
 
 //extern formula getForm(fNode n);
 extern fNode getNode(formula f);

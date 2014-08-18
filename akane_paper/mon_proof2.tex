@@ -1,0 +1,349 @@
+%% write up of monitor algorithm
+% Aaron Kane
+
+% at eventually, need to finish writing up safety_monitor()
+% should also decide on notation for append, step/bound #, etc
+
+\documentclass[10pt,a4paper]{article}
+\usepackage[noend]{algorithmic}
+\usepackage{algorithm}
+\usepackage[latin1]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{bussproofs}
+
+%\addtolength{\textheight}{1in}
+%{\voffset}{-1.5in}
+
+\newcommand{\smon}[1]{\ensuremath{smon(\sigma, \tau, #1)}}
+\newcommand{\ty}[1]{\texttt{#1}}
+\newcommand{\bptr}{b}
+\newcommand{\fptr}{f}
+\newcommand{\ov}[1]{\ensuremath{\overline{#1}}}
+\newcommand{\ep}{ep}
+\newcommand{\cp}{cp}
+\newcommand{\rp}[2]{\ensuremath{\langle #1, #2 \rangle}}
+\newcommand{\res}[2]{\ensuremath{r_{#1}^{#2}}}
+\newcommand{\agmon}{\ensuremath{\mathbf{agmon}}}
+\newcommand{\pst}{\ensuremath{S^i_\psi}}
+\newcommand{\rpt}[3]{\ensuremath{\langle #1, #2 \rangle}_{#3}}
+
+
+
+\newtheorem{thm}{Theorem}
+\newtheorem{tdef}{Definition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{case}{Case}
+
+\title{Aggressive Monitor Proof Writeup}
+\author{Aaron Kane}
+
+\begin{document}
+\maketitle
+
+\section{Definitions}
+
+A residue $\rp{j}{\psi}_\phi$ is a tagged pair where $j \in \mathbb{N}$ is a position in the log and $\psi, \phi$ are well-formed formulas.
+
+A history structure $S_{\phi}^i = \{ r_{\phi}^0, r_{\phi}^1, \ldots r_{\phi}^i \}$ is a list of residues.
+
+We let $\mathbb{S}^i_{\psi}$ represent the set of history structures for all temporal subformula of $\psi$, i.e. $\{S^i_{\phi_1}, S^i_{\phi_2}, \ldots\}$.
+
+
+\begin{tdef}[Correctness of history structures] For all positions $i$, formulas $\psi$, traces $\sigma$, and time sequences $\tau$, a history structures $S^i_{\psi}$ is correct if:
+\begin{enumerate}
+	\item \text{Sound: } $\forall \rpt{j}{\psi'}{\psi} \in \pst.(\sigma, \tau, j \vDash \psi' \rightarrow \sigma, \tau, j \vDash \psi)$
+	\item \text{Complete: } $\forall j \leq i.(\sigma, \tau, j \vDash \psi \rightarrow \exists \rp{j}{\psi'} \in \pst. \sigma, \tau, j \vDash \psi'$ \text{ and } $\sigma, \tau, j \nvDash \psi \rightarrow \exists \rp{j}{\psi'} \in \pst. \sigma, \tau, j \nvDash \psi')$
+	\item \text{Prompt: } $\forall \rp{j}{\psi'} \in \pst.(\tau_i - \tau_j \geq \Delta^w(\psi) \rightarrow \psi' \equiv \top/\bot)$
+\end{enumerate}
+\end{tdef}
+
+
+With these properties defined, we ultimately wish to prove the correctness of our top-level algorithm \agmon.
+
+\begin{thm}[Correctness of \agmon]
+For all formula $\varphi$, all $i \in \mathbb{N}$, all time stamp sequences $\tau$, and all traces $\sigma$ it is the case that if $S^i_{\varphi}$ is 1) sound, 2) complete, and 3) prompt then $\exists j.(\rp{j}{\bot} \in S^i_{\varphi}) \leftrightarrow \sigma, \tau, j \nvDash \varphi$
+\end{thm}
+
+\begin{thm}[Correctness of \agmon 2]
+For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that if $S^{i-1}_{\varphi}$ is correct then after the loop, $S^{i}_{\varphi}$ will be correct.
+\end{thm}
+\textit{Proof.} We must show that given a correct $\mathbb{S}^i_{\psi}$ and $S^{i-1}_{\psi}$ that \agmon returns a correct $S^i_{\psi}$. Since $S^i_{\psi}$ is just the union of the reduction of all residues in $S^{i-1}_{\psi}$ and the additional reduced residue at step $i$ we know that $S^i_{\psi}$ is sound and complete since reduce is correct (Lemma 2) and there will be a residue for all $j \leq i$ included ($S^{i-1}$ provides all $j < i$ and we add $i$). $S^i_{\psi}$ is also prompt since reduce is correct.
+
+\subsection{Proof of \agmon\ Correctness}
+In this section we present some assisting lemmas and definitions we will use to show the correctness of \agmon.
+
+\begin{lemma}[Correctness of $\mathbf{simplify}(\psi)$] For all positions $i$, formulas $\psi$, traces $\sigma,$ and time sequences $\tau$ 
+it is the case that if $\psi' \leftarrow \mathbf{simplify}(\psi)$ then $\sigma, \tau, i \vDash \psi \leftrightarrow \sigma, \tau, i \vDash \psi'$
+
+Proof. Trivial by the semantics of $\mathbf{simplify}$.
+\end{lemma}
+
+\begin{lemma}[Correctness of $\mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi})$]
+For all positions $i,j$ with $j \leq i$, formulas $\psi$, traces $\sigma$, time series $\tau$, $\psi'$ such that 
+$\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j, \psi$, and all $S^i_{\phi'} \in \mathbb{S}^i_{\psi}$ correct it is the case that
+for $\rp{j'}{\phi} \leftarrow \mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi})$ 
+1) $\sigma, \tau, j \vDash \psi \leftrightarrow \sigma, \tau, j \vDash \phi$ and
+2) if $\tau_i - \tau_j \geq \Delta^w(\psi)$ then $\phi \in \{\top, \bot\}$
+\end{lemma}
+
+\noindent Proof is by induction over the formula $\phi'$: \\
+%% TRUE
+\noindent \textbf{Case} $\psi' \equiv \top$ \\
+This case returns the given residue, and since $\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j \vDash \psi$, 
+property 1 is satisfied and since $\psi' \in \{\top,\bot\}$ property 2 is satisfied.
+\\ \\ %% FALSE 
+\noindent \textbf{Case} $\psi' \equiv \bot$ \\
+This case returns the given residue, and since $\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j \vDash \psi$, 
+property 1 is satisfied and since $\psi' \in \{\top,\bot\}$ property 2 is satisfied.
+\\ \\ %% PROP
+\noindent \textbf{Case} $\psi' \equiv p$ \\
+In this case reduce returns $\rp{j}{\sigma(p)}$ -- this satisfies property one by the semantics of our logic ($\sigma, \tau, j \vDash p \leftrightarrow \sigma(p)$).
+Property 2 is trivially satisfied as this always returns $\phi \in \{\top, \bot\}$
+\\ \\ %% NOT
+\noindent \textbf{Case} $\psi' \equiv \neg \phi$ \\
+In this case we first obtain $\psi_1 \leftarrow \mathbf{reduce}(\phi)$ and then obtain $\psi_2 \leftarrow \mathbf{simplify}(\neg \psi_1)$.
+Since $\mathbf{simplify}$ is correct (Lemma 1) and $\sigma, \tau, j \vDash \psi_1 \leftrightarrow \sigma, \tau, j \vDash \phi$ 
+	we have $\sigma, \tau, j \vDash \psi_2 \leftrightarrow \sigma, \tau, j \vDash \neg \phi$.
+
+Since $\mathbf{reduce}$ is prompt we know that $\psi_1$ is prompt and since $\mathbf{simplify}$ is correct then this case will be prompt (property 2).
+\\ \\ %% OR
+\noindent \textbf{Case} $\psi' \equiv \alpha \vee \beta$ \\
+In this case we first obtain $\psi_a \leftarrow \mathbf{reduce}(\alpha)$ and $\psi_b \leftarrow \mathbf{reduce}(\beta)$.
+So we have $\sigma, \tau, j \vDash \psi_a \leftrightarrow \sigma, \tau, j \vDash \alpha$ and similarly for $\beta$.
+Next we recombine these into $\psi_{ab} = \psi_a \vee \psi_b$ and obtain $\phi \leftarrow \mathbf{simplify}(\psi_{ab})$.
+Since $\mathbf{simplify}$ is correct we know that $\sigma, \tau, j \vDash \phi \leftrightarrow \sigma, \tau, j \vDash \psi_a \vee \psi_b$.
+
+Since $\mathbf{reduce}$ is prompt we know that $\psi_a$ and $\psi_b$ are prompt, so $\psi_{ab}$ is also prompt and thus $\phi$ is prompt.
+\\ \\ %% UNTIL
+\noindent \textbf{Case} $\psi' \equiv \alpha \mathcal{U}_{[l,h]} \beta$ \\
+In this case we calculate five values and then use these values to determine the appropriate reduction. There are 4 possible reductions:
+\begin{enumerate}
+\item $b_t \leq a_u$ -- returning $\rp{j}{\top}$
+\item $a_a < b_a$ -- returning $\rp{j}{\bot}$
+\item $b_n \equiv \top$ -- returning $\rp{j}{\bot}$
+\item otherwise returning $\rp{j}{\psi'}$
+\end{enumerate}
+
+The first case is for when the formula is true. If $b_t$ is not empty then $\sigma, \tau, b_t \vDash \beta$ and 
+if $a_u$ is non-empty then 
+	$\forall n' \in [\tau_j,\tau_j+h].(n' < a_u \rightarrow \sigma, \tau, n' \vDash \alpha)$
+	so if $b_t \leq a_u$ then this is the truth semantics of Until ($\exists t. \sigma, \tau, t \vDash \beta$ and $\forall t' \in [\tau_j+l,t] \sigma, \tau, t' \vDash \alpha$)
+
+The second case is the most complex. In this case we check whether it's possible for $\psi'$ to be true (whether $\alpha$ can be true until the first possible true $\beta$).
+If $a_a$ is non-empty then $\sigma, \tau, a_a \nvDash \alpha$. If $b_a$ is non-empty then $b_a$ is the minimum position in $[\tau_j+l,\tau_j+h]$ where it's possible that $\beta$ is true, i.e. $\forall k \in [\tau_j+l,\tau_j+h].(k < b_a \rightarrow \sigma, \tau, k \nvDash \beta)$.
+So if $a_a < b_a$ then there are two cases: 
+\begin{enumerate}
+\item $\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$  -- in this case we know that $k \geq b_a$ and thus $\psi'$ must be false since we already know that $\sigma,\tau,a_a \nvDash \alpha$ and $a_a \in [\tau_j, k]$ so we cannot have $\alpha$ until $\beta$.
+\item $\not\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$ -- in this case $\alpha \mathcal{U}_{[l,h]} \beta$ is false, so we can return $\rp{j}{\bot}$
+\end{enumerate}
+
+The third case, if $b_n \equiv \top$ then because $S^i_{\beta}$ is prompt we know that $\not\exists t \in [\tau_j+l,\tau_j+h].(\sigma,\tau,t \vDash \beta)$. 
+Since this is true we know that $\alpha \mathcal{U}_{[l,h]} \beta$ must be false and so we can return $\rp{j}{\bot}$
+
+This last case is trivially correct.
+
+For promptness, there are two base cases -- either $\tau_i-\tau_j \geq \Delta^w(\psi)$ (i.e., the residue is past due) or $\tau_i-\tau_j < \Delta^w(\psi)$ (in which case the residue is not due yet, and so any returned value is prompt).
+
+So we only need to deal with the past due scenario: There are three possible scenarios:
+
+\noindent \textbf{Subcase} \textit{No Beta} \\
+There does not exist a $k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$. In this case, $b_n$ will be $\top$ so reduce will return $\rp{j}{\bot}$, satisfying promptness.
+\\ \\
+\noindent \textbf{Subcase} \textit{Not alpha until Beta} 
+$\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$ but $\not\forall k' \in [\tau_j,k].(\sigma, \tau, k' \vDash \alpha)$. In this case, since there is a $\beta$ within the bounds then $b_a = k$. Since in this case there exists a $k' \in [\tau_j,k]$ where $\sigma,\tau, k' \nvDash \alpha$ then $a_a = k'$. Since we know that $k' < k$, we have $a_a < b_a$ and so reduce will return $\rp{j}{\bot}$.
+\\ \\
+\noindent \textbf{Subcase} \textit{Alpha until Beta} 
+In this case, $\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k\vDash \beta)$ and $\forall k' \in [\tau_j,k].(\sigma,\tau,k' \vDash \alpha)$. So we have $b_a = k$ and $a_u \geq k$ (since the minimum residue in $[\tau_j,\tau_j+h]$ which is not $\top$ must be after $k$). So we have $b_t \leq a_u$ and so reduce returns $\rp{j}{\top}$.
+\\ \\ %% SINCE
+\noindent \textbf{Case} $\psi' \equiv \alpha \mathcal{S}_{[l,h]} \beta$ \\
+This proof is the same as the Until case
+
+\pagebreak
+\section{Algorithms}
+\subsection{Top-level monitoring Algorithm}
+Our top level aggressive monitoring algorithm is as follows:
+
+\begin{algorithmic}[1]
+\STATE Recognize formulas for which we build structures
+\STATE For all recognized formulas $\psi$: $S^{-1}_{\psi} \leftarrow \emptyset$
+\STATE $i \leftarrow 0$
+\LOOP
+\FOR{every $\psi \in \text{temp\_sub}(\varphi)$ in increasing size}
+	\STATE $S^i_{\psi} \leftarrow \bigcup\limits_{r \in S^{i-1}_{\psi}} \mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, r) \cup \mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, \rp{i}{\psi})$
+\ENDFOR
+\FOR{all $\rp{j}{\bot} \in S^i_{\varphi}$}
+\STATE \texttt{Report violation on $\sigma$ at position $j$}
+\ENDFOR
+\STATE $i \leftarrow i + 1$
+\ENDLOOP
+\end{algorithmic}
+
+
+%%% simplify
+\begin{align*}
+\mathbf{simplify}(\phi) = \left\{
+\begin{aligned}
+&\top &\text{ if } \phi \equiv \neg \bot \\
+&\bot &\text{ if } \phi \equiv \neg \top \\
+&\top &\text {if } \phi \equiv \psi_1 \vee \psi_2 \\
+& &\text{ and } \\ & & \psi_1 \equiv \top \text{ or } \psi_2 \equiv \top \\
+&\phi &\text{ otherwise}
+\end{aligned} \right. \\
+\end{align*}
+
+
+%%% Delta
+
+
+\begin{align*}
+\Delta(\phi) = \left\lbrace
+\begin{aligned}
+0 & \quad \text{ iff } \psi \equiv \top \\
+0 & \quad \text{ iff } \psi \equiv \bot \\
+0 & \quad \text{ iff } \psi \equiv p \\
+\Delta(\psi) & \quad \text{ iff } \phi \equiv \neg \psi \\
+%max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \wedge \beta \\
+max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \vee \beta \\
+%max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \rightarrow \beta \\
+%H + \Delta(\psi) & \quad \text{ iff } \phi \equiv \square_{l,H} \psi \\
+%h + \Delta(\psi) & \quad \text{ iff } \phi \equiv \lozenge_{l,h} \psi \\
+h + max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha\, \mathcal{U}_{[l,h]}\, \beta \\
+%\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacksquare_{l,H} \psi \\
+%\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacklozenge_{l,h} \psi \\
+max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha\, \mathcal{S}_{[l,h]}\, \beta \\
+\end{aligned} \right. 
+\end{align*}
+
+%%% Delta^w
+
+\begin{align*}
+\Delta^w(\phi) = \left\lbrace
+\begin{aligned}
+0 & \quad \text{ iff } \psi \equiv \top \\
+0 & \quad \text{ iff } \psi \equiv \bot \\
+0 & \quad \text{ iff } \psi \equiv p \\
+\Delta^w(\psi) & \quad \text{ iff } \phi \equiv \neg \psi \\
+%max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \wedge \beta \\
+max(\Delta^w(\alpha),\Delta^w(\beta)) & \quad \text{ iff } \phi \equiv \alpha \vee \beta \\
+%max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \rightarrow \beta \\
+%H + \Delta(\psi) & \quad \text{ iff } \phi \equiv \square_{l,H} \psi \\
+%h + \Delta(\psi) & \quad \text{ iff } \phi \equiv \lozenge_{l,h} \psi \\
+h + max(\Delta^w(\alpha),\Delta^w(\beta)) & \quad \text{ iff } \phi \equiv \alpha\, \mathcal{U}_{[l,h]}\, \beta \\
+%\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacksquare_{l,H} \psi \\
+%\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacklozenge_{l,h} \psi \\
+max(\Delta^w(\alpha),\Delta^w(\beta)) - l & \quad \text{ iff } \phi \equiv \alpha\, \mathcal{S}_{[l,h]}\, \beta \\
+\end{aligned} \right. 
+\end{align*}
+
+%\displaybreak
+\subsubsection*{Reduce}
+The reduce function takes a residue and returns the reduced residue:
+
+%\begin{align*}
+
+%%% true/false
+\begin{align*}
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\top}) &= \rp{j}{\top} \\
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\bot}) &= \rp{j}{\bot} \\
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{p}) &= \rp{j}{\sigma(p)} \\
+\end{align*}
+%%% NOT
+\begin{align*}
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\neg \psi}) = \left\{
+\begin{aligned}
+\text{Let } &\psi' \leftarrow \mathbf{reduce}(\sigma, \tau, i, \pi, \rp{j}{\psi}) \\
+&\psi'' \leftarrow \mathbf{simplify}(\neg \psi') \\
+&\textbf{return } \rp{j}{\psi''} \\
+\end{aligned} \right. \\
+\end{align*}
+
+%%% OR
+\begin{align*}
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\alpha \vee \beta} = \left\{
+\begin{aligned}
+\text{Let } &\alpha' \leftarrow \mathbf{reduce}(\sigma, \tau, i, \pi, \rp{j}{\alpha}) \\
+&\beta' \leftarrow \mathbf{reduce}(\sigma, \tau, i, \pi, \rp{j}{\beta}) \\
+&\phi' \leftarrow \mathbf{simplify}(\alpha' \vee \beta') \\
+&\textbf{return } \rp{j}{\phi'} \\
+\end{aligned} \right. \\
+\end{align*}
+
+%%% TAU UNTIL
+\begin{align*}
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}) = \left\{
+\begin{aligned}
+&\text{let } a_a \leftarrow min(\{k | \tau_k - \tau_j \in [0, h] \wedge \rp{k}{\bot} \in S^i_{\alpha} \}, i+1)  \\
+&a_u \leftarrow min(\{k | \tau_k - \tau_j \in [0, h] \wedge  \rp{k}{\psi'} \in S^i_{\alpha} \wedge \psi' \neq \top \}, i) \\
+&b_a \leftarrow min(\{k | \tau_k - \tau_j \in [l, h] \wedge \rp{k}{\psi'} \in S^i_{\beta} \wedge \psi' \neq \bot \}, i)  \\
+&b_t \leftarrow min(\{k | \tau_k - \tau_j \in [l, h] \wedge \rp{k}{\top} \in S^i_{\beta} \}) \\
+&b_n \leftarrow \top \text{ if } (\tau_i - \Delta^w(\psi) \geq \tau_j) \wedge \forall k.(\tau_k - \tau_i \in [l,h] \rightarrow \rp{k}{\bot} \in S^i_{\beta}) \\
+&\text{if }b_t \neq \emptyset \wedge b_t \leq a_u \\
+& \quad\mathbf{return} \rp{j}{\top} \\
+&\text{else if } a_a < b_a \text{ or } b_n = \top\\ & \quad\mathbf{return} \rp{j}{\bot} \\
+&\text{else} \\
+& \quad\mathbf{return} \rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}
+\end{aligned} \right. \\
+\end{align*}
+
+%%% TAU SINCE
+
+\begin{align*}
+\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\alpha\, \mathcal{S}_{[l,h]}\, \beta}) = \left\{
+\begin{aligned}
+&\text{let } a_a \leftarrow max(\{k | \tau_k - \tau_j \in [-h, 0] \wedge \rp{k}{\bot} \in S^i_{\alpha} \}, j+1)  \\
+&a_u \leftarrow max(\{k | \tau_k - \tau_j \in [-h, 0] \wedge  \rp{k}{\psi'} \in S^i_{\alpha} \wedge \psi' \neq \top \}, j) \\
+&b_a \leftarrow max(\{k | \tau_k - \tau_j \in [-h, -l] \wedge \rp{k}{\psi'} \in S^i_{\beta} \wedge \psi' \neq \bot \}, j)  \\
+&b_t \leftarrow max(\{k | \tau_k - \tau_j \in [-h, -l] \wedge \rp{k}{\top} \in S^i_{\beta} \}) \\
+&b_n \leftarrow \top \text{ if } (\tau_i - \Delta^w(\psi) \geq \tau_j) \wedge \forall k.(\tau_k - \tau_i \in [l,h] \rightarrow \rp{k}{\bot} \in S^i_{\beta}) \\
+&\text{if }b_t \neq \emptyset \wedge b_t \leq a_u \\
+& \quad\mathbf{return} \rp{j}{\top} \\
+&\text{else if } a_a < b_a \text{ or } b_n = \top\\ & \quad\mathbf{return} \rp{j}{\bot} \\
+&\text{else} \\
+& \quad\mathbf{return} \rp{j}{\alpha\, \mathcal{S}_{[l,h]}\, \beta}
+\end{aligned} \right. \\
+\end{align*}
+
+\end{document}
+
+
+
+%%%% old stuff, don't really need but keeping around for now...
+\section{Soundness/Completeness Proofs}
+
+The soundness and completeness of our top-level algorithm ultimately depends on the soundness and completeness of the reduce algorithm. So first, we show that reduce is sound and complete.
+
+\begin{thm}
+The function $\hat{r}^{\phi}_{j} \leftarrow reduce(\sigma_i, \tau_i, \mathbb{R}^i, \res{j}{\phi})$ is sound, complete, and prompt when $\mathbb{R}^i, \res{j}{\phi}$ are sound, complete, and prompt.
+\end{thm}
+\noindent We will show that the properties hold over the form of $\phi$: \\
+\\ \noindent \textbf{Case} $\phi \equiv \top/\bot$: \\
+reduce is trivially sound, complete and prompt since we do not change the residue.
+
+\noindent \textbf{Case} $\phi \equiv p$ \\
+reduce is trivially sound, from the semantics we know $\sigma, \tau, j \vDash p \leftrightarrow \sigma, \tau, j \vDash \sigma_j(p)$. Promptness is trivial since reduce will always return the reduced truth value of a proposition.  For completeness we know that $\sigma, \tau, j \vDash p \rightarrow \sigma, \tau, j \vDash \sigma_j(p)$ and $\sigma, \tau, j \nvDash p \rightarrow \sigma, \tau, j \nvDash \sigma_j (p)$, so replacing $p$ with $\sigma_j(p)$ is complete.
+\\ \\ 
+\noindent \textbf{Case} $\phi \equiv \neg \psi$ \\
+reduce is trivially sound...
+\\ \\
+\noindent \textbf{Case} $\phi \equiv \psi_1 \vee \psi_2$ \\
+...
+\\ \\
+\noindent \textbf{Case} $\phi \equiv \psi_1 \mathcal{U}_{[l,h]} \psi_2$: \\
+Soundness is simple in this case, since reduce either returns $\res{j}{\phi}$ which is trivially sound, or it returns the semantically correct truth value ($\top/\bot$). Reduce will only return $\top$ if $\exists k \in [j+l,j+h]$ s.t. $\res{k}{\psi_2} = \top$ and $\forall k' \in [j,e]$ $\res{k'}{\psi_1} = \top$ (if any $\psi_1$ residue is $\bot$ then $\bot$ will be returned, and if any are not yet evaluated then unfinished is set and the original residue is returned). This is the semantics of $\mathcal{U}$, so we know that a returned $\top/\bot \rightarrow \sigma, \tau, j \vDash \phi$. Thus reduce is sound for $\mathcal{U}$.
+
+Completeness is trivial because the only possible reduction is a sound $\top/\bot$ value or the original $\phi$. So for all $\res{j}{\psi} \in S^i_{\psi_1 \mathcal{U}_{[l,h]} \psi_2}$ we have $\res{\psi}{j} \equiv \rp{j}{\psi_1 \mathcal{U}_{[l,h]} \psi_2}$ or $\res{\psi}{j} \equiv \top/\bot$. Since reduce is sound, if the residue is $\top/\bot$ we know that the residue value is correct ($\top$ if $\sigma, \tau, j \vDash \phi$ and $\bot$ otherwise) and if a residue $\res{\phi}{j} \equiv \rp{j}{\phi}$ it is trivially complete.
+
+Reduce is prompt $\mathbf{reduce}$
+
+
+\section{Description}
+Our runtime monitoring algorithm \agmon takes as input a well-formed bmtl formula $\varphi$, monitors the system trace as it grows, builds history structures for temporal subformula of $\varphi$ and reports violations of $\varphi$ as soon as they are detected.
+
+We summarize the relevant functions below: \\
+$\agmon(\varphi)$ is our top-level monitor function. \\
+$\mathbf{incr}(\sigma_i, \tau, i, \hat{\mathcal{R}}^i, \psi)$ updates the history structure $S^i_{\psi}$ based on the new trace entry $\sigma_i$ \\ 
+$\mathbf{reduce}(\sigma_i,\tau, i, \mathcal{R}^i, \res{\psi}{j})$ takes a residue $\res{\psi}{j}$ and returns a reduced residue based on the history $\mathcal{R}^i$ and current state $\sigma_i, \tau_i$. 

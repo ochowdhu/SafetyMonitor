@@ -181,6 +181,7 @@ int main() {
 		// state is updated by interrupts, check if we should be going or not?
 		// if the last step we checked (estep) is less than the most recent step 
 		// we've received (instep) then run the checker again
+		//@TODO -- need to grab instep so it doesn't get changed out from under us here
 		if (estep < instep) {
 			// first increment the structure
 			incrStruct(estep);
@@ -188,7 +189,7 @@ int main() {
 			// run conservative
 			cons_res.step = estep;
 			cons_res.form = POLICY;
-			reduce(&cons_res);
+			reduce(instep, &cons_res);
 			rbInsert(&mainresbuf, cons_res.step, cons_res.form);
 			
 			start = mainresbuf.start;
@@ -197,7 +198,7 @@ int main() {
 				resp = rbGet(&mainresbuf, start);
 				//cons_res = *(rbGet(&mainresbuf, start));
 				if ((estep - resp->step) >= delay) {
-					reduce(resp);
+					reduce(estep, resp);
 					if (resp->form == FORM_TRUE) {
 						// LEDS?
 					} else if (resp->form == FORM_FALSE) {
