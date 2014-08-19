@@ -82,6 +82,22 @@ it is the case that if $\psi' \leftarrow \mathbf{simplify}(\psi)$ then $\sigma, 
 Proof. Trivial by the semantics of $\mathbf{simplify}$.
 \end{lemma}
 
+
+\begin{lemma}[Correctness of $\mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi})$]
+For all $i, j \leq i, \psi, \sigma, \tau,$ correct $\mathbb{S}^i_{\psi}$ and $\psi'$ such that $\sigma, \tau, j \vDash \psi \leftrightarrow \sigma, \tau, j \vDash \psi'$ then if $\rp{j', \phi} \leftarrow \mathbf{reduce}(\sigma,\tau,i\mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi}$ then $\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j \vDash \phi$.
+\end{lemma}
+
+\noindent Proof. \\
+
+\noindent \textbf{Case $\alpha \mathcal{S}_{[l,h]} \beta$}
+There are two cases, 1) $\sigma, \tau, j \vDash \psi' \rightarrow \sigma, \tau, j \vDash \phi$ and 2) $\sigma, \tau, j \vDash \phi \rightarrow \sigma, \tau, j \vDash \psi'$.
+
+\noindent \textbf{Case 1} \\
+
+By the semantics of Since, we know that $\exists k \in [\tau_j-h,\tau_j-l].(\sigma, \tau, k \vDash \beta \wedge \forall k' \in [k,j].(\sigma, \tau, k' \vDash \alpha))$. Since $S^i_{\beta}$ is correct then there is a $\rp{k}{\top} \in S^i_{\beta}$ and since $S^i_\alpha$ is correct then $\forall k' \in [k,j]. \rp{k'}{\top} \in S^i_\alpha$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% need to remove this one we get going.
 \begin{lemma}[Correctness of $\mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi})$]
 For all positions $i,j$ with $j \leq i$, formulas $\psi$, traces $\sigma$, time series $\tau$, $\psi'$ such that 
 $\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j, \psi$, and all $S^i_{\phi'} \in \mathbb{S}^i_{\psi}$ correct it is the case that
@@ -162,6 +178,8 @@ In this case, $\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k\vDash \beta)$ an
 \noindent \textbf{Case} $\psi' \equiv \alpha \mathcal{S}_{[l,h]} \beta$ \\
 This proof is the same as the Until case
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \pagebreak
 \section{Algorithms}
 \subsection{Top-level monitoring Algorithm}
@@ -294,7 +312,7 @@ The reduce function takes a residue and returns the reduced residue:
 \begin{align*}
 \mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\alpha\, \mathcal{S}_{[l,h]}\, \beta}) = \left\{
 \begin{aligned}
-&\text{let } a_a \leftarrow max(\{k | \tau_k - \tau_j \in [-h, 0] \wedge \rp{k}{\bot} \in S^i_{\alpha} \}, j+1)  \\
+&\text{let } a_a \leftarrow max(\{k | \tau_k - \tau_j \in [-h, 0] \wedge \rp{k}{\bot} \in S^i_{\alpha} \})  \\
 &a_u \leftarrow max(\{k | \tau_k - \tau_j \in [-h, 0] \wedge  \rp{k}{\psi'} \in S^i_{\alpha} \wedge \psi' \neq \top \}, j) \\
 &b_a \leftarrow max(\{k | \tau_k - \tau_j \in [-h, -l] \wedge \rp{k}{\psi'} \in S^i_{\beta} \wedge \psi' \neq \bot \}, j)  \\
 &b_t \leftarrow max(\{k | \tau_k - \tau_j \in [-h, -l] \wedge \rp{k}{\top} \in S^i_{\beta} \}) \\
