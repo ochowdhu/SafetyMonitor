@@ -65,7 +65,6 @@ We let $\mathbb{S}^i_{\psi}$ represent the set of history structures for all tem
 %\end{enumerate}
 %\end{tdef}
 
-
 With these properties defined, we ultimately wish to prove the correctness of our top-level algorithm \agmon.
 
 \begin{thm}[Correctness of \agmon]
@@ -86,15 +85,17 @@ it is the case that if $\psi' \leftarrow \mathbf{simplify}(\psi)$ then $\sigma, 
 Proof. Trivial by the semantics of $\mathbf{simplify}$.
 \end{lemma}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Correctness of reduce
 
 \begin{lemma}[Correctness of $\mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi})$]
-For all $i, j \leq i, \psi, \sigma, \tau,$ correct $\mathbb{S}^i_{\psi}$ and $\psi'$ such that $\sigma, \tau, j \vDash \psi \leftrightarrow \sigma, \tau, j \vDash \psi'$ then if $\rp{j'}{\phi} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi})$ then $\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j \vDash \phi$.
+For all $i, j \leq i, \psi, \sigma, \tau,$ $\mathbb{S}^i_{\psi}$, and $\psi'$ such that all $S^i_\phi \in \mathbb{S}^i_{\psi}$ are correct and $\sigma,\tau,j \vDash \psi \leftrightarrow \sigma,\tau,j\vDash \psi'$ then if $\rp{j'}{\phi} \leftarrow \mathbf{reduce}(\sigma,\tau,i,\mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi})$ then $\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j \vDash \phi$.
 \end{lemma}
 
 \noindent Proof by induction over $\psi$. \\
 
 %%%%%% PROP
-\noindent \textbf{Case $\psi \equiv p$} \\
+\noindent \textbf{Case $\psi' \equiv p$} \\
 There are two cases: $\sigma, \tau, j \vDash p \rightarrow \sigma, \tau, j \vDash \phi$ and $\sigma,\tau,j\vDash \phi \rightarrow \sigma,\tau,j\vDash p$.
 
 \textbf{Subcase 1}
@@ -103,125 +104,86 @@ From the semantics of $p$ in this case we know that $\sigma_i(p) = \top$. In thi
 \textbf{Subcase 2}
 There are two possible subcases here, either $\sigma_i(p) = \bot$ or $\sigma_i(p) = \top$. If $\sigma_i(p) = \bot$ then trivially $\sigma,\tau,j\vDash \bot \rightarrow \sigma,\tau,j\vDash p$. If $\sigma_i(p) = \top$ then we have $\sigma,\tau,j\vDash \top \rightarrow \sigma,\tau,j\vDash p$ which is true from the semantics of $p$ (since $\sigma_i(p) = \top$).
 \\ \\
-%%%%% SINCE
-\noindent \textbf{Case $\alpha \mathcal{S}_{[l,h]} \beta$}
+%%%%% NOT
+\noindent \textbf{Case $\psi' \equiv \neg \psi_1$} \\
+There are two cases: $\sigma, \tau, j \vDash \neg \psi_1 \rightarrow \sigma, \tau, j \vDash \phi$ and $\sigma,\tau,j\vDash \phi \rightarrow \sigma,\tau,j\vDash \neg \psi_1$.
+
+\textbf{Subcase 1}
+From the semantics of Not we know that if $\sigma,\tau,j\vDash \neg \psi_1$ then $\sigma, \tau, j\nvDash \psi_1$. Since reduce is correct we can see from the definition of reduce that $\psi_1' \leftarrow \mathbf{reduce}(\rp{j}{\psi})$ will be $\rp{j}{\bot}$ and then $\mathbf{simplify}(\neg \psi_1')$ will return $\top$.
+
+\textbf{Subcase 2}
+There are two possible subcases here, either $\sigma_i(p) = \bot$ or $\sigma_i(p) = \top$. If $\sigma_i(p) = \bot$ then trivially $\sigma,\tau,j\vDash \bot \rightarrow \sigma,\tau,j\vDash p$. If $\sigma_i(p) = \top$ then we have $\sigma,\tau,j\vDash \top \rightarrow \sigma,\tau,j\vDash p$ which is true from the semantics of $p$ (since $\sigma_i(p) = \top$).
+\\ \\
+%%%%% UNTIL
+\noindent \textbf{Case $\psi' \equiv \alpha \mathcal{U}_{[l,h]} \beta$} \\
 There are two cases, 1) $\sigma, \tau, j \vDash \psi' \rightarrow \sigma, \tau, j \vDash \phi$ and 2) $\sigma, \tau, j \vDash \phi \rightarrow \sigma, \tau, j \vDash \psi'$.
 
 \textbf{Subcase [$\sigma, \tau, j \vDash \psi' \rightarrow \sigma, \tau, j \vDash \phi$]} 
-By the semantics of Since, we know that $\exists k \in [\tau_j-h,\tau_j-l].(\sigma, \tau, k \vDash \beta \wedge \forall k' \in [k,j].(\sigma, \tau, k' \vDash \alpha))$. Since $S^i_{\beta}$ is correct then there is a $\rp{k}{\top} \in S^i_{\beta}$ and since $S^i_\alpha$ is correct then $\forall k' \in [k+1,j]. \rp{k'}{\top} \in S^i_\alpha$.
+By the semantics of Until, we know that $\exists k \in [\tau_j+l,\tau_j+h].(\sigma, \tau, k \vDash \beta \wedge \forall k' \in [j,k-1].(\sigma, \tau, k' \vDash \alpha))$. Since $S^i_{\beta}$ is correct then there is a $\rp{k}{\top} \in S^i_{\beta}$ and since $S^i_\alpha$ is correct then $\forall k' \in [j,k-1]. \rp{k'}{\top} \in S^i_\alpha$.
 
-Given these values in the history structs, we can see from the definition of reduce that $a_a = k$, $a_s = k$, $b_a \geq k$, $b_t \geq k$, and $b_n = \bot$. With these values, we see that $a_s \leq b_t + 1$ and so $\mathbf{reduce}$ returns $\rp{j}{\top}$ and so this case is satisfied.
+Given these values in the history structs, we can see from the definition of reduce that $a_a \geq k-1$, $a_u \geq k-1$, $b_a \leq k$, $b_t \leq k$, and $b_n = \bot$. With these values, we see that $a_u \geq b_t - 1$ and so $\mathbf{reduce}$ returns $\rp{j}{\top}$ and this case is satisfied.
 
 \textbf{Subcase [$\sigma, \tau, j \vDash \phi \rightarrow \sigma, \tau, j \vDash \psi'$]}
 There are three possible subcases here: $\phi = \top$, $\phi = \bot$, and $\phi = \psi'$.
 
 \hspace{2em} \textbf{Sub-Subcase} $\phi = \top$
-If $\phi = \top$ then we know that $a_s \leq b_t + 1$. For this to be the case there exists $k$ such that $\tau_k \in [\tau_j-h,\tau_j-l] \wedge \rp{k}{\top} \in S^i_\beta$ (i.e., $b_t = k$) and there exists $a \leq k+1$ such that $\forall a' \in [\tau_{k+1},\tau_j].(\rp{a'}{\top} \in S^i_\alpha)$ (i.e., $a_s = a$). Since $\rp{k}{\top}$ is in $S^i_\beta$ and $S^i_\beta$ is correct, we know that $\sigma,\tau,k \vDash \beta$. Since $S^i_\alpha$ is correct we also know from $a_s$ that $\forall k' \in [\tau_{k+1},\tau_j] \sigma, \tau, k' \vDash \alpha$. Given this, we can see that the semantics for Since are met and so $\sigma, \tau, j \vDash \alpha\, \mathcal{S}_{[l,h]}\, \beta$.
+If $\phi = \top$ then we know that $a_u \geq b_t - 1$. For this to be the case there exists $k$ such that $\tau_k \in [\tau_j+l,\tau_j+h] \wedge \rp{k}{\top} \in S^i_\beta$ (i.e., $b_t \leq k$) and that $\forall k' \in [\tau_j,\tau_{k-1}].(\rp{k'}{\top} \in S^i_\alpha)$ (i.e., $a_u \geq k-1$). Since $\rp{k}{\top}$ is in $S^i_\beta$ and $S^i_\beta$ is correct, we know that $\sigma,\tau,k \vDash \beta$. Since $S^i_\alpha$ is correct we also know from $a_u$ that $\forall k' \in [\tau_j,\tau_{k-1}] \sigma, \tau, k' \vDash \alpha$. Given this, we can see that the semantics for Until are met and so $\sigma, \tau, j \vDash \alpha\, \mathcal{U}_{[l,h]}\, \beta$.
 
 \hspace{2em} \textbf{Sub-Subcase} $\phi = \bot$
-If $\phi = \bot$ then we know that either $b_n = \top$ or $a_a > b_a$. If $b_n = \top$ then $\tau_i-\Delta(\psi) \geq \tau_j) \wedge \forall k.(\tau_k \in [\tau_j-l,\tau_j-h] \rightarrow \rp{k}{\bot} \in S^i_\beta)$. Since $S^i_\beta$ is correct, $\forall k.(\tau_k \in [\tau_j-l,\tau_j-h]. \sigma, \tau, k \nvDash \beta)$ which means that $\sigma, \tau, j \nvDash \alpha\, \mathcal{S}_{[l,h]}\, \beta$ due to the semantics of Since.
+If $\phi = \bot$ then we know that either $b_n = \top$ or $a_a < b_a$. 
 
-In the other case, we have $a_a > b_a$. From $b_a$ we know that $\forall k.(k \in [b_a,\tau_j-l] \rightarrow \rp{k}{bot} \in S^i_\beta$ and since $S^i_\beta$ is correct we know that for all these $k$, $\sigma,\tau,k \nvDash \beta$. Given $a_a > b_a$ we know that $\exists k' \in [b_a,\tau_j].(\rp{k'}{\bot} \in S^i_\alpha$ which means that $\sigma, \tau, k' \nvDash \alpha$. From the semantics of since and the above restrictions, for $\phi$ to be satisfied there must exist a point $p \in [\tau_j-h,b_a]. \sigma, \tau, p \vDash \beta$ and $\forall p' \in [p, \tau_j]. \sigma, \tau, p' \vDash \alpha$. But we already know (since $p' \leq b_a$) that $\exists p' \in [p,\tau_j] \sigma, \tau, p' \nvDash \alpha$, so $\alpha\, \mathcal{S}_{[l,h]}\, \beta$ cannot hold.
+If $b_n = \top$ then $(\tau_i-\Delta(\psi) \geq \tau_j) \wedge \forall k.(\tau_k \in [\tau_j+l,\tau_j+h] \rightarrow \rp{k}{\bot} \in S^i_\beta)$. Since $S^i_\beta$ is correct, $\forall k.(\tau_k \in [\tau_j+l,\tau_j+h]. \sigma, \tau, k \nvDash \beta)$ which means that $\sigma, \tau, j \nvDash \alpha\, \mathcal{S}_{[l,h]}\, \beta$ due to the semantics of Until.
+
+In the other case, we have $a_a < b_a$. From $b_a$ we know that $\forall k.(k \in [\tau_j,b_a] \rightarrow \rp{k}{\bot} \in S^i_\beta)$ and since $S^i_\beta$ is correct we know that for all these $k$, $\sigma,\tau,k \nvDash \beta$. 
+Given $a_a < b_a$ we know that $\exists k' \in [\tau_j,b_a].(\rp{k'}{\bot} \in S^i_\alpha)$ which means that $\sigma, \tau, k' \nvDash \alpha$. 
+From the semantics of Until and the above restrictions, for $\phi$ to be satisfied there must exist a point $p$ where $\tau_p \in [\tau_{b_a},\tau_j+h]. \sigma, \tau, p \vDash \beta$ and $\forall p' \in [j,p-1]. \sigma, \tau, p' \vDash \alpha$. 
+But we already know (since $p \geq b_a$) that $\exists p' \in [\tau_j,p].(\sigma, \tau, p' \nvDash \alpha)$, so $\alpha\, \mathcal{U}_{[l,h]}\, \beta$ cannot hold.
+
+\hspace{2em} \textbf{Sub-Subcase} $\phi = \psi'$
+This case is trivial, since $\sigma,\tau,j\vDash \psi' \rightarrow \sigma,\tau,j\vDash \psi'$
+%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+\\ \\
+%%%%% SINCE
+\noindent \textbf{Case $\psi' \equiv \alpha \mathcal{S}_{[l,h]} \beta$}
+There are two cases, 1) $\sigma, \tau, j \vDash \psi' \rightarrow \sigma, \tau, j \vDash \phi$ and 2) $\sigma, \tau, j \vDash \phi \rightarrow \sigma, \tau, j \vDash \psi'$.
+
+\textbf{Subcase [$\sigma, \tau, j \vDash \psi' \rightarrow \sigma, \tau, j \vDash \phi$]} 
+By the semantics of Since, we know that $\exists k \in [\tau_j-h,\tau_j-l].(\sigma, \tau, k \vDash \beta \wedge \forall k' \in [k+1,j].(\sigma, \tau, k' \vDash \alpha))$. Since $S^i_{\beta}$ is correct then there is a $\rp{k}{\top} \in S^i_{\beta}$ and since $S^i_\alpha$ is correct then $\forall k' \in [k+1,j]. \rp{k'}{\top} \in S^i_\alpha$.
+
+Given these values in the history structs, we can see from the definition of reduce that $a_a \leq k$, $a_s \leq k$, $b_a \geq k$, $b_t \geq k$, and $b_n = \bot$. With these values, we see that $a_s < b_t + 1$ and so $\mathbf{reduce}$ returns $\rp{j}{\top}$ and so this case is satisfied.
+
+\textbf{Subcase [$\sigma, \tau, j \vDash \phi \rightarrow \sigma, \tau, j \vDash \psi'$]}
+There are three possible subcases here: $\phi = \top$, $\phi = \bot$, and $\phi = \psi'$.
+
+\hspace{2em} \textbf{Sub-Subcase} $\phi = \top$
+If $\phi = \top$ then we know that $a_s \leq b_t + 1$. For this to be the case there exists $k$ such that $\tau_k \in [\tau_j-h,\tau_j-l] \wedge \rp{k}{\top} \in S^i_\beta$ (i.e., $b_t = k$) and that $\forall k' \in [\tau_{k+1},\tau_j].(\rp{k'}{\top} \in S^i_\alpha)$ (i.e., $a_s \leq k+1$). Since $\rp{k}{\top}$ is in $S^i_\beta$ and $S^i_\beta$ is correct, we know that $\sigma,\tau,k \vDash \beta$. Since $S^i_\alpha$ is correct we also know from $a_s$ that $\forall k' \in [\tau_{k+1},\tau_j] \sigma, \tau, k' \vDash \alpha$. Given this, we can see that the semantics for Since are met and so $\sigma, \tau, j \vDash \alpha\, \mathcal{S}_{[l,h]}\, \beta$.
+
+\hspace{2em} \textbf{Sub-Subcase} $\phi = \bot$
+If $\phi = \bot$ then we know that either $b_n = \top$ or $a_a > b_a$. 
+
+If $b_n = \top$ then $(\tau_i-\Delta(\psi) \geq \tau_j) \wedge \forall k.(\tau_k \in [\tau_j-h,\tau_j-l] \rightarrow \rp{k}{\bot} \in S^i_\beta)$. Since $S^i_\beta$ is correct, $\forall k.(\tau_k \in [\tau_j-l,\tau_j-h]. \sigma, \tau, k \nvDash \beta)$ which means that $\sigma, \tau, j \nvDash \alpha\, \mathcal{S}_{[l,h]}\, \beta$ due to the semantics of Since.
+
+In the other case, we have $a_a > b_a$. From $b_a$ we know that $\forall k.(k \in [b_a,\tau_j-l] \rightarrow \rp{k}{\bot} \in S^i_\beta)$ and since $S^i_\beta$ is correct we know that for all these $k$, $\sigma,\tau,k \nvDash \beta$. 
+Given $a_a > b_a$ we know that $\exists k' \in [b_a,\tau_j].(\rp{k'}{\bot} \in S^i_\alpha)$ which means that $\sigma, \tau, k' \nvDash \alpha$. 
+From the semantics of since and the above restrictions, for $\phi$ to be satisfied there must exist a point $p \in [\tau_j-h,b_a]. \sigma, \tau, p \vDash \beta$ and $\forall p' \in [p, \tau_j]. \sigma, \tau, p' \vDash \alpha$. 
+But we already know (since all $p' \leq p \leq b_a$) that $\exists p' \in [p,\tau_j] \sigma, \tau, p' \nvDash \alpha$, so $\alpha\, \mathcal{S}_{[l,h]}\, \beta$ cannot hold.
 
 %which from the definition of reduce we can see that $\exists k.(\tau_k \in [\tau_j-h,\tau_j] \wedge \rp{k}{\bot} \in S^i_\alpha)$ and $\exists k' < k. \tau_{k'} \in [\tau_j-h,\tau_j-l] \wedge \rp{k}{\beta'} \in S^i_\beta \wedge \beta' \neq \bot$.
 \hspace{2em} \textbf{Sub-Subcase} $\phi = \psi'$
 This case is trivial, since $\sigma,\tau,j\vDash \psi' \rightarrow \sigma,\tau,j\vDash \psi'$
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%% need to remove this one we get going.
-%OLD%\begin{lemma}[Correctness of $\mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi})$]
-%OLD%For all positions $i,j$ with $j \leq i$, formulas $\psi$, traces $\sigma$, time series $\tau$, $\psi'$ such that 
-%OLD%$\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j, \psi$, and all $S^i_{\phi'} \in \mathbb{S}^i_{\psi}$ correct it is the case that
-%OLD%for $\rp{j'}{\phi} \leftarrow \mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi})$ 
-%OLD%1) $\sigma, \tau, j \vDash \psi \leftrightarrow \sigma, \tau, j \vDash \phi$ and
-%OLD%2) if $\tau_i - \tau_j \geq \Delta^w(\psi)$ then $\phi \in \{\top, \bot\}$
-%OLD%\end{lemma}
-%OLD%
-%OLD%\noindent Proof is by induction over the formula $\phi'$: \\
-%OLD%%% TRUE
-%OLD%\noindent \textbf{Case} $\psi' \equiv \top$ \\
-%OLD%This case returns the given residue, and since $\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j \vDash \psi$, 
-%OLD%property 1 is satisfied and since $\psi' \in \{\top,\bot\}$ property 2 is satisfied.
-%OLD%\\ \\ %% FALSE 
-%OLD%\noindent \textbf{Case} $\psi' \equiv \bot$ \\
-%OLD%This case returns the given residue, and since $\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j \vDash \psi$, 
-%OLD%property 1 is satisfied and since $\psi' \in \{\top,\bot\}$ property 2 is satisfied.
-%OLD%\\ \\ %% PROP
-%OLD%\noindent \textbf{Case} $\psi' \equiv p$ \\
-%OLD%In this case reduce returns $\rp{j}{\sigma(p)}$ -- this satisfies property one by the semantics of our logic ($\sigma, \tau, j \vDash p \leftrightarrow \sigma(p)$).
-%OLD%Property 2 is trivially satisfied as this always returns $\phi \in \{\top, \bot\}$
-%OLD%\\ \\ %% NOT
-%OLD%\noindent \textbf{Case} $\psi' \equiv \neg \phi$ \\
-%OLD%In this case we first obtain $\psi_1 \leftarrow \mathbf{reduce}(\phi)$ and then obtain $\psi_2 \leftarrow \mathbf{simplify}(\neg \psi_1)$.
-%OLD%Since $\mathbf{simplify}$ is correct (Lemma 1) and $\sigma, \tau, j \vDash \psi_1 \leftrightarrow \sigma, \tau, j \vDash \phi$ 
-%OLD%	we have $\sigma, \tau, j \vDash \psi_2 \leftrightarrow \sigma, \tau, j \vDash \neg \phi$.
-%OLD%
-%OLD%Since $\mathbf{reduce}$ is prompt we know that $\psi_1$ is prompt and since $\mathbf{simplify}$ is correct then this case will be prompt (property 2).
-%OLD%\\ \\ %% OR
-%OLD%\noindent \textbf{Case} $\psi' \equiv \alpha \vee \beta$ \\
-%OLD%In this case we first obtain $\psi_a \leftarrow \mathbf{reduce}(\alpha)$ and $\psi_b \leftarrow \mathbf{reduce}(\beta)$.
-%OLD%So we have $\sigma, \tau, j \vDash \psi_a \leftrightarrow \sigma, \tau, j \vDash \alpha$ and similarly for $\beta$.
-%OLD%Next we recombine these into $\psi_{ab} = \psi_a \vee \psi_b$ and obtain $\phi \leftarrow \mathbf{simplify}(\psi_{ab})$.
-%OLD%Since $\mathbf{simplify}$ is correct we know that $\sigma, \tau, j \vDash \phi \leftrightarrow \sigma, \tau, j \vDash \psi_a \vee \psi_b$.
-%OLD%
-%OLD%Since $\mathbf{reduce}$ is prompt we know that $\psi_a$ and $\psi_b$ are prompt, so $\psi_{ab}$ is also prompt and thus $\phi$ is prompt.
-%OLD%\\ \\ %% UNTIL
-%OLD%\noindent \textbf{Case} $\psi' \equiv \alpha \mathcal{U}_{[l,h]} \beta$ \\
-%OLD%In this case we calculate five values and then use these values to determine the appropriate reduction. There are 4 possible reductions:
-%OLD%\begin{enumerate}
-%OLD%\item $b_t \leq a_u$ -- returning $\rp{j}{\top}$
-%OLD%\item $a_a < b_a$ -- returning $\rp{j}{\bot}$
-%OLD%\item $b_n \equiv \top$ -- returning $\rp{j}{\bot}$
-%OLD%\item otherwise returning $\rp{j}{\psi'}$
-%OLD%\end{enumerate}
-%OLD%
-%OLD%The first case is for when the formula is true. If $b_t$ is not empty then $\sigma, \tau, b_t \vDash \beta$ and 
-%OLD%if $a_u$ is non-empty then 
-%OLD%	$\forall n' \in [\tau_j,\tau_j+h].(n' < a_u \rightarrow \sigma, \tau, n' \vDash \alpha)$
-%OLD%	so if $b_t \leq a_u$ then this is the truth semantics of Until ($\exists t. \sigma, \tau, t \vDash \beta$ and $\forall t' \in [\tau_j+l,t] \sigma, \tau, t' \vDash \alpha$)
-%OLD%
-%OLD%The second case is the most complex. In this case we check whether it's possible for $\psi'$ to be true (whether $\alpha$ can be true until the first possible true $\beta$).
-%OLD%If $a_a$ is non-empty then $\sigma, \tau, a_a \nvDash \alpha$. If $b_a$ is non-empty then $b_a$ is the minimum position in $[\tau_j+l,\tau_j+h]$ where it's possible that $\beta$ is true, i.e. $\forall k \in [\tau_j+l,\tau_j+h].(k < b_a \rightarrow \sigma, \tau, k \nvDash \beta)$.
-%OLD%So if $a_a < b_a$ then there are two cases: 
-%OLD%\begin{enumerate}
-%OLD%\item $\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$  -- in this case we know that $k \geq b_a$ and thus $\psi'$ must be false since we already know that $\sigma,\tau,a_a \nvDash \alpha$ and $a_a \in [\tau_j, k]$ so we cannot have $\alpha$ until $\beta$.
-%OLD%\item $\not\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$ -- in this case $\alpha \mathcal{U}_{[l,h]} \beta$ is false, so we can return $\rp{j}{\bot}$
-%OLD%\end{enumerate}
-%OLD%
-%OLD%The third case, if $b_n \equiv \top$ then because $S^i_{\beta}$ is prompt we know that $\not\exists t \in [\tau_j+l,\tau_j+h].(\sigma,\tau,t \vDash \beta)$. 
-%OLD%Since this is true we know that $\alpha \mathcal{U}_{[l,h]} \beta$ must be false and so we can return $\rp{j}{\bot}$
-%OLD%
-%OLD%This last case is trivially correct.
-%OLD%
-%OLD%For promptness, there are two base cases -- either $\tau_i-\tau_j \geq \Delta^w(\psi)$ (i.e., the residue is past due) or $\tau_i-\tau_j < \Delta^w(\psi)$ (in which case the residue is not due yet, and so any returned value is prompt).
-%OLD%
-%OLD%So we only need to deal with the past due scenario: There are three possible scenarios:
-%OLD%
-%OLD%\noindent \textbf{Subcase} \textit{No Beta} \\
-%OLD%There does not exist a $k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$. In this case, $b_n$ will be $\top$ so reduce will return $\rp{j}{\bot}$, satisfying promptness.
-%OLD%\\ \\
-%OLD%\noindent \textbf{Subcase} \textit{Not alpha until Beta} 
-%OLD%$\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$ but $\not\forall k' \in [\tau_j,k].(\sigma, \tau, k' \vDash \alpha)$. In this case, since there is a $\beta$ within the bounds then $b_a = k$. Since in this case there exists a $k' \in [\tau_j,k]$ where $\sigma,\tau, k' \nvDash \alpha$ then $a_a = k'$. Since we know that $k' < k$, we have $a_a < b_a$ and so reduce will return $\rp{j}{\bot}$.
-%OLD%\\ \\
-%OLD%\noindent \textbf{Subcase} \textit{Alpha until Beta} 
-%OLD%In this case, $\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k\vDash \beta)$ and $\forall k' \in [\tau_j,k].(\sigma,\tau,k' \vDash \alpha)$. So we have $b_a = k$ and $a_u \geq k$ (since the minimum residue in $[\tau_j,\tau_j+h]$ which is not $\top$ must be after $k$). So we have $b_t \leq a_u$ and so reduce returns $\rp{j}{\top}$.
-%OLD%\\ \\ %% SINCE
-%OLD%\noindent \textbf{Case} $\psi' \equiv \alpha \mathcal{S}_{[l,h]} \beta$ \\
-%OLD%This proof is the same as the Until case
-%OLD%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \pagebreak
 \section{Algorithms}
 \subsection{Top-level monitoring Algorithm}
 Our top level aggressive monitoring algorithm is as follows:
 
 \begin{algorithmic}[1]
-\STATE Recognize formulas for which we build structures
-\STATE For all recognized formulas $\psi$: $S^{-1}_{\psi} \leftarrow \emptyset$
+%\STATE Recognize formulas for which we build structures
+\STATE For all recognized formulas $\psi \in \mathbf{tempSub}(\varphi)$: $S^{-1}_{\psi} \leftarrow \emptyset$
 \STATE $i \leftarrow 0$
 \LOOP
-\FOR{every $\psi \in \text{temp\_sub}(\varphi)$ in increasing size}
+\FOR{every $\psi \in \mathbf{tempSub}(\varphi)$ in increasing size}
 	\STATE $S^i_{\psi} \leftarrow \bigcup\limits_{r \in S^{i-1}_{\psi}} \mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, r) \cup \mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, \rp{i}{\psi})$
 \ENDFOR
 \FOR{all $\rp{j}{\bot} \in S^i_{\varphi}$}
@@ -330,16 +292,18 @@ The reduce function takes a residue and returns the reduced residue:
 
 %%% TAU UNTIL
 \begin{align*}
-\mathbf{reduce}(\sigma,\tau, i,\pi,\rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}) = \left\{
+\mathbf{reduce}(\sigma,\tau, i,\mathbb{S}^i_{\phi} ,\rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}) = \left\{
 \begin{aligned}
-&\text{let } a_a \leftarrow min(\{k | \tau_k - \tau_j \in [0, h] \wedge \rp{k}{\bot} \in S^i_{\alpha} \}, i+1)  \\
-&a_u \leftarrow min(\{k | \tau_k - \tau_j \in [0, h] \wedge  \rp{k}{\psi'} \in S^i_{\alpha} \wedge \psi' \neq \top \}, i) \\
-&b_a \leftarrow min(\{k | \tau_k - \tau_j \in [l, h] \wedge \rp{k}{\psi'} \in S^i_{\beta} \wedge \psi' \neq \bot \}, i)  \\
-&b_t \leftarrow min(\{k | \tau_k - \tau_j \in [l, h] \wedge \rp{k}{\top} \in S^i_{\beta} \}) \\
-&b_n \leftarrow \top \text{ if } (\tau_i - \Delta^w(\psi) \geq \tau_j) \wedge \forall k.(\tau_k - \tau_i \in [l,h] \rightarrow \rp{k}{\bot} \in S^i_{\beta}) \\
-&\text{if }b_t \neq \emptyset \wedge b_t \leq a_u \\
+&\text{let } a_a \leftarrow min(\{k | \tau_k \in [\tau_j, \tau_j+h] \wedge \rp{k}{\bot} \in S^i_\alpha \}) \\ 
+& a_u \leftarrow max(\{k | \tau_k \in [\tau_j, \tau_j+h]  \\
+& \quad \quad \wedge \forall k' \in [\tau_j,\tau_k].(\rp{k'}{\alpha'} \in S^i_\alpha \wedge \alpha' = \top) \}, j-1) \\
+%
+& b_a \leftarrow min(\{k | \tau_k \in [\tau_j+l, \tau_j+h] \wedge \rp{k}{\beta'} \in S^i_\beta \wedge \beta' \neq \bot\}) \\ 
+&b_t \leftarrow min(\{k | \tau_k \in [\tau_j+l, \tau_j+h] \wedge \rp{k}{\top} \in S^i_{\beta} \}) \\
+&b_n \leftarrow \top \text{ if } (\tau_i - \Delta^w(\psi) \geq \tau_j) \wedge \forall k.(\tau_k \in [\tau_j+l,\tau_j+h] \rightarrow \rp{k}{\bot} \in S^i_{\beta}) \\
+&\text{if } b_t \neq \emptyset \wedge a_u \geq b_t - 1\\
 & \quad\mathbf{return} \rp{j}{\top} \\
-&\text{else if } a_a < b_a \text{ or } b_n = \top\\ & \quad\mathbf{return} \rp{j}{\bot} \\
+&\text{else if } (a_a \neq \emptyset \wedge b_a \neq \emptyset) \wedge a_a < b_a \text{ or } b_n = \top\\ & \quad\mathbf{return} \rp{j}{\bot} \\
 &\text{else} \\
 & \quad\mathbf{return} \rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}
 \end{aligned} \right. \\
@@ -356,7 +320,7 @@ The reduce function takes a residue and returns the reduced residue:
 %
 & b_a \leftarrow max(\{k | \tau_k \in [\tau_j-h, \tau_j-l] \wedge \rp{k}{\beta'} \in S^i_\beta \wedge \beta' \neq \bot\}) \\ 
 &b_t \leftarrow max(\{k | \tau_k \in [\tau_j-h, \tau_j-l] \wedge \rp{k}{\top} \in S^i_{\beta} \}) \\
-&b_n \leftarrow \top \text{ if } (\tau_i - \Delta^w(\psi) \geq \tau_j) \wedge \forall k.(\tau_k \in [\tau_j-l,\tau_j-h] \rightarrow \rp{k}{\bot} \in S^i_{\beta}) \\
+&b_n \leftarrow \top \text{ if } (\tau_i - \Delta^w(\psi) \geq \tau_j) \wedge \forall k.(\tau_k \in [\tau_j-h,\tau_j-l] \rightarrow \rp{k}{\bot} \in S^i_{\beta}) \\
 &\text{if } b_t \neq \emptyset \wedge a_s \leq b_t + 1\\
 & \quad\mathbf{return} \rp{j}{\top} \\
 &\text{else if } (a_a \neq \emptyset \wedge b_a \neq \emptyset) \wedge a_a > b_a \text{ or } b_n = \top\\ & \quad\mathbf{return} \rp{j}{\bot} \\
@@ -405,3 +369,89 @@ We summarize the relevant functions below: \\
 $\agmon(\varphi)$ is our top-level monitor function. \\
 $\mathbf{incr}(\sigma_i, \tau, i, \hat{\mathcal{R}}^i, \psi)$ updates the history structure $S^i_{\psi}$ based on the new trace entry $\sigma_i$ \\ 
 $\mathbf{reduce}(\sigma_i,\tau, i, \mathcal{R}^i, \res{\psi}{j})$ takes a residue $\res{\psi}{j}$ and returns a reduced residue based on the history $\mathcal{R}^i$ and current state $\sigma_i, \tau_i$. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% need to remove this one we get going.
+%OLD%\begin{lemma}[Correctness of $\mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi})$]
+%OLD%For all positions $i,j$ with $j \leq i$, formulas $\psi$, traces $\sigma$, time series $\tau$, $\psi'$ such that 
+%OLD%$\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j, \psi$, and all $S^i_{\phi'} \in \mathbb{S}^i_{\psi}$ correct it is the case that
+%OLD%for $\rp{j'}{\phi} \leftarrow \mathbf{reduce}(\sigma, \tau, i, \mathbb{S}^i_{\psi}, \rpt{j}{\psi'}{\psi})$ 
+%OLD%1) $\sigma, \tau, j \vDash \psi \leftrightarrow \sigma, \tau, j \vDash \phi$ and
+%OLD%2) if $\tau_i - \tau_j \geq \Delta^w(\psi)$ then $\phi \in \{\top, \bot\}$
+%OLD%\end{lemma}
+%OLD%
+%OLD%\noindent Proof is by induction over the formula $\phi'$: \\
+%OLD%%% TRUE
+%OLD%\noindent \textbf{Case} $\psi' \equiv \top$ \\
+%OLD%This case returns the given residue, and since $\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j \vDash \psi$, 
+%OLD%property 1 is satisfied and since $\psi' \in \{\top,\bot\}$ property 2 is satisfied.
+%OLD%\\ \\ %% FALSE 
+%OLD%\noindent \textbf{Case} $\psi' \equiv \bot$ \\
+%OLD%This case returns the given residue, and since $\sigma, \tau, j \vDash \psi' \leftrightarrow \sigma, \tau, j \vDash \psi$, 
+%OLD%property 1 is satisfied and since $\psi' \in \{\top,\bot\}$ property 2 is satisfied.
+%OLD%\\ \\ %% PROP
+%OLD%\noindent \textbf{Case} $\psi' \equiv p$ \\
+%OLD%In this case reduce returns $\rp{j}{\sigma(p)}$ -- this satisfies property one by the semantics of our logic ($\sigma, \tau, j \vDash p \leftrightarrow \sigma(p)$).
+%OLD%Property 2 is trivially satisfied as this always returns $\phi \in \{\top, \bot\}$
+%OLD%\\ \\ %% NOT
+%OLD%\noindent \textbf{Case} $\psi' \equiv \neg \phi$ \\
+%OLD%In this case we first obtain $\psi_1 \leftarrow \mathbf{reduce}(\phi)$ and then obtain $\psi_2 \leftarrow \mathbf{simplify}(\neg \psi_1)$.
+%OLD%Since $\mathbf{simplify}$ is correct (Lemma 1) and $\sigma, \tau, j \vDash \psi_1 \leftrightarrow \sigma, \tau, j \vDash \phi$ 
+%OLD%	we have $\sigma, \tau, j \vDash \psi_2 \leftrightarrow \sigma, \tau, j \vDash \neg \phi$.
+%OLD%
+%OLD%Since $\mathbf{reduce}$ is prompt we know that $\psi_1$ is prompt and since $\mathbf{simplify}$ is correct then this case will be prompt (property 2).
+%OLD%\\ \\ %% OR
+%OLD%\noindent \textbf{Case} $\psi' \equiv \alpha \vee \beta$ \\
+%OLD%In this case we first obtain $\psi_a \leftarrow \mathbf{reduce}(\alpha)$ and $\psi_b \leftarrow \mathbf{reduce}(\beta)$.
+%OLD%So we have $\sigma, \tau, j \vDash \psi_a \leftrightarrow \sigma, \tau, j \vDash \alpha$ and similarly for $\beta$.
+%OLD%Next we recombine these into $\psi_{ab} = \psi_a \vee \psi_b$ and obtain $\phi \leftarrow \mathbf{simplify}(\psi_{ab})$.
+%OLD%Since $\mathbf{simplify}$ is correct we know that $\sigma, \tau, j \vDash \phi \leftrightarrow \sigma, \tau, j \vDash \psi_a \vee \psi_b$.
+%OLD%
+%OLD%Since $\mathbf{reduce}$ is prompt we know that $\psi_a$ and $\psi_b$ are prompt, so $\psi_{ab}$ is also prompt and thus $\phi$ is prompt.
+%OLD%\\ \\ %% UNTIL
+%OLD%\noindent \textbf{Case} $\psi' \equiv \alpha \mathcal{U}_{[l,h]} \beta$ \\
+%OLD%In this case we calculate five values and then use these values to determine the appropriate reduction. There are 4 possible reductions:
+%OLD%\begin{enumerate}
+%OLD%\item $b_t \leq a_u$ -- returning $\rp{j}{\top}$
+%OLD%\item $a_a < b_a$ -- returning $\rp{j}{\bot}$
+%OLD%\item $b_n \equiv \top$ -- returning $\rp{j}{\bot}$
+%OLD%\item otherwise returning $\rp{j}{\psi'}$
+%OLD%\end{enumerate}
+%OLD%
+%OLD%The first case is for when the formula is true. If $b_t$ is not empty then $\sigma, \tau, b_t \vDash \beta$ and 
+%OLD%if $a_u$ is non-empty then 
+%OLD%	$\forall n' \in [\tau_j,\tau_j+h].(n' < a_u \rightarrow \sigma, \tau, n' \vDash \alpha)$
+%OLD%	so if $b_t \leq a_u$ then this is the truth semantics of Until ($\exists t. \sigma, \tau, t \vDash \beta$ and $\forall t' \in [\tau_j+l,t] \sigma, \tau, t' \vDash \alpha$)
+%OLD%
+%OLD%The second case is the most complex. In this case we check whether it's possible for $\psi'$ to be true (whether $\alpha$ can be true until the first possible true $\beta$).
+%OLD%If $a_a$ is non-empty then $\sigma, \tau, a_a \nvDash \alpha$. If $b_a$ is non-empty then $b_a$ is the minimum position in $[\tau_j+l,\tau_j+h]$ where it's possible that $\beta$ is true, i.e. $\forall k \in [\tau_j+l,\tau_j+h].(k < b_a \rightarrow \sigma, \tau, k \nvDash \beta)$.
+%OLD%So if $a_a < b_a$ then there are two cases: 
+%OLD%\begin{enumerate}
+%OLD%\item $\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$  -- in this case we know that $k \geq b_a$ and thus $\psi'$ must be false since we already know that $\sigma,\tau,a_a \nvDash \alpha$ and $a_a \in [\tau_j, k]$ so we cannot have $\alpha$ until $\beta$.
+%OLD%\item $\not\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$ -- in this case $\alpha \mathcal{U}_{[l,h]} \beta$ is false, so we can return $\rp{j}{\bot}$
+%OLD%\end{enumerate}
+%OLD%
+%OLD%The third case, if $b_n \equiv \top$ then because $S^i_{\beta}$ is prompt we know that $\not\exists t \in [\tau_j+l,\tau_j+h].(\sigma,\tau,t \vDash \beta)$. 
+%OLD%Since this is true we know that $\alpha \mathcal{U}_{[l,h]} \beta$ must be false and so we can return $\rp{j}{\bot}$
+%OLD%
+%OLD%This last case is trivially correct.
+%OLD%
+%OLD%For promptness, there are two base cases -- either $\tau_i-\tau_j \geq \Delta^w(\psi)$ (i.e., the residue is past due) or $\tau_i-\tau_j < \Delta^w(\psi)$ (in which case the residue is not due yet, and so any returned value is prompt).
+%OLD%
+%OLD%So we only need to deal with the past due scenario: There are three possible scenarios:
+%OLD%
+%OLD%\noindent \textbf{Subcase} \textit{No Beta} \\
+%OLD%There does not exist a $k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$. In this case, $b_n$ will be $\top$ so reduce will return $\rp{j}{\bot}$, satisfying promptness.
+%OLD%\\ \\
+%OLD%\noindent \textbf{Subcase} \textit{Not alpha until Beta} 
+%OLD%$\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k \vDash \beta)$ but $\not\forall k' \in [\tau_j,k].(\sigma, \tau, k' \vDash \alpha)$. In this case, since there is a $\beta$ within the bounds then $b_a = k$. Since in this case there exists a $k' \in [\tau_j,k]$ where $\sigma,\tau, k' \nvDash \alpha$ then $a_a = k'$. Since we know that $k' < k$, we have $a_a < b_a$ and so reduce will return $\rp{j}{\bot}$.
+%OLD%\\ \\
+%OLD%\noindent \textbf{Subcase} \textit{Alpha until Beta} 
+%OLD%In this case, $\exists k \in [\tau_j+l,\tau_j+h].(\sigma,\tau,k\vDash \beta)$ and $\forall k' \in [\tau_j,k].(\sigma,\tau,k' \vDash \alpha)$. So we have $b_a = k$ and $a_u \geq k$ (since the minimum residue in $[\tau_j,\tau_j+h]$ which is not $\top$ must be after $k$). So we have $b_t \leq a_u$ and so reduce returns $\rp{j}{\top}$.
+%OLD%\\ \\ %% SINCE
+%OLD%\noindent \textbf{Case} $\psi' \equiv \alpha \mathcal{S}_{[l,h]} \beta$ \\
+%OLD%This proof is the same as the Until case
+%OLD%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
