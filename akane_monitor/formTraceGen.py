@@ -9,7 +9,8 @@ import random
 ### starting simple, just 4 predetermined props and a table
 
 
-SATISFY = True
+#SATISFY = True
+SATISFY = False
 Trace = {}
 conflict = []
 rseed = "AGMON"
@@ -56,9 +57,24 @@ def gen(i, form, sat):
 		# gen the opposite...
 		gen(i, rchild(form), not sat)
 	elif (formtype == OR_T):
-		# flip a coin? for now try both
-		gen(i, lchild(form), sat)
-		gen(i, rchild(form), sat)
+		if (sat == False):
+			gen(i, lchild(form), sat)
+			gen(i, rchild(form), sat)
+		else:
+			# flip a coin and set depending on flip
+			choice = random.randint(0,2)
+			# 0 -- both true
+			if (choice == 0):
+				gen(i, lchild(form), sat)
+				gen(i, rchild(form), sat)
+			# 1, just left
+			elif (choice == 1):
+				gen(i, lchild(form), sat)
+				gen(i, rchild(form), not sat)
+			# 2, just right
+			elif (choice == 2):
+				gen(i, lchild(form), not sat)
+				gen(i, rchild(form), sat)
 	elif (formtype == UNTIL_T): 
 		if (sat):
 			ttime = random.randint(lbound(form),hbound(form)) + i
