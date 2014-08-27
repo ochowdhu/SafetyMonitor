@@ -4,31 +4,42 @@
 from monUtils import *
 import sys
 import random
+from csv import DictWriter
+from distutils.util import strtobool
 
 
 ### starting simple, just 4 predetermined props and a table
 
 
 #SATISFY = True
-SATISFY = False
 Trace = {}
 conflict = []
 rseed = "AGMON"
 
 def main():
+	SATISFY = True
 	NUMSTEPS = 0
 	STEP = -1 
+	propset = set()
 	#random.seed(rseed)
+
 	if len(sys.argv) < 1:
-		print "Usage: formTraceGen.py <formula> <step/range>"
+		print "Usage: formTraceGen.py <formula> <step/range> <satisfy>"
 		exit(1)
-	elif (len(sys.argv) > 2):
+	if (len(sys.argv) > 2):
 		inRange = int(sys.argv[2])
 	else:
 		inRange = 0
+	if (len(sys.argv) > 3):
+		SATISFY = bool(strtobool(sys.argv[3]))
+
 	# grab formula
 	inForm = eval(sys.argv[1])
-
+	# grab props
+	getProps(inForm, propset)
+	proplist = list(propset)
+	proplist.insert(0, "time")
+	writer = DictWriter(sys.stdout, fieldnames=proplist, delimiter=",", restval=0)
 	if (inRange < 0):
 		NUMSTEPS = -inRange
 	else:
@@ -37,14 +48,22 @@ def main():
 
 	if STEP >= 0:
 		gen(STEP, inForm, SATISFY)
+		gen(STEP+delay(inForm), inForm, SATISFY)
 	else:
 		for i in range(0,NUMSTEPS):
 			gen(i, inForm, SATISFY)
+		gen(NUMSTEPS+delay(inForm), inForm, SATISFY)
+	# need to add a late step to guarantee full check
 	##### done generating, print it
-	print "Trace is:"
-	for i in Trace:
-		print "%s: %s" % (i,Trace[i])
-	print "any conflicts?: %s" % conflict
+
+
+	# have to do this manually in some pythons
+	#writer.writeheader()
+	writer.writerow(dict((fn,fn) for fn in proplist))
+	for i in sorted(Trace):
+		Trace[i]['time'] = i
+		writer.writerow(Trace[i])
+	sys.stderr.write("any conflicts?: %s\n" % conflict)
 
 
 def gen(i, form, sat):
@@ -62,17 +81,17 @@ def gen(i, form, sat):
 			gen(i, rchild(form), sat)
 		else:
 			# flip a coin and set depending on flip
-			choice = random.randint(0,2)
+			choice = random.randint(0,5)
 			# 0 -- both true
-			if (choice == 0):
+			if (choice < 4):
 				gen(i, lchild(form), sat)
 				gen(i, rchild(form), sat)
 			# 1, just left
-			elif (choice == 1):
+			elif (choice == 4):
 				gen(i, lchild(form), sat)
 				gen(i, rchild(form), not sat)
 			# 2, just right
-			elif (choice == 2):
+			elif (choice == 5):
 				gen(i, lchild(form), not sat)
 				gen(i, rchild(form), sat)
 	elif (formtype == UNTIL_T): 
@@ -84,18 +103,32 @@ def gen(i, form, sat):
 		else:
 			# kill both for now -- just don't do anything
 			# make a decision - missing a, missing b, 
+			lb = lbound(form)
+			hb = hbound(form)
 			failure = random.randint(0,1)
+			# can't do bad a failure if no room
+			if (lb == 0 and hb == 0):
+				failure = 1
+			elif (lb == 0):
+				lb = 1
 			if (failure == 0):
 				# bad a -- pick a b
-				ttime = random.randint(lbound(form),hbound(form)) + i
+				# gotta watch out that we don't accidently satisfy with an immediate b
+				ttime = random.randint(lb,hb) + i
 				gen(ttime, untilP2(form), sat)
 				# pick missing a
-				for t in range(i, random.randint(i,ttime)):
-					gen(t, untilP1(form), sat)
+				# for now let's do no a -- can get trickier later
+				# just make one a false for now -- less potential conflicts
+				t = random.randint(i,ttime)
+				gen(t, untilP1(form), not sat)
+				#for t in range(i, ttime):
+				#	gen(t, untilP1(form), not sat)
+				#for t in range(i, random.randint(i,ttime-2)):
+				#	gen(t, untilP1(form), sat)
 			elif (failure == 1):
 				# no b
-				for t in range(i, i+hbound(form)):
-					gen(t, untilP1(form), sat)
+				#for t in range(i, i+hbound(form)):
+				#	gen(t, untilP1(form), sat)
 				for t in range(i+lbound(form), i+hbound(form)):
 					gen(t, untilP2(form), not sat)
 	elif (formtype == SINCE_T):
@@ -120,6 +153,26 @@ def gen(i, form, sat):
 				for t in range(i-hbound(form), i):
 					gen(t, untilP1(form), sat)
 
+	else:
+		pass
+
+def getProps(form, set):
+	formtype = ftype(form)
+	if (formtype == VALUE_T):
+		return
+	elif (formtype == PROP_T):
+		set.add(rchild(form))
+	elif (formtype == NOT_T):
+		getProps(rchild(form), set)
+	elif (formtype == OR_T):
+		getProps(lchild(form), set)
+		getProps(rchild(form), set)
+	elif (formtype == UNTIL_T): 
+		getProps(untilP1(form), set)
+		getProps(untilP2(form), set)
+	elif (formtype == SINCE_T):
+		getProps(untilP1(form), set)
+		getProps(untilP2(form), set)
 	else:
 		pass
 
