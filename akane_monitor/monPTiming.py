@@ -361,7 +361,7 @@ def mon_intresidue(inFile, inFormula, traceOrder):
 					if (f[1] == False):
 							allPass = False
 							#dprint("TimeData: %s" % TimeData, DBG_TIME)
-							dprint("Violator %s" % (f,), DBG_SAT)
+							dprint("Violator %s @ %s" % (f,taulist[f[0]]), DBG_SAT)
 							TimeData.addReduceTime(int(cstate["time"] - taulist[f[0]]))
 							formulas.remove(f)
 							#del formulas[i]
@@ -454,7 +454,7 @@ def mon_consintresidue(inFile, inFormula, traceOrder):
 					if (f[1] == False):
 							allPass = False
 							#dprint("TimeData: %s" % TimeData, DBG_TIME)
-							dprint("Violator %s" % (f,), DBG_SAT)
+							dprint("Violator %s @ %s" % (f,taulist[f[0]]), DBG_SAT)
 							TimeData.addReduceTime(int(cstate["time"] - taulist[f[0]]))
 							formulas.remove(f)
 							#del formulas[i]

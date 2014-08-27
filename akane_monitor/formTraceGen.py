@@ -15,16 +15,19 @@ from distutils.util import strtobool
 Trace = {}
 conflict = []
 rseed = "AGMON"
+override = False
 
 def main():
+	global override
 	SATISFY = True
 	NUMSTEPS = 0
 	STEP = -1 
 	propset = set()
+	vsteps = []
 	#random.seed(rseed)
 
 	if len(sys.argv) < 1:
-		print "Usage: formTraceGen.py <formula> <step/range> <satisfy>"
+		print "Usage: formTraceGen.py <formula> <step/range> <satisfy> <vsteps>"
 		exit(1)
 	if (len(sys.argv) > 2):
 		inRange = int(sys.argv[2])
@@ -32,6 +35,8 @@ def main():
 		inRange = 0
 	if (len(sys.argv) > 3):
 		SATISFY = bool(strtobool(sys.argv[3]))
+		if sys.argv[4] != "":
+			vsteps = sys.argv[4].split(",")
 
 	# grab formula
 	inForm = eval(sys.argv[1])
@@ -53,6 +58,9 @@ def main():
 		for i in range(0,NUMSTEPS):
 			gen(i, inForm, SATISFY)
 		gen(NUMSTEPS+delay(inForm), inForm, SATISFY)
+		override = True
+		for i in vsteps:
+			gen(int(i), inForm, False)
 	# need to add a late step to guarantee full check
 	##### done generating, print it
 
@@ -65,8 +73,7 @@ def main():
 		writer.writerow(Trace[i])
 	sys.stderr.write("any conflicts?: %s\n" % conflict)
 
-
-def gen(i, form, sat):
+def consgen(i, form, sat):
 	formtype = ftype(form)
 	if (formtype == VALUE_T):
 		return 0
@@ -76,31 +83,102 @@ def gen(i, form, sat):
 		# gen the opposite...
 		gen(i, rchild(form), not sat)
 	elif (formtype == OR_T):
-		if (sat == False):
+			# conservative, just do both either false or true
 			gen(i, lchild(form), sat)
 			gen(i, rchild(form), sat)
-		else:
-			# flip a coin and set depending on flip
-			choice = random.randint(0,5)
-			# 0 -- both true
-			if (choice < 4):
-				gen(i, lchild(form), sat)
-				gen(i, rchild(form), sat)
-			# 1, just left
-			elif (choice == 4):
-				gen(i, lchild(form), sat)
-				gen(i, rchild(form), not sat)
-			# 2, just right
-			elif (choice == 5):
-				gen(i, lchild(form), not sat)
-				gen(i, rchild(form), sat)
 	elif (formtype == UNTIL_T): 
+		# conservative -- either fill true or just have no B
 		if (sat):
 			ttime = random.randint(lbound(form),hbound(form)) + i
 			gen(ttime, untilP2(form), sat)
 			for t in range(i, ttime):
 				gen(t, untilP1(form), sat)
 		else:
+			for t in range(i+lbound(form), i+hbound(form)):
+				gen(t, untilP2(form), not sat)
+			return
+	elif (formtype == SINCE_T):
+		# conservative -- either fill true or just have no B
+		if (sat):
+			ttime = i - random.randint(lbound(form), hbound(form))
+			gen(ttime, untilP2(form), sat)
+			for t in range(ttime+1, i+1):
+				gen(t, untilP1(form), sat)
+		else:
+			for t in range(i-hbound(form), i):
+				gen(t, untilP1(form), sat)
+	else:
+		pass
+
+def gen(i, form, sat):
+	# quick steal
+	#consgen(i, form, sat)
+	#return
+#############################
+	formtype = ftype(form)
+	if (formtype == VALUE_T):
+		return 1
+	elif (formtype == PROP_T):
+		return setprop(i,rchild(form), sat)
+	elif (formtype == NOT_T):
+		# gen the opposite...
+		return gen(i, rchild(form), not sat)
+	elif (formtype == OR_T):
+		if (sat == False):
+			gen(i, lchild(form), sat)
+			gen(i, rchild(form), sat)
+		else:
+			children = [lchild(form), rchild(form)]
+			random.shuffle(children)
+			try1 = gen(i, children[0], sat)
+			if (not try1):
+				try2 = gen(i, children[1], sat)
+				if not try2:
+					failGen()
+					return False
+			elif (random.randint(0,1)):
+				gen(i, children[1], sat)
+		return True
+
+# 			# flip a coin and set depending on flip
+#			choice = random.randint(0,5)
+#			# 0 -- both true
+#			if (choice < 4):
+#				gen(i, lchild(form), sat)
+#				gen(i, rchild(form), sat)
+#			# 1, just left
+#			elif (choice == 4):
+#				gen(i, lchild(form), sat)
+#				gen(i, rchild(form), not sat)
+#			# 2, just right
+#			elif (choice == 5):
+#				gen(i, lchild(form), not sat)
+#				gen(i, rchild(form), sat)
+	elif (formtype == UNTIL_T): 
+		if (sat):
+			ttime = None
+			r = range(i+lbound(form),i+hbound(form)+1)
+			random.shuffle(r)
+			for t in r:
+				try1 = gen(t, untilP2(form), sat)
+				if try1:
+					ttime = t
+					break
+			if ttime == None:
+				failGen()
+
+			try1 = True
+			for t in range(i, ttime):
+				try1 = try1 and gen(t, untilP1(form), sat)
+			return try1
+		else:
+			try1 = True
+			for t in range(i+lbound(form), i+hbound(form)+1):
+				try1 = gen(t, untilP2(form), sat) and try1
+			return try1
+###
+### just bail for now
+###
 			# kill both for now -- just don't do anything
 			# make a decision - missing a, missing b, 
 			lb = lbound(form)
@@ -134,10 +212,19 @@ def gen(i, form, sat):
 	elif (formtype == SINCE_T):
 		if (sat):
 			ttime = i - random.randint(lbound(form), hbound(form))
-			gen(ttime, untilP2(form), sat)
+			try1 = gen(ttime, untilP2(form), sat)
+			if not try1:
+				failGen()
+			try1 = True
 			for t in range(ttime+1, i+1):
-				gen(t, untilP1(form), sat)
+				try1 = gen(t, untilP1(form), sat) and try1
+			return try1
 		else:
+			try1 = True
+			for t in range(i-hbound(form), i):
+				try1 = gen(t, untilP1(form), sat) and try1
+			return try1
+### just bail for now
 			# kill both for now -- just don't do anything
 			# make a decision - missing a, missing b, 
 			failure = random.randint(0,1)
@@ -177,18 +264,28 @@ def getProps(form, set):
 		pass
 
 def setprop(i, prop, sat):
+	global override
 	if i in Trace:
 		#print "trace[i] is %s" % Trace[i]
 		if prop in Trace[i]:
 		#if Trace[i][prop] != -1:
-			if Trace[i][prop] != int(sat):
+			if override:
+				Trace[i][prop] = int(sat)
+				return True
+			elif Trace[i][prop] != int(sat):
 				conflict.append("%s: %s" % (i, prop))
+				return False
 		else:
 			Trace[i][prop] = int(sat)
+			return True
 	else:
 		Trace[i] = dict()
 		Trace[i][prop] = int(sat)
+		return True
 
+def failGen():
+	sys.stderr.write("UNAVOIDABLE COLLISION, FAIL!\n")
+	sys.exit(-1)
 
 if __name__ == "__main__":
 	main()
