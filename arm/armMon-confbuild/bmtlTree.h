@@ -35,11 +35,50 @@ typedef struct Node {
 	int stidx;
 } Node;
 
+#define MAX(x,y) (((x) > (y)) ? (x) : (y))
 // Global value nodes -- only want one copy of true/false
 Node* trueNode;
 Node* falseNode;
 Node* invalNode;
 
+int fdelay(Node* root) {
+	switch (root->type) {
+		case PROP_T:
+		case VALUE_T:
+			return 0;
+		case NOT_T:
+			return fdelay(root->val.child);
+		case AND_T:
+		case OR_T:
+		case IMPLIES_T:
+			return MAX(fdelay(root->val.binOp.lchild), fdelay(root->val.binOp.rchild));
+		case UNTIL_T:
+			return root->val.twotempOp.hbound + MAX(fdelay(root->val.twotempOp.lchild), fdelay(root->val.twotempOp.rchild));
+		case SINCE_T:
+			return MAX(fdelay(root->val.twotempOp.lchild), fdelay(root->val.twotempOp.rchild));
+		default:
+			return -1;
+	}
+}
+
+int minbuflen(Node* root) {
+	switch (root->type) {
+		case PROP_T:
+		case VALUE_T:
+			return 0;
+		case NOT_T:
+			return minbuflen(root->val.child);
+		case AND_T:
+		case OR_T:
+		case IMPLIES_T:
+			return MAX(minbuflen(root->val.binOp.lchild), minbuflen(root->val.binOp.rchild));
+		case UNTIL_T:
+		case SINCE_T:
+			return root->val.twotempOp.hbound + 1 + MAX(minbuflen(root->val.twotempOp.lchild), minbuflen(root->val.twotempOp.rchild));
+		default:
+			return -1;
+	}
+}
 
 bool matchNodes(Node* n1, Node* n2) {
 	if (n1->type == n2->type) {

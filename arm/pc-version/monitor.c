@@ -243,13 +243,16 @@ int sinceCheck(int step, residue* res) {
 	// loop over alpha list	
 	reslist = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].residues;
 	//reslist = theStruct[formulas[res->form].val.t_children.lchild->structidx].residues;
-	le = reslist->start;
-	ls = reslist->end;
+	le = reslist->start-1;
+	if (le < 0) le = reslist->size-1;
+	ls = reslist->end-1;
+	if (ls < 0) ls = reslist->size - 1;
 	while (ls != le) {
 		resp = rbGet(reslist, ls);
 		if (resp->step < l) {
 			break;
 		}
+		//printf("since looping alpha at step %d\n", resp->step);
 		// Already guaranteed >= l from above
 		if (res->step >= resp->step) { 	// check alpha up to res->step
 			// keep updating a_until with current val as long as we keep seeing true
@@ -279,8 +282,11 @@ int sinceCheck(int step, residue* res) {
 	// loop over beta list
 	reslist = theStruct[formulas[formulas[res->form].val.t_children.rchild].structidx].residues;
 	//reslist = theStruct[formulas[res->form].val.t_children.rchild->structidx].residues;
-	ls = reslist->end;
-	le = reslist->start;
+	ls = reslist->end-1;
+	if (ls < 0) ls = reslist->size-1;
+	le = reslist->start-1;
+	if (le < 0) le = reslist->size-1;
+
 	temp_bits = 0;
 	BIT_SET(temp_bits, (AL_MASK | UN_MASK) );
 	if (res->step >= h) 
@@ -290,6 +296,7 @@ int sinceCheck(int step, residue* res) {
 		if (resp->step < l) {
 			break;
 		}
+		//printf("since looping beta at step %d\n", resp->step);
 		if (resp->step <= h) {
 			// keep updating alive until we see a false (and unset none if we see something)
 			if (resp->form != FORM_FALSE && (temp_bits & AL_MASK)) {
