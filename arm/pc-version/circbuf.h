@@ -29,6 +29,7 @@ extern int rbFull(resbuf *rb);
 extern void rbInsertP(resbuf *rb, residue *res);
 extern void rbInsert(resbuf *rb, int step, formula f);
 extern residue* rbGet(resbuf *rb, int pos);
+extern void rbRemoveFirst(resbuf *rb);
 
 extern void ibInit(intbuf *ib, int size, interval *array);
 extern void ibInsert(intbuf *ib, int step);

@@ -13,10 +13,12 @@ extern "C" int yyparse();
 extern "C" FILE *yyin;
 
 void yyerror(const char* s);
+#define PC_VERSION 1
 
 std::map<tag, Node*> nodeMap;
 Node* ast;
 tag GTAG;
+int policyTag;
 void pprintTree(Node *n);
 void lispPrint(Node *n);
 void tagAndBuild(Node *n);
@@ -102,7 +104,7 @@ struct findNode {
 	Node* node;
 	findNode(Node* node) : node(node) {}
 	bool operator()(Node *n) { 
-		std::cout << "matching " << node->nodeTag << " against " << n->nodeTag << std::endl;
+		//std::cout << "matching " << node->nodeTag << " against " << n->nodeTag << std::endl;
 		return matchNodes(node, n);
 	}
 };
@@ -142,7 +144,7 @@ int main(int argc, char** argv) {
 		std::vector<Node*>::iterator it;
 		/*
 		std::cout << "tagged, top list?" << std::endl;
-		std::vector<Node*>::iterator it;
+		//std::vector<Node*>::iterator it;
 		int count = 0;
 		for (it = ast->nList.begin(); it != ast->nList.end(); it++) {
 			std::cout << count++ << "@" << (*it)->nodeTag << "|Node: ";  
@@ -156,7 +158,7 @@ int main(int argc, char** argv) {
 			lispPrint(*it);
 			std::cout << std::endl;
 		}
-		*/
+		*/	
 		std::vector<Node*> all(ast->nList);
 		all.insert(all.end(), ast->gList.begin(), ast->gList.end());
 
@@ -175,13 +177,17 @@ int main(int argc, char** argv) {
 
 ///////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
+		// get policy tag
+		it = find_if(all.begin(), all.end(), findNode(ast));
+		policyTag = (*it)->nodeTag;
 		std::cout << "AUTO-GENERATE CONFIG:" << std::endl;
 		// First, into gendefs.h we need NFORMULAS, NSTRUCT, NBUFLEN, FORMDELAY
 		gendefs << "/** Auto Generated definitions */" << std::endl
 				  << "#define NFORMULAS (" << all.size()+3 << ")" << std::endl
 				  << "#define NSTRUCT (" << ast->gList.size() << ")" << std::endl
-				  << "#define NBUFLEN (" << 0 << ")" << std::endl
-				  << "#define FORM_DELAY (" << 0 << ")" << std::endl;
+				  << "#define NBUFLEN (" << minbuflen(ast)+1 << ")" << std::endl
+				  << "#define FORM_DELAY (" << fdelay(ast) << ")" << std::endl
+				  << "#define POLICY (" << policyTag << ")" << std::endl;
 		// throw masks into gendefs for now
 		confPrintMasks(all, gendefs);
 		// Now, monconfig.c
@@ -197,7 +203,7 @@ int main(int argc, char** argv) {
 		//@TODO should put actual delay per structure in here eventually
 		monconfig  << "int i;" << std::endl
 				  << "resbInit(&mainresbuf, NBUFLEN, mainresbuffers);" << std::endl
-				  << "for (i = 0; i < NSTRUCT; i++) { rbuffers[i].size = NBUFLEN; rbuffers[i].buf = resbuffers[i]; }";
+				  << "for (i = 0; i < NSTRUCT; i++) { resbInit(&rbuffers[i], NBUFLEN, resbuffers[i]); }";
 		confBuildStruct(ast->gList, monconfig);
 		monconfig <<"}" << std::endl << std::endl;
 
@@ -234,7 +240,7 @@ int main(int argc, char** argv) {
 				  << "eres = cStruct->residues->end;" << std::endl
 				  << "// loop over every residue" << std::endl
 				  << "while (cres != eres) {" << std::endl
-				  << "reduce(stGetRes(cStruct, cres));" << std::endl
+				  << "reduce(step, stGetRes(cStruct, cres));" << std::endl
 				  << "// increment" << std::endl
 				  << "cres = (cres + 1) % theStruct[i].residues->size;" << std::endl
 				  << "}" << std::endl
@@ -316,6 +322,9 @@ void tagAndBuild2(Node* root) {
 			// copy children lists to global list
 			root->gList.insert(root->gList.end(), root->val.twotempOp.lchild->nList.begin(), root->val.twotempOp.lchild->nList.end());
 			root->gList.insert(root->gList.end(), root->val.twotempOp.rchild->nList.begin(), root->val.twotempOp.rchild->nList.end());
+			// copy children glists to glist
+			root->gList.insert(root->gList.end(), root->val.twotempOp.lchild->gList.begin(), root->val.twotempOp.lchild->gList.end());
+			root->gList.insert(root->gList.end(), root->val.twotempOp.rchild->gList.begin(), root->val.twotempOp.rchild->gList.end());
 			// add all possible children -- just ourself
 			if (root->val.twotempOp.lchild->type == VALUE_T) {
 				np = getValueNode(root->val.twotempOp.lchild->val.value);
@@ -508,6 +517,10 @@ void lispPrint(Node* root) {
 
 void confPrintMasks(std::vector<Node*> forms, std::ostream &os) {
 	int index = 0;
+	if (PC_VERSION) {
+		// don't need/want this for arm version, turn off
+		os << "#define MASK_time (1<<(" << index++ << "))" << std::endl;
+	}
 	std::vector<Node*>::iterator it;
 	for (it = forms.begin(); it != forms.end(); it++) {
 		if ((*it)->type == PROP_T) { 

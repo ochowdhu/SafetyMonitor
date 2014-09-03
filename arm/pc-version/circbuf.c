@@ -2,10 +2,10 @@
 
 
 #include "circbuf.h"
-
+#include <stdio.h>
 
 void resbInit(resbuf *rb, int size, residue *array) {
-	rb->size = size+1;
+	rb->size = size;
 	rb->start = 0;
 	rb->end = 0;
 	rb->buf = array;
@@ -25,6 +25,7 @@ void rbInsertP(resbuf *rb, residue *res) {
 void rbInsert(resbuf *rb, int step, formula f) {
 	rb->buf[rb->end].step = step;
 	rb->buf[rb->end].form = f;
+	// just see if circbuf is working...
 	rb->end = (rb->end + 1) % rb->size;
 	if (rb->end == rb->start) {
 		rb->start = (rb->start + 1) % rb->size;	// full, move the start
@@ -32,7 +33,12 @@ void rbInsert(resbuf *rb, int step, formula f) {
 }
 
 residue* rbGet(resbuf *rb, int pos) {
-	return &(rb->buf[(rb->start + pos) % rb->size]);
+	//return &(rb->buf[(rb->start + pos) % rb->size]);
+	return &(rb->buf[pos]);
+}
+
+void rbRemoveFirst(resbuf *rb) {
+	rb->start = (rb->start + 1) % rb->size;
 }
 
 void ibInit(intbuf *ib, int size, interval *array) {

@@ -20,6 +20,10 @@
 #include "monconfig.h"
 
 
+// pc includes
+#include <stdio.h>
+
+
 ///////////////// CANDEF
 #define USE_CAN1
 //#define USE_CAN2 
@@ -289,6 +293,7 @@ int main() {
 	build_formula();
 	build_struct();
 	
+	printf("got to the loop...\n\r");
 	// start the loop
 	cstep = 0;
 	while (1) {
@@ -302,6 +307,7 @@ int main() {
 		// we've received (instep) then run the checker again
 		//@TODO -- need to grab instep so it doesn't get changed out from under us here
 		if (estep < instep) {
+			printf("stepping at %d\n", estep);
 			// first increment the structure
 			incrStruct(estep);
 		
