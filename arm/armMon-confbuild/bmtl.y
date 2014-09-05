@@ -189,7 +189,8 @@ int main(int argc, char** argv) {
 				  << "#define NSTRUCT (" << ast->gList.size() << ")" << std::endl
 				  << "#define NBUFLEN (" << minbuflen(ast)+1 << ")" << std::endl
 				  << "#define FORM_DELAY (" << fdelay(ast) << ")" << std::endl
-				  << "#define POLICY (" << policyTag << ")" << std::endl;
+				  << "#define POLICY (" << policyTag << ")" << std::endl
+				  << "#define STACK_DEPTH (" << stackDepth(ast) << ")" << std::endl;
 		// throw masks into gendefs for now
 		confPrintMasks(all, gendefs);
 		// Now, monconfig.c

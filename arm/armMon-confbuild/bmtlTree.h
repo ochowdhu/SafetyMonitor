@@ -80,6 +80,25 @@ int minbuflen(Node* root) {
 	}
 }
 
+int stackDepth(Node* root) {
+	switch (root->type) {
+		case PROP_T:
+		case VALUE_T:
+			return 1;
+		case NOT_T:
+			return 1 + stackDepth(root->val.child);
+		case AND_T:
+		case OR_T:
+		case IMPLIES_T:
+			return 2 + MAX(stackDepth(root->val.binOp.lchild), stackDepth(root->val.binOp.rchild));
+		case UNTIL_T:
+		case SINCE_T:
+			return 1;
+		default:
+			return -1;
+	}
+}
+
 bool matchNodes(Node* n1, Node* n2) {
 	if (n1->type == n2->type) {
 		switch (n1->type) {

@@ -50,4 +50,3 @@ extern void build_formula(void);
 extern void build_struct(void);
 extern void incrStruct(int step);
 
-

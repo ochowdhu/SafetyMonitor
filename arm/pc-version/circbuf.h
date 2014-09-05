@@ -24,6 +24,9 @@ typedef struct intbuf {
 	interval* buf;
 } intbuf;
 
+typedef struct formulaStack {
+	int sp;
+}
 extern void resbInit(resbuf *rb, int size, residue *array);
 extern int rbFull(resbuf *rb);
 extern void rbInsertP(resbuf *rb, residue *res);
