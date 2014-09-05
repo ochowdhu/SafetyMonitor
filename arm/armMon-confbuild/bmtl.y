@@ -16,6 +16,7 @@ void yyerror(const char* s);
 #define PC_VERSION 1
 
 std::map<tag, Node*> nodeMap;
+std::set<Node*> nodeSet;
 Node* ast;
 tag GTAG;
 int policyTag;
@@ -29,6 +30,7 @@ void confPrintMasks(std::vector<Node*> forms, std::ostream &os);
 void confBuildStruct(std::vector<Node*> forms, std::ostream &os);
 void confBuildSimpTables(int nform, std::vector<Node*> list, std::ostream &os);
 void confBuildFtype(int nform, std::vector<Node*> list, std::ostream &os);
+Node* getSetNode(Node* node);
 %}
 
 %union {
@@ -260,6 +262,16 @@ bool sortNList(Node* lhs, Node*rhs) {
 	return (lhs->nodeTag < rhs->nodeTag);
 }
 
+Node* getSetNode(Node* node) {
+	std::set<Node*>::iterator it;
+	it = find_if(nodeSet.begin(), nodeSet.end(), findNode(node));
+	if (it == nodeSet.end()) {
+		nodeSet.insert(node);
+		return node;
+	}
+	return *it;
+}
+
 void tagAndBuild2(Node* root) {
 	std::vector<Node *>::iterator itl, itr;
 	Node* np;
@@ -269,23 +281,26 @@ void tagAndBuild2(Node* root) {
 			break;
 		case PROP_T:
 			root->nodeTag = GTAG++;
-			//uniqueAdd(&root->nList, makePropNode(root->val.propName), &root->gList);
-			uniqueAdd(&root->nList, makePropNode(root->val.propName));
+			np = getSetNode(makePropNode(root->val.propName));
+			uniqueAdd(&root->nList, np);
+			//uniqueAdd(&root->nList, makePropNode(root->val.propName));
 			break;
 		case NOT_T:
 			// build children
 			tagAndBuild2(root->val.child);
 			// copy child list
-			root->nList.insert(root->nList.end(), root->val.child->nList.begin(), root->val.child->nList.end());
+			//root->nList.insert(root->nList.end(), root->val.child->nList.begin(), root->val.child->nList.end());
 			// copy global (hidden temporal) list
-			root->gList.insert(root->gList.end(), root->val.child->gList.begin(), root->val.child->gList.end());
-			/*for (itr = root->val.child->gList.begin(); itr != root->val.child->gList.end(); irt++) {
-				uniqueAdd(&root->gList, *itr, &root->nList);
-			}*/
+			//root->gList.insert(root->gList.end(), root->val.child->gList.begin(), root->val.child->gList.end());
 			// add all possible children to childList
 			for (itl = root->val.child->nList.begin(); itl != root->val.child->nList.end(); itl++) {
-				//uniqueAdd(&root->nList, *itl);
-				uniqueAdd(&root->nList, makeNotNode(*itl));
+				uniqueAdd(&root->nList, *itl);
+				np = getSetNode(makeNotNode(*itl));
+				uniqueAdd(&root->nList, np);
+			}
+			// copy child glist
+			for (itl = root->val.child->gList.begin(); itl != root->val.child->gList.end(); itl++) {
+				uniqueAdd(&root->gList, getSetNode(*itl), &root->nList);
 			}
 			break;
 		case OR_T:
@@ -295,18 +310,30 @@ void tagAndBuild2(Node* root) {
 			tagAndBuild2(root->val.binOp.lchild);
 			tagAndBuild2(root->val.binOp.rchild);
 			// copy children lists
-			root->nList.insert(root->nList.end(), root->val.binOp.lchild->nList.begin(), root->val.binOp.lchild->nList.end());
-			root->nList.insert(root->nList.end(), root->val.binOp.rchild->nList.begin(), root->val.binOp.rchild->nList.end());
+			// Need to do uniqueAdd
+			//root->nList.insert(root->nList.end(), root->val.binOp.lchild->nList.begin(), root->val.binOp.lchild->nList.end());
+			//root->nList.insert(root->nList.end(), root->val.binOp.rchild->nList.begin(), root->val.binOp.rchild->nList.end());
 			// copy global (hidden temporal) list
-			root->gList.insert(root->gList.end(), root->val.binOp.lchild->gList.begin(), root->val.binOp.lchild->gList.end());
-			root->gList.insert(root->gList.end(), root->val.binOp.rchild->gList.begin(), root->val.binOp.rchild->gList.end());
+			//root->gList.insert(root->gList.end(), root->val.binOp.lchild->gList.begin(), root->val.binOp.lchild->gList.end());
+			//root->gList.insert(root->gList.end(), root->val.binOp.rchild->gList.begin(), root->val.binOp.rchild->gList.end());
 			// add all possible children
 			for (itl = root->val.binOp.lchild->nList.begin(); itl != root->val.binOp.lchild->nList.end(); itl++) {
+				uniqueAdd(&root->nList, getSetNode(*itl));
 				for (itr = root->val.binOp.rchild->nList.begin(); itr != root->val.binOp.rchild->nList.end(); itr++) {
+					uniqueAdd(&root->nList, getSetNode(*itr));
 					//uniqueAdd(&root->nList, *itl, &root->gList);
 					//uniqueAdd(&root->nList, *itr, &root->gList);
-					uniqueAdd(&root->nList, makeBinNode(root->type, *itl, *itr), &root->gList);
+					np = getSetNode(makeBinNode(root->type, *itl, *itr));
+					uniqueAdd(&root->nList, np, &root->gList);
 				}
+			}
+
+			// copy globals second, want to fill nList first
+			for (itl = root->val.binOp.lchild->gList.begin(); itl != root->val.binOp.lchild->gList.end(); itl++) {
+				uniqueAdd(&root->gList, getSetNode(*itl), &root->nList);
+			}
+			for (itr = root->val.binOp.rchild->gList.begin(); itr != root->val.binOp.rchild->gList.end(); itr++) {
+				uniqueAdd(&root->gList, getSetNode(*itr), &root->nList);
 			}
 			break;
 		case ALWAYS_T:
@@ -320,27 +347,53 @@ void tagAndBuild2(Node* root) {
 			tagAndBuild2(root->val.twotempOp.lchild);
 			tagAndBuild2(root->val.twotempOp.rchild);
 			// copy children lists to global list
-			root->gList.insert(root->gList.end(), root->val.twotempOp.lchild->nList.begin(), root->val.twotempOp.lchild->nList.end());
-			root->gList.insert(root->gList.end(), root->val.twotempOp.rchild->nList.begin(), root->val.twotempOp.rchild->nList.end());
+			//root->gList.insert(root->gList.end(), root->val.twotempOp.lchild->nList.begin(), root->val.twotempOp.lchild->nList.end());
+			//root->gList.insert(root->gList.end(), root->val.twotempOp.rchild->nList.begin(), root->val.twotempOp.rchild->nList.end());
 			// copy children glists to glist
-			root->gList.insert(root->gList.end(), root->val.twotempOp.lchild->gList.begin(), root->val.twotempOp.lchild->gList.end());
-			root->gList.insert(root->gList.end(), root->val.twotempOp.rchild->gList.begin(), root->val.twotempOp.rchild->gList.end());
+			//root->gList.insert(root->gList.end(), root->val.twotempOp.lchild->gList.begin(), root->val.twotempOp.lchild->gList.end());
+			//root->gList.insert(root->gList.end(), root->val.twotempOp.rchild->gList.begin(), root->val.twotempOp.rchild->gList.end());
+
+			// copy children nLists to gList
+			for (itl = root->val.twotempOp.lchild->nList.begin(); itl != root->val.twotempOp.lchild->nList.end(); itl++) {
+				uniqueAdd(&root->gList, getSetNode(*itl), &root->nList);
+			}
+			for (itr = root->val.twotempOp.rchild->nList.begin(); itr != root->val.twotempOp.rchild->nList.end(); itr++) {
+				uniqueAdd(&root->gList, getSetNode(*itr), &root->nList);
+			}
+			// copy children gLists
+			for (itl = root->val.twotempOp.lchild->gList.begin(); itl != root->val.twotempOp.lchild->gList.end(); itl++) {
+				uniqueAdd(&root->gList, getSetNode(*itl), &root->nList);
+			}
+			for (itr = root->val.twotempOp.rchild->gList.begin(); itr != root->val.twotempOp.rchild->gList.end(); itr++) {
+				uniqueAdd(&root->gList, getSetNode(*itr), &root->nList);
+			}
+
+
 			// add all possible children -- just ourself
 			if (root->val.twotempOp.lchild->type == VALUE_T) {
 				np = getValueNode(root->val.twotempOp.lchild->val.value);
 			} else {
 				itl = find_if(root->gList.begin(), root->gList.end(), findNode(root->val.twotempOp.lchild));
-				np = *itl;
+				if (itl == root->gList.end()) {
+					itl = find_if(root->nList.begin(), root->nList.end(), findNode(root->val.twotempOp.lchild));
+				}
+				if (itl == root->nList.end()) { printf("still can't find node, hmmm\n"); exit(-2);}
+				np = getSetNode(*itl);
 			}
 
 			if (root->val.twotempOp.rchild->type == VALUE_T) {
 				np2 = getValueNode(root->val.twotempOp.rchild->val.value);
 			} else {
 				itr = find_if(root->gList.begin(), root->gList.end(), findNode(root->val.twotempOp.rchild));
-				np2 = *itr;
+				if (itr == root->gList.end()) {
+					itr = find_if(root->nList.begin(), root->nList.end(), findNode(root->val.twotempOp.rchild));
+				}
+				if (itr == root->nList.end()) { printf("still can't find node, hmmm\n"); exit(-2); }
+				np2 = getSetNode(*itr);
 			}
 			//uniqueAdd(&root->nList, makeTwoTempNode(root->type, root->val.twotempOp.lbound, root->val.twotempOp.hbound, root->val.twotempOp.lchild, root->val.twotempOp.rchild), &root->gList);
-			uniqueAdd(&root->nList, makeTwoTempNode(root->type, root->val.twotempOp.lbound, root->val.twotempOp.hbound, np, np2), &root->gList);
+			uniqueAdd(&root->nList, getSetNode(makeTwoTempNode(root->type, root->val.twotempOp.lbound, root->val.twotempOp.hbound, np, np2)), &root->gList);
+
 			break;
 	}
 }

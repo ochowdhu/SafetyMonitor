@@ -120,6 +120,7 @@ void uniqueAdd(std::vector<Node*>* v, Node* n) {
 			switch ((*it)->type) {
 				case PROP_T:
 					if (strcmp((*it)->val.propName, n->val.propName) == 0) {
+						printf("UniqueAdd found a prop match with %s\n",n->val.propName);
 						found = true;
 					}
 					break;
