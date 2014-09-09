@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
 				  << "#define NBUFLEN (" << minbuflen(ast)+1 << ")" << std::endl
 				  << "#define FORM_DELAY (" << fdelay(ast) << ")" << std::endl
 				  << "#define POLICY (" << policyTag << ")" << std::endl
-				  << "#define STACK_DEPTH (" << stackDepth(ast) << ")" << std::endl;
+				  << "#define STACK_DEPTH (" << 1+stackDepth(ast) << ")" << std::endl;
 		// throw masks into gendefs for now
 		confPrintMasks(all, gendefs);
 		// Now, monconfig.c
@@ -205,6 +205,8 @@ int main(int argc, char** argv) {
 		monconfig << "// build structures" << std::endl << "void build_struct(void) {" << std::endl;
 		//@TODO should put actual delay per structure in here eventually
 		monconfig  << "int i;" << std::endl
+				  << "fstackInit(&redStack, STACK_DEPTH, redStackBuf);" << std::endl
+				  << "fstackInit(&redStackVals, STACK_DEPTH, redStackValsBuf);" << std::endl
 				  << "resbInit(&mainresbuf, NBUFLEN, mainresbuffers);" << std::endl
 				  << "for (i = 0; i < NSTRUCT; i++) { resbInit(&rbuffers[i], NBUFLEN, resbuffers[i]); }";
 		confBuildStruct(ast->gList, monconfig);
@@ -222,7 +224,13 @@ int main(int argc, char** argv) {
 				  << "residue resbuffers[NSTRUCT][NBUFLEN];" << std::endl
 				  << "// main list of residues" << std::endl
 				  << "resbuf mainresbuf;" << std::endl 
-				  << "residue mainresbuffers[NBUFLEN];" << std::endl;
+				  << "residue mainresbuffers[NBUFLEN];" << std::endl
+				  << "// iterative stack stuff" << std::endl 
+				  << "formulaStack redStack;" << std::endl
+				  << "formulaStack redStackVals;" << std::endl
+				  << "formula redStackBuf[STACK_DEPTH];" << std::endl
+				  << "formula redStackValsBuf[STACK_DEPTH];" << std::endl;
+
 
 		// print formulas
 		monconfig << "// build formulas" << std::endl << "void build_formula(void) {" << std::endl;

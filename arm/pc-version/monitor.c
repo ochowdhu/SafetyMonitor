@@ -2,6 +2,7 @@
 
 */
 
+#include <stdio.h>
 #include "monitor.h"
 #include "monconfig.h"
 
@@ -34,17 +35,128 @@ void initResStruct(resStructure* st, formula form, int delay, resbuf *res, inter
 residue* stGetRes(resStructure *st, int pos) {
 	return &(st->residues->buf[pos]);
 }
-
-void reduce(int step, residue *res) {
+void itreduce(int step, residue *res) {
+	stackReset(&redStack);
+	stackReset(&redStackVals);
 	fNode root;
 	residue child1, child2;
-	// UNTIL/SINCE stuff -- moved to check functions
-	//int a_alive, a_until, b_alive, b_until;
-	//int l, h, ls, le;
-	//residue* resp;
-	//resbuf* reslist;
-	//char temp_bits;
-	
+	formula fchild1, fchild2;
+	int type;
+	int rstep = res->step;
+	formula froot, prevNode;
+	int ret = stackEmpty(&redStack);
+	stackPush(&redStack, res->form);
+	int i;
+	// Begin Loop
+	while (stackEmpty(&redStack) == 0) {
+		froot = stackPop(&redStack);
+		type = ftype[froot];
+		switch (type) {
+			//////////
+			case (VALUE_T):
+				stackPush(&redStackVals, froot);
+				break;
+			case (PROP_T):
+				// get prop from formula table
+				root = formulas[froot];
+				if (getProp(root.val.propMask)) {
+					stackPush(&redStackVals,FORM_TRUE);
+				}
+				else {
+					stackPush(&redStackVals,FORM_FALSE);
+				}
+				break;
+			case (NOT_T):
+				root = formulas[froot];
+				// check direction
+				// coming back up
+				if (prevNode == root.val.child) {
+					fchild1 = stackPop(&redStackVals);
+					if (fchild1 == FORM_TRUE) {
+						stackPush(&redStackVals, FORM_FALSE);
+					} else if (fchild1 == FORM_FALSE) {
+						stackPush(&redStackVals, FORM_TRUE);
+					} else {
+						stackPush(&redStackVals, notForms[fchild1]);
+					}
+				} else { // going down -- just push not and child to stack
+					stackPush(&redStack, froot);
+					stackPush(&redStack, root.val.child);
+				}
+				break;
+			case (OR_T):
+				root = formulas[froot];
+				// check direction
+				if (prevNode == root.val.children.lchild) {
+					// check lchild and work on right if not done
+					fchild1 = stackPeek(&redStackVals);
+					if (fchild1 == FORM_TRUE) {
+						// could do nothing, we'll pop and push for now
+						stackPop(&redStackVals);
+						stackPush(&redStackVals, FORM_TRUE);
+					} else { // need to do the right side
+						stackPush(&redStack, froot);
+						stackPush(&redStack, root.val.children.rchild);
+					}
+				} else if (prevNode == root.val.children.rchild) { // on the way up, check vals
+					fchild1 = stackPop(&redStackVals);
+					fchild2 = stackPop(&redStackVals);
+					stackPush(&redStackVals, orForms[fchild2][fchild1]);
+				} else { // on the way down, push left
+					stackPush(&redStack, froot);
+					stackPush(&redStack, root.val.children.lchild);
+				}
+				break;
+			case (UNTIL_T):
+				// reusing type, saving memory space
+				child1.step = rstep;
+				child1.form = froot;
+				type = untilCheck(step, &child1);
+				if (type == TEMP_TRUE) {
+					//res->form = FORM_TRUE;
+					stackPush(&redStackVals, FORM_TRUE);
+				} else if (type == TEMP_FALSE) {
+					//res->form = FORM_FALSE;
+					stackPush(&redStackVals, FORM_FALSE);
+				} else {
+					stackPush(&redStackVals, child1.form);
+				}
+				// no else, just return the residue unchanged
+				break;
+			case (SINCE_T):
+				child1.step = rstep;
+				child1.form = froot;
+				type = sinceCheck(step, &child1);
+				if (type == TEMP_TRUE) {
+					stackPush(&redStackVals, FORM_TRUE);
+					//res->form = FORM_TRUE;
+				} else if (type == TEMP_FALSE) {
+					stackPush(&redStackVals, FORM_FALSE);
+					//res->form = FORM_FALSE;
+				} else {
+					stackPush(&redStackVals, child1.form);
+				}
+				break;
+			default:
+				// shouldn't get here...
+				break;
+
+			////////////////
+			//////////////
+			//////////////
+		}
+		prevNode = froot;
+	}
+	res->form = stackPop(&redStackVals);
+	stackReset(&redStack);
+	stackReset(&redStackVals);
+}
+
+void reduce(int step, residue *res) {
+	return itreduce(step, res);
+	fNode root;
+	residue child1, child2;
+
 	int type = ftype[res->form];
 	switch (type) {
 		case (VALUE_T):
@@ -177,7 +289,7 @@ int untilCheck(int step, residue* res) {
 	le = reslist->end;
 	temp_bits = 0;
 	BIT_SET(temp_bits, (AL_MASK) );
-	if (res->step >= h) 
+	if (step >= h) 
 		b_none = 1;	// past time, looking for none now
 	while (ls != le) {
 		resp = rbGet(reslist, ls);
@@ -205,6 +317,7 @@ int untilCheck(int step, residue* res) {
 	
 	/////////////////////////////////
 	// Could just update res->form here instead of passing up to reduce...
+	//printf("UNTILCHECK: bactual: %d, au: %d, al: %d, bal: %d\n, bn: %d", b_actual, a_until, a_alive, b_alive, b_none); 
 	if (b_actual != -1 && a_until != -1 && b_actual <= a_until) {
 		return TEMP_TRUE;
 	} else if (b_alive != -1 && a_alive != -1 && a_alive < b_alive) {
@@ -289,7 +402,7 @@ int sinceCheck(int step, residue* res) {
 
 	temp_bits = 0;
 	BIT_SET(temp_bits, (AL_MASK | UN_MASK) );
-	if (res->step >= h) 
+	if (step >= h) 
 		b_none = 1;	// past time, looking for none now
 	while (ls != le) {
 		resp = rbGet(reslist, ls);

@@ -17,7 +17,9 @@
 // csv stuff
 char buf[200];		/* input line buffer */
 char field[NFIELDS];	/* fields */
-long timeus;
+//long long timeus;
+unsigned long timeus;
+unsigned long mytimer;
 
 
 //stolen from 'the practice of programming'
@@ -72,6 +74,7 @@ int main(int argc, char** argv) {
 	
 	struct timeval ts, te;
 	timeus = 0;
+	mytimer = 0;
 	// keep track of violated or not
 	tracesat = 1;
 	FILE *infile;
@@ -116,8 +119,11 @@ int main(int argc, char** argv) {
 			// run conservative
 			cons_res.step = estep;
 			cons_res.form = POLICY;
+			//printf("before reduction, cons_res is (%d,%d)\n", cons_res.step, cons_res.form);
 			reduce(instep, &cons_res);
+			//printf("after reduction, cons_res is (%d,%d)\n", cons_res.step, cons_res.form);
 			rbInsert(&mainresbuf, cons_res.step, cons_res.form);
+			//printf("added (%d,%d) to ring\n", cons_res.step, cons_res.form);
 			
 			start = mainresbuf.start;
 			end = mainresbuf.end;
@@ -125,16 +131,17 @@ int main(int argc, char** argv) {
 				resp = rbGet(&mainresbuf, start);
 				if ((estep - resp->step) >= delay) {
 					reduce(estep, resp);
+					//printf("estep: %d, rstep: %d, form: %d\n", estep, resp->step, resp->form);
 					if (resp->form == FORM_TRUE) {
 						//printf("step %d is TRUE\n", resp->step);
 						rbRemoveFirst(&mainresbuf);
 					} else if (resp->form == FORM_FALSE) {
-						printf("step %d is FALSE\n", resp->step);
+						//printf("step %d is FALSE\n", resp->step);
 						rbRemoveFirst(&mainresbuf);
 						tracesat = 0;
 						// LEDS?
 					} else {	// not possible...
-						printf("step %d is ELSE?\n", resp->step);
+						printf("%d@@step %d is ELSE? -- %d\n", estep, resp->step, resp->form);
 						// LEDS?
 					}
 				} else {
@@ -148,13 +155,21 @@ int main(int argc, char** argv) {
 			// checked current step, increment
 			estep++;
 		}
+		printf("getting timeofday, timeus is %lu\n", timeus);
 		gettimeofday(&te, NULL);
-		timeus += (te.tv_sec - ts.tv_sec) * 1000000;
-		printf("added secs: timeus is %ld\n", timeus);
-		timeus += (te.tv_usec - ts.tv_usec);
-		printf("added usecs: timeus is %ld\n", timeus);
+		//long long add = (te.tv_sec - ts.tv_sec) * 1000000;
+		unsigned int add;
+		//timeus += (te.tv_sec - ts.tv_sec) * 1000000;
+		//printf("added secs: timeus is %lld\n", timeus);
+		//timeus += (te.tv_usec - ts.tv_usec);
+		add = (te.tv_usec - ts.tv_usec);
+		printf("timeus is %lu before add\n", timeus);
+		timeus = timeus + add;
+		printf("timeus is %lu after add\n",timeus);
+		printf("adding %d to timeus\n", add);
+		printf("added usecs: timeus is %lu\n", timeus);
 	}
-	printf("elapsed time to check is %ld", timeus);
+	printf("elapsed time to check is %lld\n", timeus);
 	printf("finished loop\n");
 	printf("Trace finished. Satisfied is %s\n", tracesat ? "true" : "false");
 }

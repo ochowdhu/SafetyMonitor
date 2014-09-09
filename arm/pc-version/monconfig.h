@@ -24,8 +24,6 @@
 
 extern const int ftype[NFORMULAS];
 
-///a -> b U_0,1s c
-
 // structure table
 extern resStructure theStruct[NSTRUCT];
 // formula table
@@ -33,7 +31,9 @@ extern fNode formulas[NFORMULAS];
 // residue buffer table
 extern resbuf rbuffers[NSTRUCT];
 // interval buffer table
-extern interval ibuffers[NSTRUCT][NBUFLEN*2];
+extern intNode intnodebuf[NSTRUCT][2][NBUFLEN];
+extern intbuf intbuffer[NSTRUCT][2];
+extern intring intringbuffer[NSTRUCT][2];
 extern residue resbuffers[NSTRUCT][NBUFLEN];
 
 // main list of residues
@@ -45,6 +45,12 @@ extern const formula notForms[NFORMULAS];
 extern const formula orForms[NFORMULAS][NFORMULAS];
 extern const formula untilForms[NFORMULAS][NFORMULAS];
 extern const formula sinceForms[NFORMULAS][NFORMULAS];
+
+// iterative reduce stack stuff
+extern formulaStack redStack;
+extern formulaStack redStackVals;
+extern formula redStackBuf[STACK_DEPTH];
+extern formula redStackValsBuf[STACK_DEPTH];
 
 extern void build_formula(void);
 extern void build_struct(void);
