@@ -24,7 +24,7 @@ volatile int estep, instep;
 int untilCheck(int step, residue* res);
 int sinceCheck(int step, residue* res);
 
-void initResStruct(resStructure* st, formula form, int delay, resbuf *res, interval *t, interval *f) {
+void initResStruct(resStructure* st, formula form, int delay, resbuf *res, intring *t, intring *f) {
 	st->delay = delay;
 	st->formula = form;
 	st->ctime = 0;

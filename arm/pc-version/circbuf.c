@@ -3,6 +3,8 @@
 
 #include "circbuf.h"
 #include <stdio.h>
+#define TRUE 1
+#define FALSE 0
 
 void resbInit(resbuf *rb, int size, residue *array) {
 	rb->size = size;
@@ -51,14 +53,8 @@ void rbRemoveFirst(resbuf *rb) {
 void ibInit(intbuf *ib, int size, intNode *array) {
 	ib->size = size;
 	ib->start = 0;
-	ib->end = 0;
-	ib->buf = array;
-}
-
-void inodebufInit(inodebuf* ib, int size, intNode *array) {
-	ib->size = size;
-	ib->start = 0;
-	ib->end = 0;
+	//ib->end = 0;
+	ib->end = size-1;	// filled by pointing to good memory
 	ib->buf = array;
 }
 
@@ -81,6 +77,8 @@ intNode* ibPop(intbuf *ib) {
 	return ret;
 }
 
+// //////////////////////////////
+// intring stuff
 void intRingInit(intring *ring, intbuf *pool) {
 	ring->start->ival.start = -1;
 	ring->start->ival.end = -1;
@@ -96,18 +94,71 @@ void intRingAdd(intNode *anchor, intNode *newring) {
 	anchor->next = newring;
 }
 
+void intRingAddFront(intring *ring, intNode *newring) {
+	newring->next = ring->start;
+	ring->start = newring;
+}
+void intRingRemove(intring* ring, intNode *prev, intNode* rem) {
+	prev->next = rem->next;
+	ibPush(ring, rem);
+}
 void RingAddStep(int step, intring *ring) {
-	intNode *it;
+	intNode *it, *lastit;
+	lastit = NULL;
 	it = ring->start;
 	intNode *next;
+	char merge = FALSE;
+	char added = TRUE;
 	while (it != ring->end) {
+		// either newest so add and be done
+		// or we already added it and are not merging
 		if (step > (*it).ival.end + 1) {
-			next = ibPop(ring->pool);
-			next->ival.start = step;
-			next->ival.end = step;
-			intRingAdd(it, next);
+			if (added == FALSE) {
+				next = ibPop(ring->pool);
+				next->ival.start = step;
+				next->ival.end = step;
+				if (lastit == NULL) {
+					intRingAddFront(ring, next);
+				} else {
+					intRingAdd(lastit, next);
+				}
+				added = TRUE;
+			}
+			break;
+		// extends current interval at the back
+		// merge with previous if we added already
+		} else if (step == (*it).ival.end + 1) {
+			if (added == TRUE) {
+				// MERGE -- put our start in last guy and delete 
+				// current
+				lastit.ival.start = (*it).ival.start;
+				intRingRemove(lastit, (*it));
+			// new, just extend and be done
+			} else {
+				(*it).ival.end = step;
+				added = TRUE;
+				break;
+			}
+		// if this extends the front, extend
+		// this is the only add case that continues to check for merges
+		} else if (step == (*it).ival.start - 1) {
+				(*it).ival.start = step;
+				added = TRUE;
+		} else if ((*it).ival.start <= step && step <= ((*it).ival.end)) {
+			// do nothing, already inside
+			added = TRUE;
+			break;
 		}
-
+		lastit = it;
+		it++;
+	}
+	// got to end and didn't add, so add it to the end
+	// i.e. step < all intervals
+	if (added == FALSE) {
+		next = ibPop(ring->pool);
+		next->ival.start = step;
+		next->ival.end = step;
+		intRingAdd(lastit, next);
 	}
 }
 ///////////////// interval stuff above

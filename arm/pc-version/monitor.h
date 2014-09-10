@@ -22,11 +22,11 @@ typedef struct {
 	int delay;
 	formula formula;
 	resbuf* residues;
-	interval* ttime;
-	interval* ftime;
+	intring* ttime;
+	intring* ftime;
 } resStructure;
 
-extern void initResStruct(resStructure* st, formula form, int delay, resbuf *res, interval *t, interval *f);
+extern void initResStruct(resStructure* st, formula form, int delay, resbuf *res, intring *t, intring *f);
 extern residue* stGetRes(resStructure *st, int pos);
 extern void reduce(int step, residue *res);
 

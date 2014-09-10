@@ -30,14 +30,6 @@ typedef struct intbuf {
 	intNode *buf;
 } intbuf;
 
-typedef struct inodebuf {
-	int size;
-	int start;
-	int end;
-	intNode* buf;
-} inodebuf;
-
-
 typedef struct intring {
 	intNode* start;
 	intNode* end;
@@ -73,10 +65,10 @@ extern void ibPush(intbuf *ib, int start, int end);
 extern intNode* ibPop(intbuf *ib);
 //extern interval* ibGet(intbuf *ib, int pos);
 
-extern void inodebufInit(inodebuf* ib, int size, intNode *array);
-
 extern void RingAddStep(int step, intring *ring);
 extern void intRingInit(intring *ring, intbuf *pool);
+extern void intRingAddFront(intring *ring, intNode * next);
+extern void intRingRemove(intring *ring, intNode *prev, intNode* rem);
 // essentially private
 extern void intRingAdd(intNode *anchor, intNode *newring);
 #endif
