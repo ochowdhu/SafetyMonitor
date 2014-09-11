@@ -27,7 +27,7 @@ typedef struct intbuf {
 	int start;
 	int end;
 //	interval* buf;
-	intNode *buf;
+	intNode **buf;
 } intbuf;
 
 typedef struct intring {
@@ -58,11 +58,11 @@ extern void rbInsert(resbuf *rb, int step, formula f);
 extern residue* rbGet(resbuf *rb, int pos);
 extern void rbRemoveFirst(resbuf *rb);
 
-extern void ibInit(intbuf *ib, int size, intNode *array);
-extern void ibInsert(intbuf *ib, int step);
-extern interval* ibGet(intbuf *ib, int pos);
-extern void ibPush(intbuf *ib, int start, int end);
+// new interval stuff
+extern void ibInit(intbuf *ib, int size, intNode **array);
+extern void ibPush(intbuf *ib, intNode *n);
 extern intNode* ibPop(intbuf *ib);
+//extern void ibPush(intbuf *ib, int start, int end);
 //extern interval* ibGet(intbuf *ib, int pos);
 
 extern void RingAddStep(int step, intring *ring);

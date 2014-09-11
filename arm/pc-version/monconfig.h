@@ -32,6 +32,7 @@ extern fNode formulas[NFORMULAS];
 extern resbuf rbuffers[NSTRUCT];
 // interval buffer table
 extern intNode intnodebuf[NSTRUCT][2][NBUFLEN];
+extern intNode *intnodebufP[NSTRUCT][2][NBUFLEN];
 extern intbuf intbuffer[NSTRUCT][2];
 extern intring intringbuffer[NSTRUCT][2];
 extern residue resbuffers[NSTRUCT][NBUFLEN];

@@ -204,11 +204,22 @@ int main(int argc, char** argv) {
 		// print structures
 		monconfig << "// build structures" << std::endl << "void build_struct(void) {" << std::endl;
 		//@TODO should put actual delay per structure in here eventually
-		monconfig  << "int i;" << std::endl
+		monconfig  << "int i,j;" << std::endl
 				  << "fstackInit(&redStack, STACK_DEPTH, redStackBuf);" << std::endl
 				  << "fstackInit(&redStackVals, STACK_DEPTH, redStackValsBuf);" << std::endl
 				  << "resbInit(&mainresbuf, NBUFLEN, mainresbuffers);" << std::endl
-				  << "for (i = 0; i < NSTRUCT; i++) { resbInit(&rbuffers[i], NBUFLEN, resbuffers[i]); }";
+				  << "for (i = 0; i < NSTRUCT; i++) { " << std::endl
+				  << "resbInit(&rbuffers[i], NBUFLEN, resbuffers[i]); " << std::endl 
+				  << "for (j = 0; j < NBUFLEN; j++) {" << std::endl
+				  << "// maybe memset the intnodebufs to 0, we'll see..." << std::endl
+				  << "intnodebufP[i][0][j] = &intnodebuf[i][0][j];"  
+				  << "intnodebufP[i][1][j] = &intnodebuf[i][1][j];" << std::endl
+				  << "}" << std::endl
+				  << "ibInit(&intbuffer[i][0], NBUFLEN, intnodebufP[i][0]);" << std::endl
+				  << "ibInit(&intbuffer[i][1], NBUFLEN, intnodebufP[i][1]);" << std::endl
+				  << "intRingInit(&intringbuffer[i][0], &intbuffer[i][0]);" << std::endl
+				  << "intRingInit(&intringbuffer[i][1], &intbuffer[i][1]);" << std::endl
+				  << "}";
 		confBuildStruct(ast->gList, monconfig);
 		monconfig <<"}" << std::endl << std::endl;
 
@@ -229,7 +240,13 @@ int main(int argc, char** argv) {
 				  << "formulaStack redStack;" << std::endl
 				  << "formulaStack redStackVals;" << std::endl
 				  << "formula redStackBuf[STACK_DEPTH];" << std::endl
-				  << "formula redStackValsBuf[STACK_DEPTH];" << std::endl;
+				  << "formula redStackValsBuf[STACK_DEPTH];" << std::endl
+				  << "// interval stuff" << std::endl
+				  << "intNode intnodebuf[NSTRUCT][2][NBUFLEN];" << std::endl
+				  << "intNode *intnodebufP[NSTRUCT][2][NBUFLEN];" << std::endl
+				  << "intbuf intbuffer[NSTRUCT][2];" << std::endl
+				  << "intring intringbuffer[NSTRUCT][2];" << std::endl
+				  << "residue resbuffers[NSTRUCT][NBUFLEN];" << std::endl;
 
 
 		// print formulas
@@ -241,7 +258,7 @@ int main(int argc, char** argv) {
 		// and lastly dump incr_struct here
 		monconfig << "void incrStruct(int step) { " << std::endl
 				  << "// loop over struct (make sure struct is built smallest to largest...) " << std::endl
-				  << "int i, cres, eres;" << std::endl
+				  << "int i, cres, eres; residue *resp;" << std::endl
 				  << "for (i = 0; i < NSTRUCT; i++) {" << std::endl
 				  << "resStructure *cStruct = &theStruct[i];" << std::endl
 				  << "// add residue to structure" << std::endl 
@@ -251,7 +268,10 @@ int main(int argc, char** argv) {
 				  << "eres = cStruct->residues->end;" << std::endl
 				  << "// loop over every residue" << std::endl
 				  << "while (cres != eres) {" << std::endl
-				  << "reduce(step, stGetRes(cStruct, cres));" << std::endl
+				  << "resp = stGetRes(cStruct, cres);" << std::endl
+				  << "reduce(step, resp);" << std::endl
+				  << "if (resp->form == FORM_TRUE) { RingAddStep(resp->step, cStruct->ttime);}" << std::endl
+				  << "else if (resp->form == FORM_FALSE) { RingAddStep(resp->step, cStruct->ftime);};" << std::endl
 				  << "// increment" << std::endl
 				  << "cres = (cres + 1) % theStruct[i].residues->size;" << std::endl
 				  << "}" << std::endl
@@ -656,7 +676,7 @@ void confBuildStruct(std::vector<Node*> forms, std::ostream &os) {
 	int index = 0;
 	std::vector<Node*>::iterator it;
 	for (it = forms.begin(); it != forms.end(); it++) {
-		os << "initResStruct(&theStruct[" << index << "], " << (*it)->nodeTag << ", FORM_DELAY, &rbuffers[" << index << "], &ibuffers[" << index << "][0], &ibuffers[" << index << "][1]);" << std::endl;
+		os << "initResStruct(&theStruct[" << index << "], " << (*it)->nodeTag << ", FORM_DELAY, &rbuffers[" << index << "], &intringbuffer[" << index << "][0], &intringbuffer[" << index << "][1]);" << std::endl;
 		(*it)->stidx = index;
 		index++;
 	}

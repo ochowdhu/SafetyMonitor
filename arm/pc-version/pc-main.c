@@ -163,11 +163,12 @@ int main(int argc, char** argv) {
 		//printf("added secs: timeus is %lld\n", timeus);
 		//timeus += (te.tv_usec - ts.tv_usec);
 		add = (te.tv_usec - ts.tv_usec);
-		printf("timeus is %lu before add\n", timeus);
+		/*printf("timeus is %lu before add\n", timeus);
 		timeus = timeus + add;
 		printf("timeus is %lu after add\n",timeus);
 		printf("adding %d to timeus\n", add);
 		printf("added usecs: timeus is %lu\n", timeus);
+		*/
 	}
 	printf("elapsed time to check is %lld\n", timeus);
 	printf("finished loop\n");

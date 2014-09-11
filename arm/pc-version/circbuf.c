@@ -6,6 +6,8 @@
 #define TRUE 1
 #define FALSE 0
 
+
+
 void resbInit(resbuf *rb, int size, residue *array) {
 	rb->size = size;
 	rb->start = 0;
@@ -13,11 +15,6 @@ void resbInit(resbuf *rb, int size, residue *array) {
 	rb->buf = array;
 }
 
-void fstackInit(formulaStack *fs, unsigned int size, formula* buf) {
-	fs->size = size;
-	fs->sp = 0;
-	fs->stack = buf;
-}
 int rbFull(resbuf *rb) {
 		return (rb->end + 1) % rb->size == rb->start;
 }
@@ -50,7 +47,7 @@ void rbRemoveFirst(resbuf *rb) {
 
 ///////////// residue buffer above
 ///////////// interval buffer below
-void ibInit(intbuf *ib, int size, intNode *array) {
+void ibInit(intbuf *ib, int size, intNode **array) {
 	ib->size = size;
 	ib->start = 0;
 	//ib->end = 0;
@@ -58,21 +55,15 @@ void ibInit(intbuf *ib, int size, intNode *array) {
 	ib->buf = array;
 }
 
-void ibPush(intbuf *ib, int start, int end) {
-	ib->buf[ib->end].ival.start = start;
-	ib->buf[ib->end].ival.end = end;
-	// just see if circbuf is working...
+void ibPush(intbuf *ib, intNode *n) {
+	ib->buf[ib->end] = n;
 	ib->end = (ib->end + 1) % ib->size;
 	if (ib->end == ib->start) {
 		ib->start = (ib->start + 1) % ib->size;	// full, move the start
 	}
 }
-
-/*interval* ibGet(intbuf *ib, int pos) {
-		return &(ib->buf[(ib->start + pos) % ib->size]);
-}*/
 intNode* ibPop(intbuf *ib) {
-	intNode* ret = &(ib->buf[ib->start]);
+	intNode* ret = ib->buf[ib->start];
 	ib->start = (ib->start + 1) % ib->size;	// full, move the start
 	return ret;
 }
@@ -80,13 +71,12 @@ intNode* ibPop(intbuf *ib) {
 // //////////////////////////////
 // intring stuff
 void intRingInit(intring *ring, intbuf *pool) {
+	ring->pool = pool;
+	ring->start = ibPop(ring->pool);
+	ring->end = ring->start;
 	ring->start->ival.start = -1;
 	ring->start->ival.end = -1;
-	ring->start->next = ring->end;
-	ring->end->ival.start = -1;
-	ring->end->ival.end = -1;
-	ring->end->next = NULL;
-	ring->pool = pool;
+	ring->start->next = NULL;
 }
 
 void intRingAdd(intNode *anchor, intNode *newring) {
@@ -100,15 +90,14 @@ void intRingAddFront(intring *ring, intNode *newring) {
 }
 void intRingRemove(intring* ring, intNode *prev, intNode* rem) {
 	prev->next = rem->next;
-	ibPush(ring, rem);
+	ibPush(ring->pool, rem);
 }
 void RingAddStep(int step, intring *ring) {
 	intNode *it, *lastit;
 	lastit = NULL;
 	it = ring->start;
 	intNode *next;
-	char merge = FALSE;
-	char added = TRUE;
+	char added = FALSE;
 	while (it != ring->end) {
 		// either newest so add and be done
 		// or we already added it and are not merging
@@ -131,8 +120,9 @@ void RingAddStep(int step, intring *ring) {
 			if (added == TRUE) {
 				// MERGE -- put our start in last guy and delete 
 				// current
-				lastit.ival.start = (*it).ival.start;
-				intRingRemove(lastit, (*it));
+				lastit->ival.start = (*it).ival.start;
+				intRingRemove(ring, lastit, (it));
+				break;
 			// new, just extend and be done
 			} else {
 				(*it).ival.end = step;
@@ -150,7 +140,7 @@ void RingAddStep(int step, intring *ring) {
 			break;
 		}
 		lastit = it;
-		it++;
+		it = it->next;
 	}
 	// got to end and didn't add, so add it to the end
 	// i.e. step < all intervals
@@ -158,11 +148,20 @@ void RingAddStep(int step, intring *ring) {
 		next = ibPop(ring->pool);
 		next->ival.start = step;
 		next->ival.end = step;
-		intRingAdd(lastit, next);
+		if (lastit == NULL) {
+			intRingAddFront(ring, next);
+		} else {
+			intRingAdd(lastit, next);
+		}
 	}
 }
 ///////////////// interval stuff above
-///////////////// stack below
+///////////////// FORMULA STACK STUFF
+void fstackInit(formulaStack *fs, unsigned int size, formula* buf) {
+	fs->size = size;
+	fs->sp = 0;
+	fs->stack = buf;
+}
 int stackPush(formulaStack *fs, formula f) {
 	if (fs->sp < fs->size-1) {
 		fs->stack[++(fs->sp)] = f;
@@ -198,3 +197,4 @@ void stackReset(formulaStack *fs) {
 		fs->stack[i] = 0;
 	}*/
 }
+//// END FORMULA STACK STUFF

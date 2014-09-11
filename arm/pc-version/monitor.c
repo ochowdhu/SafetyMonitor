@@ -16,6 +16,11 @@
 #define BIT_CLEAR(field, val) (field &= ~(val))
 #define BIT_SET(field, val) (field |= (val))
 
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#define MIN(a,b) (((a)<(b))?(a):(b))
+
+#define USEINTS
+
 
 volatile int cstate, nstate; // current/next start -- just a set of bits for now
 volatile int estep, instep;
@@ -331,6 +336,9 @@ int untilCheck(int step, residue* res) {
 
 
 int sinceCheck(int step, residue* res) {
+	#ifdef USEINTS
+	return sinceCheckInt(step, res);
+	#endif
 	/// we can do intervals
 	/// instead of a circ buffer we'll just keep a straight array
 	/// since we have to resort after every insert anyway
@@ -443,6 +451,165 @@ int sinceCheck(int step, residue* res) {
 	} else {
 		return TEMP_RES;
 	}
+}
+
+
+int sinceCheckInt(int step, residue *res) {
+	int l, h; // temporal bounds
+	int ls, le; // residue list loop pointers
+	intring *beta, *alphat, *alphaf;
+	intNode *nnb, *nna;
+	resbuf *reslist;
+	residue *resp;
+	// interval vars
+	int maxRes = -1, maxTrue = -1;
+	int islow, ishigh, aislow, aishigh;
+	// get temporal bounds
+	l = res->step - formulas[res->form].val.t_children.hbound;
+	h = res->step - formulas[res->form].val.t_children.lbound;
+
+	// No Beta case
+	beta = theStruct[formulas[formulas[res->form].val.t_children.rchild].structidx].ftime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		if (nnb->ival.start <= l && nnb->ival.end >= h) {
+			return TEMP_FALSE;
+		// everything after this isn't in [l,h]
+		} else if (nnb->ival.end < l) {
+			break;
+		}
+	}
+	// alpha not since possible beta
+	reslist = theStruct[formulas[formulas[res->form].val.t_children.rchild].structidx].residues;
+	ls = reslist->end-1;
+	if (ls < 0) ls = reslist->size-1;
+	le = reslist->start-1;
+	if (le < 0) le = reslist->size-1;
+	while (ls != le) {
+		resp = rbGet(reslist, ls);
+		if (l <= resp->step && resp->step <= h && (resp->form != FORM_TRUE && resp->form != FORM_FALSE)) {
+			maxRes = resp->step;
+			break;
+		}
+		// decrement to next item in list
+		ls = (ls - 1) % reslist->size;
+		// looping backwards, so if we roll over bump to the top
+		if (ls < 0) { ls = (reslist->size - 1); }
+	}
+	// Rest of cases mixed together
+	// get true-time interval lists
+	alphat = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ttime;
+	alphaf = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ftime;
+	beta = theStruct[formulas[formulas[res->form].val.t_children.rchild].structidx].ttime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		islow = MAX(nnb->ival.start,l);
+		ishigh = MIN(nnb->ival.end, h);
+		if (islow <= ishigh) {
+			// //////////////////////////////////
+			// Quick check of a not since b here
+			if (maxTrue == -1) {
+				maxTrue = MAX(ishigh+1, maxRes);
+				for (nna = alphaf->start; nna->next != NULL; nna = nna->next) {
+					aislow = MAX(nna->ival.start, maxTrue);
+					aishigh = MIN(nna->ival.end, res->step);
+					if (aislow <= aishigh) {
+						return TEMP_FALSE;
+					}
+				}
+			}
+			/////////////////////////////////////////
+			for (nna = alphat->start; nna->next != NULL; nna = nna->next) {
+				if (nna->ival.start <= ishigh+1 && nna->ival.end >= res->step) {
+					return TEMP_TRUE;
+				}
+			}
+			if (islow <= res->step && ishigh >= res->step) {
+				return TEMP_TRUE;
+			}
+		}
+	}
+	return TEMP_RES;
+}
+
+int untilCheckInt(int step, residue *res) {
+	int l, h; // temporal bounds
+	int ls, le; // residue list loop pointers
+	intring *beta, *alphat, *alphaf;
+	intNode *nnb, *nna;
+	resbuf *reslist;
+	residue *resp;
+	// interval vars
+	int minRes = -1, minTrue = -1;
+	int islow, ishigh, aislow, aishigh;
+
+	// get temporal bounds
+	l = res->step + formulas[res->form].val.t_children.lbound;
+	h = res->step + formulas[res->form].val.t_children.hbound;
+
+	// No Beta Case
+	beta = theStruct[formulas[formulas[res->form].val.t_children.rchild].structidx].ftime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		if (nnb->ival.start <= l && nnb->ival.end >= h) {
+			return TEMP_FALSE;
+		// everything after this isn't in [l,h]
+		} else if (nnb->ival.end < l) {
+			break;
+		}
+	}
+
+	// alpha not since possible beta case
+	reslist = theStruct[formulas[formulas[res->form].val.t_children.rchild].structidx].residues;
+	ls = reslist->start;
+	le = reslist->end;
+	while (ls != le) {
+		resp = rbGet(reslist, ls);
+		if (l <= resp->step && resp->step <= h && (resp->form != FORM_TRUE && resp->form != FORM_FALSE)) {
+			minRes = resp->step;
+			break;
+		}
+		// decrement to next item in list
+		ls = (ls + 1) % reslist->size;
+	}
+	// Rest of cases mixed together
+	// get true time interval lists
+	alphat = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ttime;
+	alphaf = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ftime;
+	beta = theStruct[formulas[formulas[res->form].val.t_children.rchild].structidx].ttime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		islow = MAX(nnb->ival.start,l);
+		ishigh = MIN(nnb->ival.end, h);
+		if (islow <= ishigh) {
+			// //////////////////////////////////
+			// Quick check of a not since b here
+			if (minTrue == -1) {
+				minTrue = MIN(islow, minRes);
+				for (nna = alphaf->start; nna->next != NULL; nna = nna->next) {
+					aislow = MAX(nna->ival.start, res->step);
+					aishigh = MIN(nna->ival.end, minTrue);
+					if (aislow <= aishigh) {
+						return TEMP_FALSE;
+					}
+				}
+			}
+			/////////////////////////////////////////
+			for (nna = alphat->start; nna->next != NULL; nna = nna->next) {
+				if (nna->ival.start <= res->step && nna->ival.end >= islow) {
+					return TEMP_TRUE;
+				}
+			}
+			if (islow <= res->step && ishigh >= res->step) {
+				return TEMP_TRUE;
+			}
+		}
+	}
+}
+
+void printRing(intring *ring) {
+	intNode *n;
+	printf("printing ring...\n");
+	for (n = ring->start; n->next != NULL; n = n->next) {
+		printf("[%d,%d]  ", n->ival.start, n->ival.end);
+	}
+	printf("\n");
 }
 void test() {
 	// should compile...

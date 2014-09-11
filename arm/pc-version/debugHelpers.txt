@@ -1,0 +1,16 @@
+// Put in genmonconfig incr_struct in the loop to see the intervals
+if (resp->step == step) {
+printf("incremented struct %d, rings are:\n", i);
+printf("%d-ttime: ", i);
+for (node = cStruct->ttime->start; node != cStruct->ttime->end; node = node->next) {
+	printf("[%d,%d]\t", node->ival.start, node->ival.end);
+}
+printf("\n");
+printf("%d-ftime: ", i);
+for (node = cStruct->ftime->start; node != cStruct->ftime->end; node = node->next) {
+	printf("[%d,%d]\t", node->ival.start, node->ival.end);
+}
+printf("\n");
+}
+
+
