@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 		// if the last step we checked (estep) is less than the most recent step 
 		// we've received (instep) then run the checker again
 		//@TODO -- need to grab instep so it doesn't get changed out from under us here
-		if (estep < instep) {
+		if (estep <= instep) {
 			// first increment the structure
 			incrStruct(estep);
 		
