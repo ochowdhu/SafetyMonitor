@@ -270,8 +270,10 @@ int main(int argc, char** argv) {
 				  << "while (cres != eres) {" << std::endl
 				  << "resp = stGetRes(cStruct, cres);" << std::endl
 				  << "reduce(step, resp);" << std::endl
+				  << "#ifdef USEINTS" << std::endl
 				  << "if (resp->form == FORM_TRUE) { RingAddStep(resp->step, cStruct->ttime);}" << std::endl
 				  << "else if (resp->form == FORM_FALSE) { RingAddStep(resp->step, cStruct->ftime);};" << std::endl
+				  << "#endif" << std::endl
 				  << "// increment" << std::endl
 				  << "cres = (cres + 1) % theStruct[i].residues->size;" << std::endl
 				  << "}" << std::endl

@@ -134,10 +134,10 @@ int main(int argc, char** argv) {
 					//printf("estep: %d, rstep: %d, form: %d\n", estep, resp->step, resp->form);
 					if (resp->form == FORM_TRUE) {
 						//printf("step %d is TRUE\n", resp->step);
-						rbRemoveFirst(&mainresbuf);
+						//rbRemoveFirst(&mainresbuf);
 					} else if (resp->form == FORM_FALSE) {
 						//printf("step %d is FALSE\n", resp->step);
-						rbRemoveFirst(&mainresbuf);
+						//rbRemoveFirst(&mainresbuf);
 						tracesat = 0;
 						// LEDS?
 					} else {	// not possible...
@@ -155,7 +155,7 @@ int main(int argc, char** argv) {
 			// checked current step, increment
 			estep++;
 		}
-		printf("getting timeofday, timeus is %lu\n", timeus);
+		//printf("getting timeofday, timeus is %lu\n", timeus);
 		gettimeofday(&te, NULL);
 		//long long add = (te.tv_sec - ts.tv_sec) * 1000000;
 		unsigned int add;

@@ -156,8 +156,10 @@ eres = cStruct->residues->end;
 while (cres != eres) {
 resp = stGetRes(cStruct, cres);
 reduce(step, resp);
+#ifdef USEINTS
 if (resp->form == FORM_TRUE) { RingAddStep(resp->step, cStruct->ttime);}
 else if (resp->form == FORM_FALSE) { RingAddStep(resp->step, cStruct->ftime);};
+#endif
 // increment
 cres = (cres + 1) % theStruct[i].residues->size;
 }

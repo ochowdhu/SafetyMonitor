@@ -21,6 +21,9 @@
 #define FORM_FALSE 1
 #define FORM_TRUE 2
 
+#define USEINTS
+#define ITERATIVE_RED
+#define PC_MODE
 
 extern const int ftype[NFORMULAS];
 
