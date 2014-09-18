@@ -2,10 +2,14 @@
 
 
 #include "circbuf.h"
+#include <stdio.h>
+#define TRUE 1
+#define FALSE 0
+
 
 
 void resbInit(resbuf *rb, int size, residue *array) {
-	rb->size = size+1;
+	rb->size = size;
 	rb->start = 0;
 	rb->end = 0;
 	rb->buf = array;
@@ -25,6 +29,7 @@ void rbInsertP(resbuf *rb, residue *res) {
 void rbInsert(resbuf *rb, int step, formula f) {
 	rb->buf[rb->end].step = step;
 	rb->buf[rb->end].form = f;
+	// just see if circbuf is working...
 	rb->end = (rb->end + 1) % rb->size;
 	if (rb->end == rb->start) {
 		rb->start = (rb->start + 1) % rb->size;	// full, move the start
@@ -32,43 +37,164 @@ void rbInsert(resbuf *rb, int step, formula f) {
 }
 
 residue* rbGet(resbuf *rb, int pos) {
-	return &(rb->buf[(rb->start + pos) % rb->size]);
+	//return &(rb->buf[(rb->start + pos) % rb->size]);
+	return &(rb->buf[pos]);
 }
 
-void ibInit(intbuf *ib, int size, interval *array) {
-	
+void rbRemoveFirst(resbuf *rb) {
+	rb->start = (rb->start + 1) % rb->size;
 }
-void ibInsert(intbuf *ib, int step) {
-	// not going to deal with this right now... just using residual list
-	// need to sort so might as well think about data structures...
-	return;
-	/*char merge = 0, added = 0;
-	interval* cint;
-	int s = ib->start;
-	while (s != ib->end) {
-		cint = ibGet(ib, s);
-		// check if extending...
-		if (step-1 == cint->end) {
-			cint->end = step;
-			added = 1;
-		} else if (step + 1 == cint->start) {
-			if (added)
-				merge = s;
-			else {
-				cint->start = step;
+
+///////////// residue buffer above
+///////////// interval buffer below
+void ibInit(intbuf *ib, int size, intNode **array) {
+	ib->size = size;
+	ib->start = 0;
+	//ib->end = 0;
+	ib->end = size-1;	// filled by pointing to good memory
+	ib->buf = array;
+}
+
+void ibPush(intbuf *ib, intNode *n) {
+	ib->buf[ib->end] = n;
+	ib->end = (ib->end + 1) % ib->size;
+	if (ib->end == ib->start) {
+		ib->start = (ib->start + 1) % ib->size;	// full, move the start
+	}
+}
+intNode* ibPop(intbuf *ib) {
+	intNode* ret = ib->buf[ib->start];
+	ib->start = (ib->start + 1) % ib->size;	// full, move the start
+	return ret;
+}
+
+// //////////////////////////////
+// intring stuff
+void intRingInit(intring *ring, intbuf *pool) {
+	ring->pool = pool;
+	ring->start = ibPop(ring->pool);
+	ring->end = ring->start;
+	ring->start->ival.start = -1;
+	ring->start->ival.end = -1;
+	ring->start->next = NULL;
+}
+
+void intRingAdd(intNode *anchor, intNode *newring) {
+	newring->next = anchor->next;
+	anchor->next = newring;
+}
+
+void intRingAddFront(intring *ring, intNode *newring) {
+	newring->next = ring->start;
+	ring->start = newring;
+}
+void intRingRemove(intring* ring, intNode *prev, intNode* rem) {
+	prev->next = rem->next;
+	ibPush(ring->pool, rem);
+}
+void RingAddStep(int step, intring *ring) {
+	intNode *it, *lastit;
+	intNode *next;
+	char added;
+	added	= FALSE;
+	lastit = NULL;
+	it = ring->start;
+	while (it != ring->end) {
+		// either newest so add and be done
+		// or we already added it and are not merging
+		if (step > (*it).ival.end + 1) {
+			if (added == FALSE) {
+				next = ibPop(ring->pool);
+				next->ival.start = step;
+				next->ival.end = step;
+				if (lastit == NULL) {
+					intRingAddFront(ring, next);
+				} else {
+					intRingAdd(lastit, next);
+				}
+				added = TRUE;
 			}
+			break;
+		// extends current interval at the back
+		// merge with previous if we added already
+		} else if (step == (*it).ival.end + 1) {
+			if (added == TRUE) {
+				// MERGE -- put our start in last guy and delete 
+				// current
+				lastit->ival.start = (*it).ival.start;
+				intRingRemove(ring, lastit, (it));
+				break;
+			// new, just extend and be done
+			} else {
+				(*it).ival.end = step;
+				added = TRUE;
+				break;
+			}
+		// if this extends the front, extend
+		// this is the only add case that continues to check for merges
+		} else if (step == (*it).ival.start - 1) {
+				(*it).ival.start = step;
+				added = TRUE;
+		} else if ((*it).ival.start <= step && step <= ((*it).ival.end)) {
+			// do nothing, already inside
+			added = TRUE;
+			break;
 		}
-		// done extending, do we need to merge?
-		if (merge) {
-			
+		lastit = it;
+		it = it->next;
+	}
+	// got to end and didn't add, so add it to the end
+	// i.e. step < all intervals
+	if (added == FALSE) {
+		next = ibPop(ring->pool);
+		next->ival.start = step;
+		next->ival.end = step;
+		if (lastit == NULL) {
+			intRingAddFront(ring, next);
+		} else {
+			intRingAdd(lastit, next);
 		}
-		
-		// no extend/merge -- add directly
+	}
+}
+///////////////// interval stuff above
+///////////////// FORMULA STACK STUFF
+void fstackInit(formulaStack *fs, unsigned int size, formula* buf) {
+	fs->size = size;
+	fs->sp = 0;
+	fs->stack = buf;
+}
+int stackPush(formulaStack *fs, formula f) {
+	if (fs->sp < fs->size-1) {
+		fs->stack[++(fs->sp)] = f;
+		return 1;
+	}
+	return 0;
+}
+formula stackPop(formulaStack *fs) {
+	if (fs->sp <= 0) {
+		return 0;
+	}
+	fs->sp--;
+	return fs->stack[fs->sp+1];
+}
+void stackDec(formulaStack *fs) {
+	if (fs->sp > 0) {
+		(fs->sp)--;
+	}
+	return;
+}
+int stackEmpty(formulaStack *fs) {
+	return (fs->sp <= 0);
+}
+formula stackPeek(formulaStack *fs) {
+	return fs->stack[fs->sp];
+}
+void stackReset(formulaStack *fs) {
+	fs->sp = 0;
+	// helpful to debug, don't need to acually erase
+	/*int i = 0; 
+	for (i = 0; i < fs->size; i++) {
+		fs->stack[i] = 0;
 	}*/
 }
-
-
-
-interval* ibGet(intbuf *ib, int pos) {
-		return &(ib->buf[(ib->start + pos) % ib->size]);
-}
+//// END FORMULA STACK STUFF

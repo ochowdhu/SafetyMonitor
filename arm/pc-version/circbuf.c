@@ -94,10 +94,12 @@ void intRingRemove(intring* ring, intNode *prev, intNode* rem) {
 }
 void RingAddStep(int step, intring *ring) {
 	intNode *it, *lastit;
+	intNode *next;
+	char added;
+
 	lastit = NULL;
 	it = ring->start;
-	intNode *next;
-	char added = FALSE;
+	added = FALSE;
 	while (it != ring->end) {
 		// either newest so add and be done
 		// or we already added it and are not merging
@@ -175,7 +177,6 @@ formula stackPop(formulaStack *fs) {
 	}
 	fs->sp--;
 	return fs->stack[fs->sp+1];
-	return 0;
 }
 void stackDec(formulaStack *fs) {
 	if (fs->sp > 0) {

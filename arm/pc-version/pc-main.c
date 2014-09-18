@@ -163,6 +163,7 @@ int main(int argc, char** argv) {
 		//printf("added secs: timeus is %lld\n", timeus);
 		//timeus += (te.tv_usec - ts.tv_usec);
 		add = (te.tv_usec - ts.tv_usec);
+		printf("loop time is %d\n", add);
 		/*printf("timeus is %lu before add\n", timeus);
 		timeus = timeus + add;
 		printf("timeus is %lu after add\n",timeus);

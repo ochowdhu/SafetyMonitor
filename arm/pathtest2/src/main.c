@@ -9,7 +9,7 @@
 #include "misc.h"
 #include "stm32f4xx_tim.h"
 #include "stm32f4xx_rcc.h"
-#include "stm32f4xx_gpio.h"
+#include <stm32f4xx_gpio.h>
 
 // monitor includes
 #include "residues.h"
@@ -61,6 +61,10 @@ int sim = TRUE;
 int delay;	
 int cstep;	// current step count
 int lcount;
+
+#define MASK_a 1
+#define MASK_b 2
+#define MASK_c 4
 
 void fillData() {
 	int i;

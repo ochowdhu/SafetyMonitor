@@ -47,17 +47,16 @@ residue* stGetRes(resStructure *st, int pos) {
 // Iterative Reduce, used to be itreduce -- now just using preprocessor
 //void itreduce(int step, residue *res) {
 void reduce(int step, residue *res) {
+	fNode root;
+	residue child1;
+	formula fchild1, fchild2;
+	int type, rstep;
+	formula froot, prevNode;
+
 	stackReset(&redStack);
 	stackReset(&redStackVals);
-	fNode root;
-	residue child1, child2;
-	formula fchild1, fchild2;
-	int type;
-	int rstep = res->step;
-	formula froot, prevNode;
-	int ret = stackEmpty(&redStack);
+	rstep = res->step;
 	stackPush(&redStack, res->form);
-	int i;
 	// Begin Loop
 	while (stackEmpty(&redStack) == 0) {
 		froot = stackPop(&redStack);

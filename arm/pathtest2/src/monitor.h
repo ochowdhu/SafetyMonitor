@@ -12,7 +12,7 @@
 
 
 // get proposition value
-#define getProp(m) (cstate & m)
+#define getProp(m) ((cstate & m)!=0)
 
 extern volatile int cstate, nstate; // current/next start -- just a set of bits for now
 extern volatile int estep, instep;
@@ -22,11 +22,11 @@ typedef struct {
 	int delay;
 	formula formula;
 	resbuf* residues;
-	interval* ttime;
-	interval* ftime;
+	intring* ttime;
+	intring* ftime;
 } resStructure;
 
-extern void initResStruct(resStructure* st, formula form, int delay, resbuf *res, interval *t, interval *f);
+extern void initResStruct(resStructure* st, formula form, int delay, resbuf *res, intring *t, intring *f);
 extern residue* stGetRes(resStructure *st, int pos);
 extern void reduce(int step, residue *res);
 
