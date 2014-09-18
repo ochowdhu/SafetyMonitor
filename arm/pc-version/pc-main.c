@@ -12,6 +12,10 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
 
 #define NFIELDS 6
 // csv stuff
@@ -20,7 +24,30 @@ char field[NFIELDS];	/* fields */
 //long long timeus;
 unsigned long timeus;
 unsigned long mytimer;
+double mtimeus = 0;
+int stepcount = 0;
 
+// OSX clock stuff
+#ifdef __MACH__
+clock_serv_t cclock;
+mach_timespec_t mts;
+#endif
+
+// Use clock_gettime in linux, clock_get_time in OS X.
+void get_monotonic_time(struct timespec *ts){
+#ifdef __MACH__
+  clock_get_time(cclock, &mts);
+  ts->tv_sec = mts.tv_sec;
+  ts->tv_nsec = mts.tv_nsec;
+#else
+  clock_gettime(CLOCK_MONOTONIC, ts);
+#endif
+}
+double get_elapsed_time(struct timespec *before, struct timespec *after){
+  double deltat_s  = after->tv_sec - before->tv_sec;
+  double deltat_ns = after->tv_nsec - before->tv_nsec;
+  return deltat_s + deltat_ns*1e-9;
+}
 
 //stolen from 'the practice of programming'
 int csvgetline(FILE *fin)
@@ -71,8 +98,12 @@ int main(int argc, char** argv) {
 	// Fill test data -- let's see what's going on
 	//fillData();
 	//fillData2();
+	#ifdef __MACH__
+  	host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
+	#endif
 	
 	struct timeval ts, te;
+	struct timespec tsm, tem;
 	timeus = 0;
 	mytimer = 0;
 	// keep track of violated or not
@@ -98,6 +129,7 @@ int main(int argc, char** argv) {
 	// was while(1)
 	while ((traceFinished = csvgetline(infile)) != -1) {
 		gettimeofday(&ts, NULL);
+		get_monotonic_time(&tsm);
 		// fill cstate
 		cstate = 0;
 		int i;
@@ -157,13 +189,17 @@ int main(int argc, char** argv) {
 		}
 		//printf("getting timeofday, timeus is %lu\n", timeus);
 		gettimeofday(&te, NULL);
+		get_monotonic_time(&tem);
 		//long long add = (te.tv_sec - ts.tv_sec) * 1000000;
-		unsigned int add;
+		unsigned int add; double addm;
 		//timeus += (te.tv_sec - ts.tv_sec) * 1000000;
 		//printf("added secs: timeus is %lld\n", timeus);
 		//timeus += (te.tv_usec - ts.tv_usec);
 		add = (te.tv_usec - ts.tv_usec);
-		printf("loop time is %d\n", add);
+		addm = get_elapsed_time(&tsm, &tem);
+		stepcount = stepcount + 1;
+		printf("loop time is %d, mach time is %f, mtotal: %f step: %d\n", add, addm, mtimeus, stepcount);
+		mtimeus = mtimeus + addm;
 		/*printf("timeus is %lu before add\n", timeus);
 		timeus = timeus + add;
 		printf("timeus is %lu after add\n",timeus);
@@ -171,7 +207,11 @@ int main(int argc, char** argv) {
 		printf("added usecs: timeus is %lu\n", timeus);
 		*/
 	}
-	printf("elapsed time to check is %lld\n", timeus);
+	printf("elapsed time to check is %d, mach time is %f, at %d steps\n", timeus, mtimeus, stepcount);
 	printf("finished loop\n");
 	printf("Trace finished. Satisfied is %s\n", tracesat ? "true" : "false");
+	#ifdef __MACH__
+  	mach_port_deallocate(mach_task_self(), cclock);
+	#endif
+
 }
