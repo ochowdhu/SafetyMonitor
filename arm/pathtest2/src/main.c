@@ -25,6 +25,7 @@
 #include "stm32f4_discovery.h"
 #include "stm32f4xx_tim.h"
 #include "stm32f4xx_gpio.h"
+
 //#include "stm
 // Monitor includes
 #include "monsrc/residues.h"
@@ -65,9 +66,11 @@
 /* Private variables ---------------------------------------------------------*/ 
 int delay, cstep, lcount, sim = FALSE;
 #define TDATASIZE 1200
+#define IM_REDUCE
 int testdata[TDATASIZE];
 CanTxMsg TxMessage;
 CanRxMsg RxMessage;
+residue cons_res;
 
 /* Private function prototypes -----------------------------------------------*/
 void Delay (uint32_t nCount);
@@ -78,8 +81,8 @@ void Delay (uint32_t nCount);
  * CAN Setup function
  */
 void InitCAN() {
-  GPIO_InitTypeDef  GPIO_InitStructure;
-  CAN_InitTypeDef        CAN_InitStructure;
+	GPIO_InitTypeDef  GPIO_InitStructure;
+	CAN_InitTypeDef        CAN_InitStructure;
 	CAN_FilterInitTypeDef  CAN_FilterInitStructure;
   /* CAN GPIOs configuration **************************************************/
 
@@ -136,14 +139,14 @@ void InitCAN() {
   
   /* Transmit Structure preparation */
 
-		TxMessage.StdId = 0x321;
+	TxMessage.StdId = 0x321;
     TxMessage.ExtId = 0x01;
     TxMessage.RTR = CAN_RTR_DATA;
     TxMessage.IDE = CAN_ID_STD;
     TxMessage.DLC = 3;
-		TxMessage.Data[0] = 0xAA;
-		TxMessage.Data[1] = 0x55;
-		TxMessage.Data[2] = 0xAA;
+	TxMessage.Data[0] = 0xAA;
+	TxMessage.Data[1] = 0x55;
+	TxMessage.Data[2] = 0xAA;
   /* Enable FIFO 0 message pending Interrupt */
   CAN_ITConfig(CANx, CAN_IT_FMP0, ENABLE);
 }
@@ -154,7 +157,7 @@ void InitializeTimer()
 {
     TIM_TimeBaseInitTypeDef timerInitStructure;
 
-		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
     timerInitStructure.TIM_Prescaler = 42000 - 1;	// get 2kHz clock
     timerInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
@@ -163,11 +166,11 @@ void InitializeTimer()
     timerInitStructure.TIM_RepetitionCounter = 0;
     TIM_TimeBaseInit(TIM2, &timerInitStructure);
     TIM_Cmd(TIM2, ENABLE);
-		TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
 	
 		
-		// second timer: just for testing to load new values
-		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+	// second timer: just for testing to load new values
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
     timerInitStructure.TIM_Prescaler = 42000 - 1;	// get 2kHz clock
     timerInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
@@ -176,7 +179,7 @@ void InitializeTimer()
     timerInitStructure.TIM_RepetitionCounter = 0;
     TIM_TimeBaseInit(TIM3, &timerInitStructure);
     TIM_Cmd(TIM3, ENABLE);
-		TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+	TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
 		
 	
 }
@@ -197,11 +200,13 @@ void EnableTimerInterrupt()
 
 		// and enable TIM3
 		// should be higher urgency (lower "priority" number)
+		/*
     nvicStructure.NVIC_IRQChannel = TIM3_IRQn;
     nvicStructure.NVIC_IRQChannelPreemptionPriority = 0;
     nvicStructure.NVIC_IRQChannelSubPriority = 1;
     nvicStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&nvicStructure);
+		*/
 	
 	// Enable CAN
 	#ifdef  USE_CAN1 
@@ -209,10 +214,10 @@ void EnableTimerInterrupt()
 	#else  /* USE_CAN2 */
 	nvicStructure.NVIC_IRQChannel = CAN2_RX0_IRQn;
 	#endif /* USE_CAN1 */
-  nvicStructure.NVIC_IRQChannelPreemptionPriority = 0x0;
-  nvicStructure.NVIC_IRQChannelSubPriority = 0x0;
-  nvicStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&nvicStructure);
+	nvicStructure.NVIC_IRQChannelPreemptionPriority = 0x0;
+	nvicStructure.NVIC_IRQChannelSubPriority = 0x0;
+	nvicStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&nvicStructure);
 }
 
 
@@ -221,8 +226,25 @@ void TIM2_IRQHandler()
 {
     if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET || sim)
     {
+				// safely grab nstate
+				// INTERRUPTS OFF
+				__disable_irq();
 				cstate = nstate;
-				instep++;
+				__enable_irq();
+				// INTERRUPTS ON
+				instep++; // this might need to be atomic -- but shouldn't be used by anyone above us
+				incrStruct(instep);
+				// add residue to list
+				cons_res.step = instep;
+				cons_res.form = POLICY;
+				// reduce when we add
+				#ifdef IM_REDUCE 
+				reduce(instep, &cons_res);
+				#endif
+				rbInsert(&mainresbuf, cons_res.step, cons_res.form);
+				checkConsStep();
+
+				// just to see that we're running...
 				if ((instep % 80) > 40) {
 					  STM_EVAL_LEDOff(LED3);
 						STM_EVAL_LEDOn(LED6);
@@ -230,7 +252,7 @@ void TIM2_IRQHandler()
 						STM_EVAL_LEDOff(LED6);
 						STM_EVAL_LEDOn(LED3);
 				}
-				CAN_Transmit(CANx, &TxMessage);
+				//CAN_Transmit(CANx, &TxMessage);
         TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
     }
 }
@@ -248,15 +270,26 @@ void TIM3_IRQHandler()
     }
 }
 
+// Fill nstate with current CAN value -- 
+// this should actually come from genmonconfig eventually
+void updateState() {
+		switch (RxMessage.StdId) {
+			// fake value fill for now
+			case 0x321:
+				nstate &= ~0x01;
+				if (RxMessage.Data[0] == 1)
+						nstate |= 0x01;
+		}
+}
 int checkReceive(CanRxMsg *msg) {
-TxMessage.StdId = 0x321;
-    TxMessage.ExtId = 0x01;
-    TxMessage.RTR = CAN_RTR_DATA;
-    TxMessage.IDE = CAN_ID_STD;
-    TxMessage.DLC = 3;
-		TxMessage.Data[0] = 0xAA;
-		TxMessage.Data[1] = 0x55;
-		TxMessage.Data[2] = 0xAA;
+	TxMessage.StdId = 0x321;
+  TxMessage.ExtId = 0x01;
+  TxMessage.RTR = CAN_RTR_DATA;
+  TxMessage.IDE = CAN_ID_STD;
+  TxMessage.DLC = 3;
+	TxMessage.Data[0] = 0xAA;
+	TxMessage.Data[1] = 0x55;
+	TxMessage.Data[2] = 0xAA;
 	if ((msg->DLC != 3) || msg->StdId != 0x321) {
 		return 0;
 	}
@@ -270,7 +303,7 @@ void CAN1_RX0_IRQHandler() {
 	if (CAN_GetITStatus(CANx, CAN_IT_FMP0) == SET) {
 		CAN_Receive(CANx, CAN_FIFO0, &RxMessage);
 	}
-;
+	updateState();
 }
 /**
   * @brief   Main program
@@ -279,13 +312,14 @@ void CAN1_RX0_IRQHandler() {
   */
 int main(void)
 {
-	residue cons_res;
-	residue* resp;
+	residue res, *resp;
 	int start, end, i;
+	int agcstate;
 	delay = FORM_DELAY;
 	// global variable initialization
 	instep = 0;
 	estep = 0;	
+	agcstate = 0;
 	cstate = 0;
 	nstate = 0x02;
 	lcount = 1;
@@ -296,7 +330,9 @@ int main(void)
 	//// non-monitor setup
 	InitCAN();
 	InitializeTimer();
-	EnableTimerInterrupt();
+	//// Timer interrupt starts the monitor, 
+	//// so do this right before entering loop
+	//EnableTimerInterrupt();
 	
   /* Initialize LEDs mounted on STM32F4-Discovery board ***************************/
   STM_EVAL_LEDInit(LED4);
@@ -316,77 +352,95 @@ int main(void)
 	
 	// start the loop
 	cstep = 0;
+	// start CAN and monitor
+	EnableTimerInterrupt();
+	// Conservative check is done in timer interrupt
+	// So main loop is just constant aggressive check 
+	// and waiting if we happen to finish
 	while (1) {
 		// can't simulator timer interrupts, just call them instead...
 		if (sim) {
 			TIM3_IRQHandler();
 			TIM2_IRQHandler();
-/*			while (CAN_MessagePending(CANx, CAN_FIFO0) < 1) {
+			/*	while (CAN_MessagePending(CANx, CAN_FIFO0) < 1) {
 				// wait...
 			};*/
 			CAN1_RX0_IRQHandler();
 			checkReceive(&RxMessage);
 		}
-		// state is updated by interrupts, check if we should be going or not?
-		// if the last step we checked (estep) is less than the most recent step 
-		// we've received (instep) then run the checker again
-		//@TODO -- need to grab instep so it doesn't get changed out from under us here
-		if (estep < instep) {
-			// first increment the structure
-			incrStruct(estep);
-		
-			// run conservative
-			cons_res.step = estep;
-			cons_res.form = POLICY;
-			reduce(instep, &cons_res);
-			rbInsert(&mainresbuf, cons_res.step, cons_res.form);
-			
-			start = mainresbuf.start;
-			end = mainresbuf.end;
-			while (start != end) {
-				resp = rbGet(&mainresbuf, start);
-				//cons_res = *(rbGet(&mainresbuf, start));
-				if ((estep - resp->step) >= delay) {
-					reduce(estep, resp);
-					if (resp->form == FORM_TRUE) {
-						// LEDS?
-					} else if (resp->form == FORM_FALSE) {
-						// LEDS?
-					} else {	// not possible...
-						// LEDS?
-					}
-				} else {
-					// mainresbuf is ordered, later residues can't be from earlier
-					break;
-				}
+		// run aggressive monitor
+		// need to be aware of state updating out from under us
+		// but it's always safe to give the "old" answer and then keep going
+		// grab state
+		NVIC_DisableIRQ(TIM2_IRQn);
+		agcstate = cstate;
+		agstep = instep;
+		NVIC_EnableIRQ(TIM2_IRQn);
+		while (start != end) {
+			///////////////////////////////////
+			// just disable the conservative trigger
+			NVIC_DisableIRQ(TIM2_IRQn);
+			resp = rbGet(&mainresbuf, start);
+			// copy residue
+			res.form = resp->form;
+			res.step = resp->step;
+			NVIC_EnableIRQ(TIM2_IRQn);
+			////////////////////////////////////
+			// now we can reduce our copied residue
+			reduce(instep, &res);
+			////////////////////////////////
+			// check if we got interrupted by period
+			NVIC_DisableIRQ(TIM2_IRQn);
+			if (agstep == instep) {
+				// put res into mainresbuf[start]
+				mainresbuf.buf[start].form = res.form;
+				mainresbuf.buf[start].step = res.step;
 				start = (start + 1) % mainresbuf.size;
+			} else {
+				start = mainresbuf.start;
 			}
-			// run aggressive
-		
-			// checked current step, increment
-			estep++;
+			NVIC_EnableIRQ(TIM2_IRQn);
+			//////////////////////////////
 		}
+		// checked everything, busy wait until next tick
+		// ok to not lock here, we might miss by one iteration
+		// but that should be better than constantly locking
+		while (agstep == instep) {}
 	}
-
-
-//  while (1)
-//  {
-//    /* Toggle LED3 and LED6 */
-//    STM_EVAL_LEDToggle(LED3);
-//    STM_EVAL_LEDToggle(LED6);
-
-//    /* Insert a delay */
-//    Delay(0x7FFFF);
-
-//    /* Toggle LED4 and LED5 */
-//    STM_EVAL_LEDToggle(LED4);
-//    STM_EVAL_LEDToggle(LED5);
-
-//    /* Insert a delay */
-//    Delay(0x7FFFF);    
-//  }
 }
 
+// We only call this when we start a new step, so no need to check
+// that we're in a new one
+void checkConsStep() {
+	residue* resp;
+	int start, end;
+
+	// don't think we need this, but want to debug with it first
+	// loop incase we got delayed somehow
+	// could just check delay of start
+	start = mainresbuf.start;
+	end = mainresbuf.end;
+	while (start != end) {
+		resp = rbGet(&mainresbuf, start);
+		//cons_res = *(rbGet(&mainresbuf, start));
+		if ((estep - resp->step) >= delay) {
+				reduce(estep, resp);
+				if (resp->form == FORM_TRUE) {
+						// LEDS?
+				} else if (resp->form == FORM_FALSE) {
+						// LEDS?
+				} else {	// not possible...
+						// LEDS?
+				}
+		} else {
+			// mainresbuf is ordered, later residues can't be from earlier
+			break;
+		}
+		start = (start + 1) % mainresbuf.size;
+	}
+	// checked current step, increment
+	estep++;
+}	
 /**
   * @brief  Inserts a delay time.
   * @param  nCount: specifies the delay time length.
@@ -424,3 +478,58 @@ void assert_failed(uint8_t* file, uint32_t line)
  
 
 /******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
+
+
+
+ // Old main code -- 
+//  while (1) {
+//		// can't simulator timer interrupts, just call them instead...
+//		if (sim) {
+//			TIM3_IRQHandler();
+//			TIM2_IRQHandler();
+//			/*	while (CAN_MessagePending(CANx, CAN_FIFO0) < 1) {
+//				// wait...
+//			};*/
+//			CAN1_RX0_IRQHandler();
+//			checkReceive(&RxMessage);
+//		}
+//		// state is updated by interrupts, check if we should be going or not?
+//		// if the last step we checked (estep) is less than the most recent step 
+//		// we've received (instep) then run the checker again
+//		//@TODO -- need to grab instep so it doesn't get changed out from under us here
+//		if (estep < instep) {
+//			// first increment the structure
+//			incrStruct(estep);
+//		
+//			// run conservative
+//			cons_res.step = estep;
+//			cons_res.form = POLICY;
+//			reduce(instep, &cons_res);
+//			rbInsert(&mainresbuf, cons_res.step, cons_res.form);
+//			
+//			start = mainresbuf.start;
+//			end = mainresbuf.end;
+//			while (start != end) {
+//				resp = rbGet(&mainresbuf, start);
+//				//cons_res = *(rbGet(&mainresbuf, start));
+//				if ((estep - resp->step) >= delay) {
+//					reduce(estep, resp);
+//					if (resp->form == FORM_TRUE) {
+//						// LEDS?
+//					} else if (resp->form == FORM_FALSE) {
+//						// LEDS?
+//					} else {	// not possible...
+//						// LEDS?
+//					}
+//				} else {
+//					// mainresbuf is ordered, later residues can't be from earlier
+//					break;
+//				}
+//				start = (start + 1) % mainresbuf.size;
+//			}
+//			// run aggressive
+//		
+//			// checked current step, increment
+//			estep++;
+//		}
+//	}
