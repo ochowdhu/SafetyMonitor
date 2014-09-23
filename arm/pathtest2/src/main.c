@@ -1,24 +1,40 @@
-/* Testing adding the library path...
+/**
+  ******************************************************************************
+  * @file    agMon test 3 -- trying to use existing stdperiph project
+  * @author  Adapted by Aaron Kane === MCD Application Team 
+  * @version V1.0.0
+  * @date    19-September-2011
+  * @brief   Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+  * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+  * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+  * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+  * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+  * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+  *
+  * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
+  ******************************************************************************  
+  */ 
 
-*/
 
-// hardware includes
-#include "stm32f4xx.h"
-#include "LED.h"
-#include "Keyboard.h"
-#include "misc.h"
+
+/* Includes ------------------------------------------------------------------*/
+#include "stm32f4_discovery.h"
 #include "stm32f4xx_tim.h"
-#include "stm32f4xx_rcc.h"
-#include <stm32f4xx_gpio.h>
+#include "stm32f4xx_gpio.h"
+//#include "stm
+// Monitor includes
+#include "monsrc/residues.h"
+#include "monsrc/formula.h"
+#include "monsrc/circbuf.h"
+#include "monsrc/monitor.h"
+#include "monsrc/monconfig.h"
 
-// monitor includes
-#include "residues.h"
-#include "formula.h"
-#include "circbuf.h"
-#include "monitor.h"
-#include "monconfig.h"
-
-
+/* Private typedef -----------------------------------------------------------*/
+/* Private define ------------------------------------------------------------*/
 ///////////////// CANDEF
 #define USE_CAN1
 //#define USE_CAN2 
@@ -45,48 +61,26 @@
   #define CAN_TX_SOURCE              GPIO_PinSource13    
 #endif  /* USE_CAN1 */
 ///////////////////////////
-
-
-// 30s minutes of data
-#define TDATASIZE	1200
-
+/* Private macro -------------------------------------------------------------*/
+/* Private variables ---------------------------------------------------------*/ 
+int delay, cstep, lcount, sim = FALSE;
+#define TDATASIZE 1200
 int testdata[TDATASIZE];
-int sim = TRUE;
+CanTxMsg TxMessage;
+CanRxMsg RxMessage;
 
-// What we'll eventually need:
-// moved state to monitor.c
-// formulas
-// struct	-- list of lists
-// taulist	-- resbuf of (step,time) pairs
-int delay;	
-int cstep;	// current step count
-int lcount;
+/* Private function prototypes -----------------------------------------------*/
+void Delay (uint32_t nCount);
 
-#define MASK_a 1
-#define MASK_b 2
-#define MASK_c 4
+/* Private functions ---------------------------------------------------------*/
 
-void fillData() {
-	int i;
-	for (i = 0; i < TDATASIZE; i++) {
-		testdata[i] = 0x00;
-		if (i > 400 && i < 600) {
-			testdata[i] |= MASK_b;
-			if (i < 500) 
-				testdata[i] |= MASK_a;
-		}
-		if ((i % 30) == 0)
-			testdata[i] |= MASK_c;
-	}
-}
-
-
-
+/**
+ * CAN Setup function
+ */
 void InitCAN() {
   GPIO_InitTypeDef  GPIO_InitStructure;
   CAN_InitTypeDef        CAN_InitStructure;
 	CAN_FilterInitTypeDef  CAN_FilterInitStructure;
-	CanTxMsg TxMessage;
   /* CAN GPIOs configuration **************************************************/
 
   /* Enable GPIO clock */
@@ -115,9 +109,13 @@ void InitCAN() {
   CAN_StructInit(&CAN_InitStructure);
 	// Set stuff that isn't default
   /* CAN Baudrate = 1 MBps (CAN clocked at 30 MHz) */
-  CAN_InitStructure.CAN_BS1 = CAN_BS1_6tq;
-  CAN_InitStructure.CAN_BS2 = CAN_BS2_8tq;
-  CAN_InitStructure.CAN_Prescaler = 2;
+  //CAN_InitStructure.CAN_BS1 = CAN_BS1_6tq;
+  //CAN_InitStructure.CAN_BS2 = CAN_BS2_8tq;
+	CAN_InitStructure.CAN_BS1 = CAN_BS1_14tq;
+  CAN_InitStructure.CAN_BS2 = CAN_BS2_6tq;
+	CAN_InitStructure.CAN_Mode = CAN_Mode_Normal;
+  //CAN_InitStructure.CAN_Prescaler = 2; // 1Mbps
+	CAN_InitStructure.CAN_Prescaler = 4;	// 500kbps
   CAN_Init(CANx, &CAN_InitStructure);
 
   /* CAN filter init */
@@ -137,34 +135,21 @@ void InitCAN() {
   CAN_FilterInit(&CAN_FilterInitStructure);
   
   /* Transmit Structure preparation */
-  TxMessage.StdId = 0x321;
-  TxMessage.ExtId = 0x01;
-  TxMessage.RTR = CAN_RTR_DATA;
-  TxMessage.IDE = CAN_ID_STD;
-  TxMessage.DLC = 1;
-  
+
+		TxMessage.StdId = 0x321;
+    TxMessage.ExtId = 0x01;
+    TxMessage.RTR = CAN_RTR_DATA;
+    TxMessage.IDE = CAN_ID_STD;
+    TxMessage.DLC = 3;
+		TxMessage.Data[0] = 0xAA;
+		TxMessage.Data[1] = 0x55;
+		TxMessage.Data[2] = 0xAA;
   /* Enable FIFO 0 message pending Interrupt */
   CAN_ITConfig(CANx, CAN_IT_FMP0, ENABLE);
 }
-
-void fillData2() {
-	int i;
-	testdata[0] = 0x00;
-	testdata[1] = 0x00;
-	testdata[2] = 0x00;
-	testdata[3] |= MASK_a | MASK_b;
-	testdata[4] |= MASK_b;
-	testdata[5] |= MASK_b;
-	testdata[6] |= MASK_b;
-	testdata[7] |= MASK_b;
-	testdata[8] |= MASK_b | MASK_c;
-	testdata[9] |= 0;//MASK_B;
-	testdata[10] |= MASK_c;
-	for (i = 11; i < 200; i++) {
-		testdata[i] = 0x00;
-	}
-	
-}
+/** 
+ * Timer Initialization function
+ */
 void InitializeTimer()
 {
     TIM_TimeBaseInitTypeDef timerInitStructure;
@@ -196,6 +181,11 @@ void InitializeTimer()
 	
 }
 
+
+
+/** 
+ * Timer and CAN Interrupt Setup function
+ */
 void EnableTimerInterrupt()
 {
     NVIC_InitTypeDef nvicStructure;
@@ -233,6 +223,14 @@ void TIM2_IRQHandler()
     {
 				cstate = nstate;
 				instep++;
+				if ((instep % 80) > 40) {
+					  STM_EVAL_LEDOff(LED3);
+						STM_EVAL_LEDOn(LED6);
+				} else {
+						STM_EVAL_LEDOff(LED6);
+						STM_EVAL_LEDOn(LED3);
+				}
+				CAN_Transmit(CANx, &TxMessage);
         TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
     }
 }
@@ -249,25 +247,41 @@ void TIM3_IRQHandler()
         TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
     }
 }
+
+int checkReceive(CanRxMsg *msg) {
+TxMessage.StdId = 0x321;
+    TxMessage.ExtId = 0x01;
+    TxMessage.RTR = CAN_RTR_DATA;
+    TxMessage.IDE = CAN_ID_STD;
+    TxMessage.DLC = 3;
+		TxMessage.Data[0] = 0xAA;
+		TxMessage.Data[1] = 0x55;
+		TxMessage.Data[2] = 0xAA;
+	if ((msg->DLC != 3) || msg->StdId != 0x321) {
+		return 0;
+	}
+	if ((msg->Data[0] | (msg->Data[1] << 8) | (msg->Data[2] << 16)) != 0xAA55AA) {
+		return -1;
+	}
+	return 1;
+}
 //extern "C"
 void CAN1_RX0_IRQHandler() {
-	// might not need to check flags, need to look around a bit more
-	/*if (CAN_GetITStatus(CANx, CAN_IT_FMP0) == SET) {
-		
-	} else if (CAN_GetITStatus(CANx, CAN_IT_FMP1) == SET) {
-		
-	}*/
+	if (CAN_GetITStatus(CANx, CAN_IT_FMP0) == SET) {
+		CAN_Receive(CANx, CAN_FIFO0, &RxMessage);
+	}
+;
 }
-
-int main() {
-	// local variables
+/**
+  * @brief   Main program
+  * @param  None
+  * @retval None
+  */
+int main(void)
+{
 	residue cons_res;
 	residue* resp;
-	//int cptr, eptr;
-	int start, end;
-	// cons variables
-	//cptr = 0;
-	//eptr = 0;
+	int start, end, i;
 	delay = FORM_DELAY;
 	// global variable initialization
 	instep = 0;
@@ -275,17 +289,27 @@ int main() {
 	cstate = 0;
 	nstate = 0x02;
 	lcount = 1;
-	// non-monitor board setup
-	LED_Initialize();
-	Keyboard_Initialize();
+	
+	for (i = 0; i < TDATASIZE; i++) {
+		testdata[i] = 0x01;
+	}
+	//// non-monitor setup
+	InitCAN();
 	InitializeTimer();
 	EnableTimerInterrupt();
 	
-	// Fill test data -- let's see what's going on
-	//fillData();
-	fillData2();
-	
-	///////// Start monitor ///////////////////
+  /* Initialize LEDs mounted on STM32F4-Discovery board ***************************/
+  STM_EVAL_LEDInit(LED4);
+  STM_EVAL_LEDInit(LED3);
+  STM_EVAL_LEDInit(LED5);
+  STM_EVAL_LEDInit(LED6);
+  
+  /* Turn on LED4 and LED5 */
+  STM_EVAL_LEDOn(LED4);
+  STM_EVAL_LEDOn(LED5);
+  
+
+///////// Start monitor ///////////////////
 	// build structure
 	build_formula();
 	build_struct();
@@ -297,6 +321,11 @@ int main() {
 		if (sim) {
 			TIM3_IRQHandler();
 			TIM2_IRQHandler();
+/*			while (CAN_MessagePending(CANx, CAN_FIFO0) < 1) {
+				// wait...
+			};*/
+			CAN1_RX0_IRQHandler();
+			checkReceive(&RxMessage);
 		}
 		// state is updated by interrupts, check if we should be going or not?
 		// if the last step we checked (estep) is less than the most recent step 
@@ -338,4 +367,60 @@ int main() {
 			estep++;
 		}
 	}
+
+
+//  while (1)
+//  {
+//    /* Toggle LED3 and LED6 */
+//    STM_EVAL_LEDToggle(LED3);
+//    STM_EVAL_LEDToggle(LED6);
+
+//    /* Insert a delay */
+//    Delay(0x7FFFF);
+
+//    /* Toggle LED4 and LED5 */
+//    STM_EVAL_LEDToggle(LED4);
+//    STM_EVAL_LEDToggle(LED5);
+
+//    /* Insert a delay */
+//    Delay(0x7FFFF);    
+//  }
 }
+
+/**
+  * @brief  Inserts a delay time.
+  * @param  nCount: specifies the delay time length.
+  * @retval None
+  */
+void Delay(__IO uint32_t nCount)
+{
+  /* Decrement nCount value */
+  while (nCount != 0)
+  {
+    nCount--;
+  }
+}
+
+#ifdef  USE_FULL_ASSERT
+
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t* file, uint32_t line)
+{ 
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+
+  /* Infinite loop */
+  while (1)
+  {
+  }
+}
+#endif
+ 
+
+/******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
