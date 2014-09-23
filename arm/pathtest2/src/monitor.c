@@ -53,13 +53,11 @@ void reduce(int step, residue *res) {
 	int type;
 	int rstep; 
 	formula froot, prevNode;
-	int ret;
 	// clear stacks
 	stackReset(&redStack);
 	stackReset(&redStackVals);
 	// set up stuff
 	rstep = res->step;
-	ret = stackEmpty(&redStack);
 	stackPush(&redStack, res->form);
 	// Begin Loop
 	while (stackEmpty(&redStack) == 0) {
