@@ -70,11 +70,11 @@ int delay, cstep, lcount, sim = FALSE;
 int testdata[TDATASIZE];
 CanTxMsg TxMessage;
 CanRxMsg RxMessage;
-residue cons_res;
+residue cons_res, *cresp;
 
 /* Private function prototypes -----------------------------------------------*/
 void Delay (uint32_t nCount);
-
+void checkConsStep(void);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -170,7 +170,7 @@ void InitializeTimer()
 	
 		
 	// second timer: just for testing to load new values
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+/*	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
     timerInitStructure.TIM_Prescaler = 42000 - 1;	// get 2kHz clock
     timerInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
@@ -180,7 +180,7 @@ void InitializeTimer()
     TIM_TimeBaseInit(TIM3, &timerInitStructure);
     TIM_Cmd(TIM3, ENABLE);
 	TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
-		
+	*/	
 	
 }
 
@@ -245,12 +245,8 @@ void TIM2_IRQHandler()
 				checkConsStep();
 
 				// just to see that we're running...
-				if ((instep % 80) > 40) {
-					  STM_EVAL_LEDOff(LED3);
-						STM_EVAL_LEDOn(LED6);
-				} else {
-						STM_EVAL_LEDOff(LED6);
-						STM_EVAL_LEDOn(LED3);
+				if ((instep % 40) == 0) { // 1s (40@25ms)
+						STM_EVAL_LEDToggle(LED3);
 				}
 				//CAN_Transmit(CANx, &TxMessage);
         TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
@@ -275,10 +271,15 @@ void TIM3_IRQHandler()
 void updateState() {
 		switch (RxMessage.StdId) {
 			// fake value fill for now
-			case 0x321:
-				nstate &= ~0x01;
+			case 0x123:
+				nstate &= ~(1<<1);
 				if (RxMessage.Data[0] == 1)
-						nstate |= 0x01;
+						nstate |= (1<<1);
+				break;
+			case 0x555:
+				nstate &= ~(1<<2);
+				if (RxMessage.Data[1] > 10)
+						nstate |= (1 << 2);
 		}
 }
 int checkReceive(CanRxMsg *msg) {
@@ -314,14 +315,13 @@ int main(void)
 {
 	residue res, *resp;
 	int start, end, i;
-	int agcstate;
+	int agstep;
 	delay = FORM_DELAY;
 	// global variable initialization
 	instep = 0;
 	estep = 0;	
-	agcstate = 0;
 	cstate = 0;
-	nstate = 0x02;
+	nstate = 0x00;
 	lcount = 1;
 	
 	for (i = 0; i < TDATASIZE; i++) {
@@ -341,8 +341,8 @@ int main(void)
   STM_EVAL_LEDInit(LED6);
   
   /* Turn on LED4 and LED5 */
-  STM_EVAL_LEDOn(LED4);
-  STM_EVAL_LEDOn(LED5);
+  //STM_EVAL_LEDOn(LED4);
+  //STM_EVAL_LEDOn(LED5);
   
 
 ///////// Start monitor ///////////////////
@@ -373,8 +373,9 @@ int main(void)
 		// but it's always safe to give the "old" answer and then keep going
 		// grab state
 		NVIC_DisableIRQ(TIM2_IRQn);
-		agcstate = cstate;
 		agstep = instep;
+		start = mainresbuf.start;
+		end = mainresbuf.end;
 		NVIC_EnableIRQ(TIM2_IRQn);
 		while (start != end) {
 			///////////////////////////////////
@@ -398,6 +399,8 @@ int main(void)
 				start = (start + 1) % mainresbuf.size;
 			} else {
 				start = mainresbuf.start;
+				end = mainresbuf.end;
+				agstep = instep;
 			}
 			NVIC_EnableIRQ(TIM2_IRQn);
 			//////////////////////////////
@@ -412,34 +415,37 @@ int main(void)
 // We only call this when we start a new step, so no need to check
 // that we're in a new one
 void checkConsStep() {
-	residue* resp;
+	//residue* resp;
 	int start, end;
-
-	// don't think we need this, but want to debug with it first
+	
+	// don't think we need this loop, but want to debug with it first
 	// loop incase we got delayed somehow
-	// could just check delay of start
+	// could just check delay of start (since we never need to check more than one entry)
 	start = mainresbuf.start;
 	end = mainresbuf.end;
 	while (start != end) {
-		resp = rbGet(&mainresbuf, start);
+		cresp = rbGet(&mainresbuf, start);
 		//cons_res = *(rbGet(&mainresbuf, start));
-		if ((estep - resp->step) >= delay) {
-				reduce(estep, resp);
-				if (resp->form == FORM_TRUE) {
-						// LEDS?
-				} else if (resp->form == FORM_FALSE) {
-						// LEDS?
+		//if ((estep - cresp->step) >= delay) {
+		if ((cresp->step + delay) <= instep) {
+				reduce(estep, cresp);
+				if (cresp->form == FORM_TRUE) {
+						STM_EVAL_LEDOn(LED4);
+				} else if (cresp->form == FORM_FALSE) {
+						STM_EVAL_LEDOff(LED4);
+						STM_EVAL_LEDOn(LED5);
 				} else {	// not possible...
 						// LEDS?
 				}
+				estep++;
 		} else {
 			// mainresbuf is ordered, later residues can't be from earlier
-			break;
+			//break;
 		}
 		start = (start + 1) % mainresbuf.size;
 	}
 	// checked current step, increment
-	estep++;
+	
 }	
 /**
   * @brief  Inserts a delay time.
