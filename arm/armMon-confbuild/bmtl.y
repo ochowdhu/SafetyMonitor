@@ -179,9 +179,15 @@ int main(int argc, char** argv) {
 
 ///////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
+		// formTag the all list
+		int fi = 3;
+		for (it = all.begin(); it != all.end(); it++) {
+			(*it)->formTag = fi++;
+		}
 		// get policy tag
 		it = find_if(all.begin(), all.end(), findNode(ast));
-		policyTag = (*it)->nodeTag;
+		policyTag = (*it)->formTag;
+		//policyTag = (*it)->nodeTag;
 		std::cout << "AUTO-GENERATE CONFIG:" << std::endl;
 		// First, into gendefs.h we need NFORMULAS, NSTRUCT, NBUFLEN, FORMDELAY
 		gendefs << "/** Auto Generated definitions */" << std::endl
@@ -220,6 +226,7 @@ int main(int argc, char** argv) {
 				  << "intRingInit(&intringbuffer[i][0], &intbuffer[i][0]);" << std::endl
 				  << "intRingInit(&intringbuffer[i][1], &intbuffer[i][1]);" << std::endl
 				  << "}";
+		//confBuildStruct(ast->gList, monconfig);
 		confBuildStruct(ast->gList, monconfig);
 		monconfig <<"}" << std::endl << std::endl;
 
@@ -615,7 +622,6 @@ void confPrintMasks(std::vector<Node*> forms, std::ostream &os) {
 }
 
 void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
-	int index = 3;
 	std::vector<Node*>::iterator it;
 	// INVALID/TRUE/FALSE come from template...
 	os << "formulas[0].type = VALUE_T;" << std::endl << "formulas[0].val.value = INVALID;" << std::endl;
@@ -624,47 +630,41 @@ void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
 	for (it = forms.begin(); it != forms.end(); it++) {
 		switch ((*it)->type) {
 			case VALUE_T:
-				os << "formulas[" << index << "].type = VALUE_T;" << std::endl;
-				os << "formulas[" << index << "].val.value = " << (*it)->val.value << ";" << std::endl;
-				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
-				index++;
+				os << "formulas[" << (*it)->formTag << "].type = VALUE_T;" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.value = " << (*it)->val.value << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case PROP_T:
-				os << "formulas[" << index << "].type = PROP_T;" << std::endl;
-				os << "formulas[" << index << "].val.propMask = MASK_" << (*it)->val.propName << ";" << std::endl;
-				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
-				index++;
+				os << "formulas[" << (*it)->formTag << "].type = PROP_T;" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.propMask = MASK_" << (*it)->val.propName << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case NOT_T:
-				os << "formulas[" << index << "].type = NOT_T;" << std::endl;
-				os << "formulas[" << index << "].val.child = " << (*it)->val.child->nodeTag << ";" << std::endl;
-				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
-				index++;
+				os << "formulas[" << (*it)->formTag << "].type = NOT_T;" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.child = " << (*it)->val.child->nodeTag << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case OR_T:
-				os << "formulas[" << index << "].type = OR_T;" << std::endl;
-				os << "formulas[" << index << "].val.children.lchild = " << (*it)->val.binOp.lchild->nodeTag << ";" << std::endl;
-				os << "formulas[" << index << "].val.children.rchild = " << (*it)->val.binOp.rchild->nodeTag << ";" << std::endl;
-				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
-				index++;
+				os << "formulas[" << (*it)->formTag << "].type = OR_T;" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.children.lchild = " << (*it)->val.binOp.lchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.children.rchild = " << (*it)->val.binOp.rchild->nodeTag << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case UNTIL_T:
-				os << "formulas[" << index << "].type = UNTIL_T;" << std::endl;
-				os << "formulas[" << index << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->nodeTag << ";" << std::endl;
-				os << "formulas[" << index << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->nodeTag << ";" << std::endl;
-				os << "formulas[" << index << "].val.t_children.lbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
-				os << "formulas[" << index << "].val.t_children.hbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
-				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
-				index++;
+				os << "formulas[" << (*it)->formTag << "].type = UNTIL_T;" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.lbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.hbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case SINCE_T:
-				os << "formulas[" << index << "].type = SINCE_T;" << std::endl;
-				os << "formulas[" << index << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->nodeTag << ";" << std::endl;
-				os << "formulas[" << index << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->nodeTag << ";" << std::endl;
-				os << "formulas[" << index << "].val.t_children.lbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
-				os << "formulas[" << index << "].val.t_children.hbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
-				if ((*it)->stidx != -1) os << "formulas[" << index << "].structidx = " << (*it)->stidx << ";" << std::endl;
-				index++;
+				os << "formulas[" << (*it)->formTag << "].type = SINCE_T;" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.lbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.hbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			default:
 				break;
@@ -678,7 +678,7 @@ void confBuildStruct(std::vector<Node*> forms, std::ostream &os) {
 	int index = 0;
 	std::vector<Node*>::iterator it;
 	for (it = forms.begin(); it != forms.end(); it++) {
-		os << "initResStruct(&theStruct[" << index << "], " << (*it)->nodeTag << ", FORM_DELAY, &rbuffers[" << index << "], &intringbuffer[" << index << "][0], &intringbuffer[" << index << "][1]);" << std::endl;
+		os << "initResStruct(&theStruct[" << index << "], " << (*it)->formTag << ", FORM_DELAY, &rbuffers[" << index << "], &intringbuffer[" << index << "][0], &intringbuffer[" << index << "][1]);" << std::endl;
 		(*it)->stidx = index;
 		index++;
 	}
@@ -725,13 +725,13 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 		// fill simplification tables
 		for (it = list.begin(); it!=list.end(); it++) {
 			if ((*it)->type == NOT_T) {
-				notForms[(*it)->val.child->nodeTag] = (*it)->nodeTag;
+				notForms[(*it)->val.child->formTag] = (*it)->formTag;
 			} else if ((*it)->type == OR_T) {
-				orForms[(*it)->val.binOp.lchild->nodeTag][(*it)->val.binOp.rchild->nodeTag] = (*it)->nodeTag;
+				orForms[(*it)->val.binOp.lchild->formTag][(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
 			} else if ((*it)->type == UNTIL_T) {
-				untilForms[(*it)->val.twotempOp.lchild->nodeTag][(*it)->val.twotempOp.rchild->nodeTag] = (*it)->nodeTag;
+				untilForms[(*it)->val.twotempOp.lchild->formTag][(*it)->val.twotempOp.rchild->formTag] = (*it)->formTag;
 			} else if ((*it)->type == SINCE_T) {
-				sinceForms[(*it)->val.twotempOp.lchild->nodeTag][(*it)->val.twotempOp.rchild->nodeTag] = (*it)->nodeTag;
+				sinceForms[(*it)->val.twotempOp.lchild->formTag][(*it)->val.twotempOp.rchild->formTag] = (*it)->formTag;
 			}
 		}
 		// PRINT NOT

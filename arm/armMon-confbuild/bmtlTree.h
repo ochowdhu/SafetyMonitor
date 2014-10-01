@@ -30,6 +30,7 @@ typedef struct Node {
 	std::set<confNode, confCompare> childList;
 	std::set<confNode, confCompare> tempList;
 	tag nodeTag;
+	tag formTag;
 	std::vector<Node*> nList;
 	std::vector<Node*> gList;
 	int stidx;
