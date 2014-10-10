@@ -1,0 +1,10 @@
+/** Auto Generated definitions */
+#define NFORMULAS (9)
+#define NSTRUCT (1)
+#define NBUFLEN (12)
+#define FORM_DELAY (10)
+#define POLICY (8)
+#define STACK_DEPTH (5)
+#define MASK_time (1<<(0))
+#define MASK_a (1<<(1))
+#define MASK_b (1<<(2))
