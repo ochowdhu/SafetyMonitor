@@ -6,4 +6,5 @@ project(pc-armMon)
 
 
 set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -lrt")
 add_executable(pc-armMon pc-main.c monitor.c circbuf.c genmonconfig.c)
