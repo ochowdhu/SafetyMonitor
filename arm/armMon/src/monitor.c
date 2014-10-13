@@ -6,8 +6,11 @@
 #include "monitor.h"
 #include "monconfig.h"
 
+
+#ifndef PCVERSION
 // need this for checkCons to trigger failure -- should pull out fail/success functions
 #include "stm32f4_discovery.h"
+#endif
 
 #define BIT(n) (1 << (n))
 #define AL_MASK BIT(0)
@@ -627,15 +630,18 @@ void checkConsStep() {
 	if (start != end) {		// not empty
 		cresp = rbGet(&mainresbuf, start);						// get first residue in list
 		if ((cresp->step + FORM_DELAY) <= instep) {		// if it's old enough, we'll check it
-				reduce(estep, cresp);
-				if (cresp->form == FORM_TRUE) {
-					stepSatisfy();
-				} else if (cresp->form == FORM_FALSE) {
-					traceViolate();
-				} else {	// not possible...
-						// LEDS?
-				}
-				estep++;
+			reduce(estep, cresp);
+			if (cresp->form == FORM_TRUE) {
+				stepSatisfy();
+				//rbSafeRemove(&mainresbuf, start);
+			} else if (cresp->form == FORM_FALSE) {
+				traceViolate();
+				//rbSafeRemove(&mainresbuf, start);
+			} else {	// not possible...
+				traceFail();
+				// LEDS?
+			}
+			//estep++;
 		}
 	}
 }
@@ -654,15 +660,17 @@ void checkConsStepLoop() {
 		//cons_res = *(rbGet(&mainresbuf, start));
 		//if ((estep - cresp->step) >= delay) {
 		if ((cresp->step + FORM_DELAY) <= instep) {
-				reduce(estep, cresp);
-				if (cresp->form == FORM_TRUE) {
-						stepSatisfy();
-				} else if (cresp->form == FORM_FALSE) {
-						traceViolate();
-				} else {	// not possible...
-						// LEDS?
-				}
-				estep++;
+			reduce(estep, cresp);
+			if (cresp->form == FORM_TRUE) {
+				stepSatisfy();
+				rbSafeRemove(&mainresbuf, start);
+			} else if (cresp->form == FORM_FALSE) {
+				traceViolate();
+				rbSafeRemove(&mainresbuf, start);
+			} else {	// not possible...
+					// LEDS?
+			}
+			estep++;
 		} else {
 			// mainresbuf is ordered, later residues can't be from earlier
 			break;

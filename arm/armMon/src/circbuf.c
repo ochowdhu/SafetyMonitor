@@ -45,6 +45,12 @@ void rbRemoveFirst(resbuf *rb) {
 	rb->start = (rb->start + 1) % rb->size;
 }
 
+void rbSafeRemove(resbuf *rb, int pos) {
+	if (rb->start == pos) {
+		rb->start = (rb->start + 1) % rb->size;
+	}
+}
+
 ///////////// residue buffer above
 ///////////// interval buffer below
 void ibInit(intbuf *ib, int size, intNode **array) {

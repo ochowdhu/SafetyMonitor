@@ -193,7 +193,7 @@ int main(int argc, char** argv) {
 		gendefs << "/** Auto Generated definitions */" << std::endl
 				  << "#define NFORMULAS (" << all.size()+3 << ")" << std::endl
 				  << "#define NSTRUCT (" << ast->gList.size() << ")" << std::endl
-				  << "#define NBUFLEN (" << minbuflen(ast)+1 << ")" << std::endl
+				  << "#define NBUFLEN (" << minbuflen(ast)+2 << ")" << std::endl
 				  << "#define FORM_DELAY (" << fdelay(ast) << ")" << std::endl
 				  << "#define POLICY (" << policyTag << ")" << std::endl
 				  << "#define STACK_DEPTH (" << 1+stackDepth(ast) << ")" << std::endl;
@@ -278,6 +278,7 @@ int main(int argc, char** argv) {
 				  << "resp = stGetRes(cStruct, cres);" << std::endl
 				  << "reduce(step, resp);" << std::endl
 				  << "#ifdef USEINTS" << std::endl
+				  << "rbSafeRemove(cStruct->residues, cres);" << std::endl
 				  << "if (resp->form == FORM_TRUE) { RingAddStep(resp->step, cStruct->ttime);}" << std::endl
 				  << "else if (resp->form == FORM_FALSE) { RingAddStep(resp->step, cStruct->ftime);};" << std::endl
 				  << "#endif" << std::endl

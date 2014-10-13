@@ -57,6 +57,7 @@ extern void rbInsertP(resbuf *rb, residue *res);
 extern void rbInsert(resbuf *rb, int step, formula f);
 extern residue* rbGet(resbuf *rb, int pos);
 extern void rbRemoveFirst(resbuf *rb);
+extern void rbSafeRemove(resbuf *rb, int pos);
 
 // new interval stuff
 extern void ibInit(intbuf *ib, int size, intNode **array);

@@ -62,3 +62,4 @@ extern void incrStruct(int step);
 
 extern void traceViolate(void);
 extern void stepSatisfy(void);
+extern void traceFail(void);

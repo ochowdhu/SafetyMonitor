@@ -4,6 +4,7 @@
 #include "circbuf.h"
 #include "monitor.h"
 #include "monconfig.h"
+#include "gendefs.h"
 
 
 // pc includes
@@ -18,9 +19,14 @@
 #include <mach/mach.h>
 #endif
 
-#define NFIELDS 6
+#ifndef MON_TYPE
+#define MON_CONS
+#define MON_AGGR
+#endif
+
+#define NFIELDS 100
 // csv stuff
-char buf[200];		/* input line buffer */
+char buf[2048];		/* input line buffer */
 char field[NFIELDS];	/* fields */
 //long long timeus;
 unsigned long timeus;
@@ -60,11 +66,23 @@ int csvgetline(FILE *fin)
 		return -1;
 	}
 	nfield = 0;
-	for (q = buf; (p=strtok(q, ",\n\r")) != NULL; q = NULL)
-		field[nfield++] = (*p == '0' ? 0 : 1);
+	for (q = buf; (p=strtok(q, ",\n\r")) != NULL; q = NULL) {
+		if (strcmp(p,"0") != 0) {
+			field[nfield] = 1;
+		} else {
+			field[nfield] = 0;
+		}
+		nfield++;
+	}
 	return nfield;
 }
 
+void updateState() {
+	// start at 1 to skip time field
+	//	cstate |= field[0];
+	cstate |= field[1] << 1;
+	cstate |= field[2] << 2;
+}
 
 int sim = TRUE;
 // monitor vars
@@ -81,8 +99,6 @@ int main(int argc, char** argv) {
 	//int cptr, eptr;
 	int start, end;
 	// cons variables
-	//cptr = 0;
-	//eptr = 0;
 	delay = FORM_DELAY;
 	// global variable initialization
 	instep = 0;
@@ -90,15 +106,7 @@ int main(int argc, char** argv) {
 	cstate = 0;
 	nstate = 0x02;
 	lcount = 1;
-	// non-monitor board setup
-//@@	LED_Initialize();
-//@@	Keyboard_Initialize();
-//@@	InitializeTimer();
-//@@	EnableTimerInterrupt();
 	
-	// Fill test data -- let's see what's going on
-	//fillData();
-	//fillData2();
 	#ifdef __MACH__
   	host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
 	#endif
@@ -128,66 +136,71 @@ int main(int argc, char** argv) {
 	printf("read header line\n");
 	printf("%s", buf);
 	// was while(1)
-	while ((traceFinished = csvgetline(infile)) != -1) {
+	while ((traceFinished = csvgetline(infile)) > 0) {
 		gettimeofday(&ts, NULL);
 		get_monotonic_time(&tsm);
 		// fill cstate
 		cstate = 0;
 		int i;
-		// start at 1 to skip time field
-		for (i = 1; i < NFIELDS; i++) { 
-			cstate |= (field[i] << i);
-		}
-		instep++;
-		//printf("checking props: x: %d, p: %d, q: %d, r: %d, t: %d\n", getProp(MASK_x), getProp(MASK_p), getProp(MASK_q), getProp(MASK_r), getProp(MASK_t));
+		////// FILL STATE
+		updateState();
+		////////////////
+		instep = instep + 1;
 		
-		// state is updated by interrupts, check if we should be going or not?
-		// if the last step we checked (estep) is less than the most recent step 
-		// we've received (instep) then run the checker again
-		//@TODO -- need to grab instep so it doesn't get changed out from under us here
-		if (estep <= instep) {
-			// first increment the structure
-			incrStruct(estep);
+		// first increment the structure
+		incrStruct(estep);
+		// add residue to list
+	
+		// if we've received a new state (instep) that we haven't checked (estep), check
+		//if (estep <= instep) {
 		
-			// run conservative
-			cons_res.step = estep;
+			// add residue to list
+			cons_res.step = instep;
 			cons_res.form = POLICY;
 			//printf("before reduction, cons_res is (%d,%d)\n", cons_res.step, cons_res.form);
+			#ifdef IM_REDUCE
 			reduce(instep, &cons_res);
+			#endif
 			//printf("after reduction, cons_res is (%d,%d)\n", cons_res.step, cons_res.form);
 			rbInsert(&mainresbuf, cons_res.step, cons_res.form);
 			//printf("added (%d,%d) to ring\n", cons_res.step, cons_res.form);
-			
+			#ifdef MON_CONS
+			checkConsStep();
+			#endif
+		
+			#ifdef MON_AGGR
+			//////// START AGGRESSIVE CHECK //////////////
+			////////////////////////////////////////////
 			start = mainresbuf.start;
 			end = mainresbuf.end;
+			printf("start %d, end %d", start, end);
 			while (start != end) {
 				resp = rbGet(&mainresbuf, start);
-				if ((estep - resp->step) >= delay) {
-					reduce(estep, resp);
-					//printf("estep: %d, rstep: %d, form: %d\n", estep, resp->step, resp->form);
-					if (resp->form == FORM_TRUE) {
-						//printf("step %d is TRUE\n", resp->step);
-						//rbRemoveFirst(&mainresbuf);
-					} else if (resp->form == FORM_FALSE) {
-						//printf("step %d is FALSE\n", resp->step);
-						//rbRemoveFirst(&mainresbuf);
-						tracesat = 0;
-						// LEDS?
-					} else {	// not possible...
-						printf("%d@@step %d is ELSE? -- %d\n", estep, resp->step, resp->form);
-						// LEDS?
-					}
-				} else {
-					// mainresbuf is ordered, later residues can't be from earlier
-				//	break;
-				}
+				reduce(instep, resp);
+				printf("in step: %d, reduced %d to %d\n", instep, resp->step, resp->form);
+				//printf("estep: %d, rstep: %d, form: %d\n", estep, resp->step, resp->form);
+				if (resp->form == FORM_TRUE) {
+					//printf("step %d is TRUE\n", resp->step);
+					//rbRemoveFirst(&mainresbuf);
+					rbSafeRemove(&mainresbuf, start);
+					stepSatisfy();
+				} else if (resp->form == FORM_FALSE) {
+					//printf("step %d is FALSE\n", resp->step);
+					rbSafeRemove(&mainresbuf, start);
+					traceViolate();
+					// LEDS?
+				} 
+				/*else {	// not possible...
+					printf("%d@@step %d is ELSE? -- %d\n", instep, resp->step, resp->form);
+					exit(-1);
+					// LEDS?
+				}*/
 				start = (start + 1) % mainresbuf.size;
 			}
-			// run aggressive
-		
-			// checked current step, increment
-			estep++;
-		}
+			#endif
+			/////////////// END AGGRESSIVE CHECK ////////////////////
+			/////////////////////////////////////////////////////////
+		//}
 		//printf("getting timeofday, timeus is %lu\n", timeus);
 		gettimeofday(&te, NULL);
 		get_monotonic_time(&tem);
@@ -208,11 +221,26 @@ int main(int argc, char** argv) {
 		printf("added usecs: timeus is %lu\n", timeus);
 		*/
 	}
+	////////////////////////////////////////////////
+	// FINISHED CHECKING, print stats
 	printf("elapsed time to check is %d, mach time is %f, at %d steps\n", timeus, mtimeus, stepcount);
 	printf("finished loop\n");
 	printf("Trace finished. Satisfied is %s\n", tracesat ? "true" : "false");
 	#ifdef __MACH__
   	mach_port_deallocate(mach_task_self(), cclock);
 	#endif
+} // END MAIN
 
+
+
+void traceViolate() {
+	//printf("Trace VIOLATED!!!\n");
+	tracesat = 0;
+}
+void stepSatisfy() {
+	// do nothing...	
+}
+void traceFail() {
+	printf("FAILED REDUCE\n");
+	exit(-2);
 }

@@ -39,10 +39,10 @@ RM = /usr/bin/cmake -E remove -f
 CMAKE_EDIT_COMMAND = /usr/bin/ccmake
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /afs/ece.cmu.edu/usr/akane/Private/research/thesis/SafetyMonitor/arm/pc-version
+CMAKE_SOURCE_DIR = /afs/ece.cmu.edu/usr/akane/Private/research/thesis/SafetyMonitor/arm/armMon/src
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /afs/ece.cmu.edu/usr/akane/Private/research/thesis/SafetyMonitor/arm/pc-version/build
+CMAKE_BINARY_DIR = /afs/ece.cmu.edu/usr/akane/Private/research/thesis/SafetyMonitor/arm/armMon/src/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -69,9 +69,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /afs/ece.cmu.edu/usr/akane/Private/research/thesis/SafetyMonitor/arm/pc-version/build/CMakeFiles /afs/ece.cmu.edu/usr/akane/Private/research/thesis/SafetyMonitor/arm/pc-version/build/CMakeFiles/progress.make
+	$(CMAKE_COMMAND) -E cmake_progress_start /afs/ece.cmu.edu/usr/akane/Private/research/thesis/SafetyMonitor/arm/armMon/src/build/CMakeFiles /afs/ece.cmu.edu/usr/akane/Private/research/thesis/SafetyMonitor/arm/armMon/src/build/CMakeFiles/progress.make
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /afs/ece.cmu.edu/usr/akane/Private/research/thesis/SafetyMonitor/arm/pc-version/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /afs/ece.cmu.edu/usr/akane/Private/research/thesis/SafetyMonitor/arm/armMon/src/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target

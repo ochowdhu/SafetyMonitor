@@ -1,0 +1,32 @@
+Just keeping some notes here
+
+TODO: 
+	implement full logic
+	check interval/list preprocessor switches
+	implement hard conservative?
+
+artificial trace data ---
+	We have 3 "dimensions"
+		conservative/aggressive
+		interval/lists
+		restricted/full logic
+
+
+Traces we need to run:
+	single temporal with increasing duration
+
+	nesting with increasing depth (across durations?)
+
+	Full vs restricted logic
+		same formula -- should have same results
+		formulas that are better for full
+			across durations!
+		any that are worse for full?
+
+	aggressive vs conservative
+		overall computation
+		time to eval
+		best vs worst case
+
+
+
