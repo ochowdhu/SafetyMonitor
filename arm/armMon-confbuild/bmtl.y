@@ -641,6 +641,8 @@ void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
 	os << "formulas[1].type = VALUE_T;" << std::endl << "formulas[1].val.value = FALSE;" << std::endl;
 	os << "formulas[2].type = VALUE_T;" << std::endl << "formulas[2].val.value = TRUE;" << std::endl;
 	for (it = forms.begin(); it != forms.end(); it++) {
+		std::string stype = typeStrings[(*it)->type];
+		//std::cout << "Type " << (*it)->type << " is " << stype << std::endl;
 		switch ((*it)->type) {
 			case VALUE_T:
 				os << "formulas[" << (*it)->formTag << "].type = VALUE_T;" << std::endl;
@@ -657,21 +659,35 @@ void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
 				os << "formulas[" << (*it)->formTag << "].val.child = " << (*it)->val.child->formTag << ";" << std::endl;
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
+			case AND_T:
+			case IMPLIES_T:
 			case OR_T:
-				os << "formulas[" << (*it)->formTag << "].type = OR_T;" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].type = " << stype << ";"  << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.children.lchild = " << (*it)->val.binOp.lchild->formTag << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.children.rchild = " << (*it)->val.binOp.rchild->formTag << ";" << std::endl;
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
+			case SINCE_T:
 			case UNTIL_T:
-				os << "formulas[" << (*it)->formTag << "].type = UNTIL_T;" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].type = " << stype << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->formTag << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->formTag << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.lbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.hbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
-			case SINCE_T:
+			case PEVENT_T:
+			case PALWAYS_T:
+			case EVENT_T:
+			case ALWAYS_T:
+				os << "formulas[" << (*it)->formTag << "].type = " << stype << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.lchild = " << (*it)->val.tempOp.child->formTag << ";" << std::endl;
+				//os << "formulas[" << (*it)->formTag << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->formTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.lbound = " << (*it)->val.tempOp.lbound << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.hbound = " << (*it)->val.tempOp.hbound << ";" << std::endl;
+				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
+				break;
+			/*case SINCE_T:
 				os << "formulas[" << (*it)->formTag << "].type = SINCE_T;" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->formTag << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->formTag << ";" << std::endl;
@@ -679,6 +695,7 @@ void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
 				os << "formulas[" << (*it)->formTag << "].val.t_children.hbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
+			*/
 			default:
 				break;
 
@@ -705,6 +722,13 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 		int orForms[NFORMULAS][NFORMULAS];
 		int untilForms[NFORMULAS][NFORMULAS];
 		int sinceForms[NFORMULAS][NFORMULAS];
+		/////////////////////////////////////
+		// unrestricted
+		int alwaysForms[NFORMULAS];
+		int palwaysForms[NFORMULAS];
+		int eventForms[NFORMULAS];
+		int peventForms[NFORMULAS];
+		////////////////////////////////////
 		int si, si2;
 		// initialize simplification tables:
 		for (si = 0; si < NFORMULAS; si++) {
