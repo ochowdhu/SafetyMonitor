@@ -1,10 +1,13 @@
 ## runArmMon.sh -- add formula, compile, and run formula
 
+#basepath=~/Private/research/
+basepath=~/Documents/Work/
+
 formula=$1
-tracedir=~/Private/research/thesis/SafetyMonitor/arm/armMon/traces
-confdir=~/Private/research/thesis/SafetyMonitor/arm/armMon-confbuild
-builddir=~/Private/research/thesis/SafetyMonitor/arm/armMon/src/build
-codedir=~/Private/research/thesis/SafetyMonitor/arm/armMon/src
+tracedir="$basepath/thesis/SafetyMonitor/arm/armMon/traces"
+confdir="$basepath/thesis/SafetyMonitor/arm/armMon-confbuild"
+builddir="$basepath/thesis/SafetyMonitor/arm/armMon/src/build"
+codedir="$basepath/thesis/SafetyMonitor/arm/armMon/src"
 
 args="-DDO_MON_CONS=0 -DDO_MON_AGGR=0"
 #if [ -z "$3" ]

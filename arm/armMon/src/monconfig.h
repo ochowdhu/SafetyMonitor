@@ -23,7 +23,6 @@
 
 #define USEINTS
 #define ITERATIVE_RED
-#define PC_MODE
 
 extern const int ftype[NFORMULAS];
 

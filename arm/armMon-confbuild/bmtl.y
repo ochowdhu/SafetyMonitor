@@ -21,7 +21,7 @@ Node* ast;
 tag GTAG;
 int policyTag;
 void pprintTree(Node *n);
-void lispPrint(Node *n);
+void lispPrint(Node *n, std::ostream &os);
 void tagAndBuild(Node *n);
 void tagAndBuild2(Node *n);
 bool sortNList(Node* lhs, Node* rhs);
@@ -119,9 +119,13 @@ int main(int argc, char** argv) {
 	gendefs.open("gendefs.h");
 	monconfig.open("genmonconfig.c");
 	// create value nodes
-	invalNode = makeValueNode(2);
-	trueNode = makeValueNode(1);
 	falseNode = makeValueNode(0);
+	trueNode = makeValueNode(1);
+	invalNode = makeValueNode(2);
+	// set the formula tags correctly
+	invalNode->formTag = 0;
+	falseNode->formTag = 1;
+	trueNode->formTag = 2;
 	if (argc > 1) {
 		yyin = fopen(argv[1], "r");
 		//yyin = myfile;
@@ -134,7 +138,7 @@ int main(int argc, char** argv) {
 	if (ast) {
 		//pprintTree(ast);
 		std::cout << "Using formula" << std::endl;
-		lispPrint(ast);
+		lispPrint(ast, std::cout);
 		std::cout << std::endl;
 		std::cout << "trying tag&build" << std::endl;
 		tagCount = 3;
@@ -168,7 +172,7 @@ int main(int argc, char** argv) {
 		std::sort(all.begin(), all.end(), sortNList);
 		for (it = all.begin(); it != all.end(); it++) {
 			std::cout << (*it)->nodeTag << "|gNode: ";
-			lispPrint(*it);
+			lispPrint(*it, std::cout);
 			std::cout << std::endl;
 
 		}
@@ -180,10 +184,15 @@ int main(int argc, char** argv) {
 ///////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
 		// formTag the all list
+
 		int fi = 3;
 		for (it = all.begin(); it != all.end(); it++) {
 			(*it)->formTag = fi++;
+			std::cout << (*it)->formTag << "|Node: ";
+			lispPrint(*it, std::cout);
+			std::cout << std::endl;
 		}
+		std::cout << "minbuflen of AST is " << minbuflen(ast) << std::endl;
 		// get policy tag
 		it = find_if(all.begin(), all.end(), findNode(ast));
 		policyTag = (*it)->formTag;
@@ -196,11 +205,15 @@ int main(int argc, char** argv) {
 				  << "#define NBUFLEN (" << minbuflen(ast)+2 << ")" << std::endl
 				  << "#define FORM_DELAY (" << fdelay(ast) << ")" << std::endl
 				  << "#define POLICY (" << policyTag << ")" << std::endl
-				  << "#define STACK_DEPTH (" << 1+stackDepth(ast) << ")" << std::endl;
+				  << "#define STACK_DEPTH (" << 3+stackDepth(ast) << ")" << std::endl;
 		// throw masks into gendefs for now
 		confPrintMasks(all, gendefs);
 		// Now, monconfig.c
-		monconfig << "/** Auto Generated monitor configuration */" << std::endl;
+		monconfig << "/** Auto Generated monitor configuration */" << std::endl
+				  << "// FORMULA: ";
+		lispPrint(*it, monconfig);
+		monconfig << std::endl;
+
 		monconfig << "#include \"monconfig.h\"" << std::endl;
 		confBuildFtype(all.size()+3, all, monconfig);
 		confBuildSimpTables(all.size()+3, all, monconfig);
@@ -278,9 +291,8 @@ int main(int argc, char** argv) {
 				  << "resp = stGetRes(cStruct, cres);" << std::endl
 				  << "reduce(step, resp);" << std::endl
 				  << "#ifdef USEINTS" << std::endl
-				  << "rbSafeRemove(cStruct->residues, cres);" << std::endl
-				  << "if (resp->form == FORM_TRUE) { RingAddStep(resp->step, cStruct->ttime);}" << std::endl
-				  << "else if (resp->form == FORM_FALSE) { RingAddStep(resp->step, cStruct->ftime);};" << std::endl
+				  << "if (resp->form == FORM_TRUE) { RingAddStep(resp->step, cStruct->ttime); rbSafeRemove(cStruct->residues, cres);}" << std::endl
+				  << "else if (resp->form == FORM_FALSE) { RingAddStep(resp->step, cStruct->ftime); rbSafeRemove(cStruct->residues, cres);};" << std::endl
 				  << "#endif" << std::endl
 				  << "// increment" << std::endl
 				  << "cres = (cres + 1) % theStruct[i].residues->size;" << std::endl
@@ -533,76 +545,76 @@ void pprintTree(Node* root) {
 	}
 }
 
-void lispPrint(Node* root) {
+void lispPrint(Node* root, std::ostream &os) {
 	switch (root->type) {
 		case VALUE_T:
-			std::cout << root->val.value;
+			os << root->val.value;
 			break;
 		case PROP_T:
-			std::cout << "['prop', '" << root->val.propName << "']";
+			os << "['prop', '" << root->val.propName << "']";
 			break;
 		case NOT_T:
-			std::cout << "['notprop', ";
-			lispPrint(root->val.child);
-			std::cout << "]";
+			os << "['notprop', ";
+			lispPrint(root->val.child, os);
+			os << "]";
 			break;
 		case AND_T:
-			std::cout << "['andprop', ";
-			lispPrint(root->val.binOp.lchild);
-			std::cout << ", ";
-			lispPrint(root->val.binOp.rchild);
-			std::cout << "]";
+			os << "['andprop', ";
+			lispPrint(root->val.binOp.lchild, os);
+			os << ", ";
+			lispPrint(root->val.binOp.rchild, os);
+			os << "]";
 			break;
 		case OR_T:
-			std::cout << "['orprop', ";
-			lispPrint(root->val.binOp.lchild);
-			std::cout << ", ";
-			lispPrint(root->val.binOp.rchild);
-			std::cout << "]";
+			os << "['orprop', ";
+			lispPrint(root->val.binOp.lchild, os);
+			os << ", ";
+			lispPrint(root->val.binOp.rchild, os);
+			os << "]";
 			break;
 		case IMPLIES_T:
-			std::cout << "['impprop', ";
-			lispPrint(root->val.binOp.lchild);
-			std::cout << ", ";
-			lispPrint(root->val.binOp.rchild);
-			std::cout << "]";
+			os << "['impprop', ";
+			lispPrint(root->val.binOp.lchild, os);
+			os << ", ";
+			lispPrint(root->val.binOp.rchild, os);
+			os << "]";
 			break;
 		case ALWAYS_T:
-			std::cout << "['alwaysprop', " << root->val.tempOp.lbound << ", " << root->val.tempOp.hbound << ", ";
-			lispPrint(root->val.tempOp.child);
-			std::cout << "]";
+			os << "['alwaysprop', " << root->val.tempOp.lbound << ", " << root->val.tempOp.hbound << ", ";
+			lispPrint(root->val.tempOp.child, os);
+			os << "]";
 			break;
 		case EVENT_T:
-			std::cout << "['eventprop', " << root->val.tempOp.lbound << ", " << root->val.tempOp.hbound << ", ";
-			lispPrint(root->val.tempOp.child);
-			std::cout << "]";
+			os << "['eventprop', " << root->val.tempOp.lbound << ", " << root->val.tempOp.hbound << ", ";
+			lispPrint(root->val.tempOp.child, os);
+			os << "]";
 			break;
 		case PALWAYS_T:
-			std::cout << "['palwaysprop', " << root->val.tempOp.lbound << ", " << root->val.tempOp.hbound << ", ";
-			lispPrint(root->val.tempOp.child);
-			std::cout << "]";
+			os << "['palwaysprop', " << root->val.tempOp.lbound << ", " << root->val.tempOp.hbound << ", ";
+			lispPrint(root->val.tempOp.child, os);
+			os << "]";
 			break;
 		case PEVENT_T:
-			std::cout << "['peventprop', " << root->val.tempOp.lbound << ", " << root->val.tempOp.hbound << ", ";
-			lispPrint(root->val.tempOp.child);
-			std::cout << "]";
+			os << "['peventprop', " << root->val.tempOp.lbound << ", " << root->val.tempOp.hbound << ", ";
+			lispPrint(root->val.tempOp.child, os);
+			os << "]";
 			break;
 		case SINCE_T:
-			std::cout << "['sinceprop', " << root->val.twotempOp.lbound << ", " << root->val.twotempOp.hbound << ", ";
-			lispPrint(root->val.twotempOp.lchild);
-			std::cout << ", ";
-			lispPrint(root->val.twotempOp.rchild);
-			std::cout << "]";
+			os << "['sinceprop', " << root->val.twotempOp.lbound << ", " << root->val.twotempOp.hbound << ", ";
+			lispPrint(root->val.twotempOp.lchild, os);
+			os << ", ";
+			lispPrint(root->val.twotempOp.rchild, os);
+			os << "]";
 			break;
 		case UNTIL_T:
-			std::cout << "['untilprop', " << root->val.twotempOp.lbound << ", " << root->val.twotempOp.hbound << ", ";
-			lispPrint(root->val.twotempOp.lchild);
-			std::cout << ", ";
-			lispPrint(root->val.twotempOp.rchild);
-			std::cout << "]";
+			os << "['untilprop', " << root->val.twotempOp.lbound << ", " << root->val.twotempOp.hbound << ", ";
+			lispPrint(root->val.twotempOp.lchild, os);
+			os << ", ";
+			lispPrint(root->val.twotempOp.rchild, os);
+			os << "]";
 			break;
 		default:
-			std::cout << "ERROR!";
+			os << "ERROR!";
 			break;
 	}
 }
@@ -642,27 +654,27 @@ void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
 				break;
 			case NOT_T:
 				os << "formulas[" << (*it)->formTag << "].type = NOT_T;" << std::endl;
-				os << "formulas[" << (*it)->formTag << "].val.child = " << (*it)->val.child->nodeTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.child = " << (*it)->val.child->formTag << ";" << std::endl;
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case OR_T:
 				os << "formulas[" << (*it)->formTag << "].type = OR_T;" << std::endl;
-				os << "formulas[" << (*it)->formTag << "].val.children.lchild = " << (*it)->val.binOp.lchild->nodeTag << ";" << std::endl;
-				os << "formulas[" << (*it)->formTag << "].val.children.rchild = " << (*it)->val.binOp.rchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.children.lchild = " << (*it)->val.binOp.lchild->formTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.children.rchild = " << (*it)->val.binOp.rchild->formTag << ";" << std::endl;
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case UNTIL_T:
 				os << "formulas[" << (*it)->formTag << "].type = UNTIL_T;" << std::endl;
-				os << "formulas[" << (*it)->formTag << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->nodeTag << ";" << std::endl;
-				os << "formulas[" << (*it)->formTag << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->formTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->formTag << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.lbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.hbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case SINCE_T:
 				os << "formulas[" << (*it)->formTag << "].type = SINCE_T;" << std::endl;
-				os << "formulas[" << (*it)->formTag << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->nodeTag << ";" << std::endl;
-				os << "formulas[" << (*it)->formTag << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->nodeTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->formTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->formTag << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.lbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.hbound = " << (*it)->val.twotempOp.hbound << ";" << std::endl;
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;

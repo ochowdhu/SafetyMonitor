@@ -7,7 +7,7 @@
 #include "monconfig.h"
 
 
-#ifndef PCVERSION
+#ifndef PC_MODE
 // need this for checkCons to trigger failure -- should pull out fail/success functions
 #include "stm32f4_discovery.h"
 #endif
@@ -59,6 +59,7 @@ void reduce(int step, residue *res) {
 	int type;
 	int rstep; 
 	formula froot, prevNode;
+	prevNode = 0;
 	// clear stacks
 	stackReset(&redStack);
 	stackReset(&redStackVals);
@@ -69,6 +70,7 @@ void reduce(int step, residue *res) {
 	while (stackEmpty(&redStack) == 0) {
 		froot = stackPop(&redStack);
 		type = ftype[froot];
+		//printf("reducing %d from %d\n", froot, prevNode);
 		switch (type) {
 			//////////
 			case (VALUE_T):
@@ -638,6 +640,7 @@ void checkConsStep() {
 				traceViolate();
 				//rbSafeRemove(&mainresbuf, start);
 			} else {	// not possible...
+				//printf("failing at <%d,%d>@%d\n", cresp->step, cresp->form, instep);
 				traceFail();
 				// LEDS?
 			}

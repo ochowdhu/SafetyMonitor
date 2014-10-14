@@ -141,14 +141,13 @@ int main(int argc, char** argv) {
 		get_monotonic_time(&tsm);
 		// fill cstate
 		cstate = 0;
-		int i;
 		////// FILL STATE
 		updateState();
 		////////////////
 		instep = instep + 1;
 		
 		// first increment the structure
-		incrStruct(estep);
+		incrStruct(instep);
 		// add residue to list
 	
 		// if we've received a new state (instep) that we haven't checked (estep), check
@@ -173,12 +172,10 @@ int main(int argc, char** argv) {
 			////////////////////////////////////////////
 			start = mainresbuf.start;
 			end = mainresbuf.end;
-			printf("start %d, end %d", start, end);
 			while (start != end) {
 				resp = rbGet(&mainresbuf, start);
 				reduce(instep, resp);
-				printf("in step: %d, reduced %d to %d\n", instep, resp->step, resp->form);
-				//printf("estep: %d, rstep: %d, form: %d\n", estep, resp->step, resp->form);
+				//printf("in step: %d, reduced %d to %d\n", instep, resp->step, resp->form);
 				if (resp->form == FORM_TRUE) {
 					//printf("step %d is TRUE\n", resp->step);
 					//rbRemoveFirst(&mainresbuf);
@@ -201,25 +198,15 @@ int main(int argc, char** argv) {
 			/////////////// END AGGRESSIVE CHECK ////////////////////
 			/////////////////////////////////////////////////////////
 		//}
-		//printf("getting timeofday, timeus is %lu\n", timeus);
 		gettimeofday(&te, NULL);
 		get_monotonic_time(&tem);
 		//long long add = (te.tv_sec - ts.tv_sec) * 1000000;
 		unsigned int add; double addm;
-		//timeus += (te.tv_sec - ts.tv_sec) * 1000000;
-		//printf("added secs: timeus is %lld\n", timeus);
-		//timeus += (te.tv_usec - ts.tv_usec);
 		add = (te.tv_usec - ts.tv_usec);
 		addm = get_elapsed_time(&tsm, &tem);
 		stepcount = stepcount + 1;
 		printf("loop time is %d, mach time is %f, mtotal: %f step: %d\n", add, addm, mtimeus, stepcount);
 		mtimeus = mtimeus + addm;
-		/*printf("timeus is %lu before add\n", timeus);
-		timeus = timeus + add;
-		printf("timeus is %lu after add\n",timeus);
-		printf("adding %d to timeus\n", add);
-		printf("added usecs: timeus is %lu\n", timeus);
-		*/
 	}
 	////////////////////////////////////////////////
 	// FINISHED CHECKING, print stats
