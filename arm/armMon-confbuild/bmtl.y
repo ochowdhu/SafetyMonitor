@@ -6,6 +6,7 @@
 #include <map>
 #include <algorithm>
 #include <fstream>
+#include <cstring>
 
 // flex stuff
 extern "C" int yylex();
@@ -68,9 +69,11 @@ expression:
 	| PROP { $$ = makePropNode($1); } // std::cout << "bison got prop: " << $1 << std::endl; }
 	| '(' expression ')' {$$ = $2; } // std::cout << "parenthesized expression -- keep going" <<  std::endl; }
 	| NOT expression { $$ = makeNotNode($2); } //  std::cout << "bison got not" << std::endl; }
-	| expression AND expression { $$ = makeNotNode(makeBinNode(OR_T, makeNotNode($1), makeNotNode($3))); } // std::cout << "bison got and" << std::endl; }
+	//| expression AND expression { $$ = makeNotNode(makeBinNode(OR_T, makeNotNode($1), makeNotNode($3))); } // std::cout << "bison got and" << std::endl; }
+	| expression AND expression { $$ = makeAndNode($1, $3); } // new, need to handle unrestricted
 	| expression OR expression { $$ = makeBinNode(OR_T, $1, $3); } //std::cout << "bison got or" << std::endl; }
-	| expression IMPLIES expression { $$ = makeBinNode(OR_T, makeNotNode($1), $3); } // std::cout << "bison got implies" << std::endl; }
+	//| expression IMPLIES expression { $$ = makeBinNode(OR_T, makeNotNode($1), $3); } // std::cout << "bison got implies" << std::endl; }
+	| expression IMPLIES expression { $$ = makeImpNode($1, $3); } // new, need to hanlde unrestricted
 	| ALWAYS_L BOUND ',' BOUND ALWAYS_R expression	{ $$ = makeAlwaysNode($2, $4, $6); } // std::cout << "bison got always" << std::endl; }
 	| EVENT_L BOUND ',' BOUND EVENT_R expression	{ $$ = makeEventNode($2, $4, $6); } // std::cout << "bison got eventually" << std::endl; }
 	| PALWAYS_L BOUND ',' BOUND PALWAYS_R expression	{ $$ = makePAlwaysNode($2, $4, $6); } // std::cout << "bison got past_always" << std::endl; }
@@ -127,9 +130,14 @@ int main(int argc, char** argv) {
 	falseNode->formTag = 1;
 	trueNode->formTag = 2;
 	if (argc > 1) {
-		yyin = fopen(argv[1], "r");
+		if (strncmp("unres", argv[1],5) == 0) {
+			RESTRICT_LOGIC = 0;
+		}
+		if (argc > 2) {
+			yyin = fopen(argv[1], "r");
+		}
 		//yyin = myfile;
-	}
+	} 
 
 	do {
 		yyparse();
@@ -391,6 +399,29 @@ void tagAndBuild2(Node* root) {
 		case EVENT_T:
 		case PALWAYS_T:
 		case PEVENT_T:
+			tagAndBuild2(root->val.tempOp.child);
+			// copy children nLists to gList
+			for (itl = root->val.tempOp.child->nList.begin(); itl != root->val.tempOp.child->nList.end(); itl++) {
+				uniqueAdd(&root->gList, getSetNode(*itl), &root->nList);
+			}
+			// copy children gLists
+			for (itl = root->val.tempOp.child->gList.begin(); itl != root->val.tempOp.child->gList.end(); itl++) {
+				uniqueAdd(&root->gList, getSetNode(*itl), &root->nList);
+			}
+
+			// add all possible children -- just ourself
+			if (root->val.tempOp.child->type == VALUE_T) {
+				np = getValueNode(root->val.tempOp.child->val.value);
+			} else {
+				itl = find_if(root->gList.begin(), root->gList.end(), findNode(root->val.tempOp.child));
+				if (itl == root->gList.end()) {
+					itl = find_if(root->nList.begin(), root->nList.end(), findNode(root->val.tempOp.child));
+				}
+				if (itl == root->nList.end()) { printf("still can't find node, hmmm\n"); exit(-2);}
+				np = getSetNode(*itl);
+			}
+
+			uniqueAdd(&root->nList, getSetNode(makeTempNode(root->type, root->val.tempOp.lbound, root->val.tempOp.hbound, np)), &root->gList);
 			break;
 		case SINCE_T:
 		case UNTIL_T:
@@ -714,21 +745,21 @@ void confBuildStruct(std::vector<Node*> forms, std::ostream &os) {
 	}
 }
 
+/* We don't actually need temporal simplification tables since we don't do 
+   simplification on them. Removing them to save space */
 void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) {
 		///// SIMPLIFICATION TABLE STUFF
 		std::vector<Node*>::iterator it;
 		int NFORMULAS = nforms;
 		int notForms[NFORMULAS];
 		int orForms[NFORMULAS][NFORMULAS];
-		int untilForms[NFORMULAS][NFORMULAS];
-		int sinceForms[NFORMULAS][NFORMULAS];
-		/////////////////////////////////////
-		// unrestricted
-		int alwaysForms[NFORMULAS];
-		int palwaysForms[NFORMULAS];
-		int eventForms[NFORMULAS];
-		int peventForms[NFORMULAS];
-		////////////////////////////////////
+		//////// unrestricted //////////
+		int andForms[NFORMULAS][NFORMULAS];
+		int impForms[NFORMULAS][NFORMULAS];
+		//int untilForms[NFORMULAS][NFORMULAS];
+		//int sinceForms[NFORMULAS][NFORMULAS];
+
+
 		int si, si2;
 		// initialize simplification tables:
 		for (si = 0; si < NFORMULAS; si++) {
@@ -736,8 +767,10 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 			// 2-dimensional ones
 			for (si2 = 0; si2 < NFORMULAS; si2++) {
 				orForms[si][si2] = 0;
-				untilForms[si][si2] = 0;
-				sinceForms[si][si2] = 0;
+				andForms[si][si2] = 0;
+				impForms[si][si2] = 0;
+				//untilForms[si][si2] = 0;
+				//sinceForms[si][si2] = 0;
 			}
 		}
 
@@ -745,18 +778,30 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 		// fill NOT 1/2
 		notForms[1] = 2; // not false is true
 		notForms[2] = 1; // not true is false
-		// fill OR:
-		// true row is true
+		// fill BINARY 
+		// TRUE ROW
 		// DON'T DO 0 -- we want to leave INVALID invalid
 		for (si = 1; si < NFORMULAS; si++) {
+			// true row is true
 			orForms[2][si] = 2;
 			orForms[si][2] = 2;
+			// true row is passthrough
+			andForms[2][si] = si;
+			andForms[si][2] = si;
+			// true implies is pass-through
+			impForms[2][si] = si;
 		}
-		// false row is pass-through
+		// FALSE ROW
 		// DON'T DO 0 -- we want to leave INVALID invalid
 		for (si = 1; si < NFORMULAS; si++) {
+			// false row is pass-through
 			orForms[1][si] = si;
 			orForms[si][1] = si;
+			// and false is false
+			andForms[1][si] = 1;
+			andForms[si][1] = 1;
+			// implies false is true, true is pass-through
+			impForms[1][si] = 2;
 		}
 
 		// fill simplification tables
@@ -765,11 +810,15 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 				notForms[(*it)->val.child->formTag] = (*it)->formTag;
 			} else if ((*it)->type == OR_T) {
 				orForms[(*it)->val.binOp.lchild->formTag][(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
-			} else if ((*it)->type == UNTIL_T) {
+			} else if ((*it)->type == AND_T) {
+				andForms[(*it)->val.binOp.lchild->formTag][(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
+			} else if ((*it)->type == IMPLIES_T) {
+				impForms[(*it)->val.binOp.lchild->formTag][(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
+			} /*else if ((*it)->type == UNTIL_T) {
 				untilForms[(*it)->val.twotempOp.lchild->formTag][(*it)->val.twotempOp.rchild->formTag] = (*it)->formTag;
 			} else if ((*it)->type == SINCE_T) {
 				sinceForms[(*it)->val.twotempOp.lchild->formTag][(*it)->val.twotempOp.rchild->formTag] = (*it)->formTag;
-			}
+			}*/
 		}
 		// PRINT NOT
 		os << "const formula notForms[NFORMULAS] = {";
@@ -787,8 +836,30 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 			os << "}," << std::endl;
 		}
 		os << "};" << std::endl;
+		if (!RESTRICT_LOGIC) {
+			// PRINT AND 
+			os << "const formula andForms[NFORMULAS][NFORMULAS] = {";
+			for (si = 0; si < NFORMULAS; si++) {
+				os << "{";
+				for (si2 = 0; si2 < NFORMULAS; si2++) {
+					os << andForms[si][si2] << ",";
+				}
+				os << "}," << std::endl;
+			}
+			os << "};" << std::endl;
+			// PRINT IMPLIES
+			os << "const formula impForms[NFORMULAS][NFORMULAS] = {";
+			for (si = 0; si < NFORMULAS; si++) {
+				os << "{";
+				for (si2 = 0; si2 < NFORMULAS; si2++) {
+					os << impForms[si][si2] << ",";
+				}
+				os << "}," << std::endl;
+			}
+			os << "};" << std::endl;
+		}
 		// PRINT UNTIL
-		os << "const formula untilForms[NFORMULAS][NFORMULAS] = {";
+		/*os << "const formula untilForms[NFORMULAS][NFORMULAS] = {";
 		for (si = 0; si < NFORMULAS; si++) {
 			os << "{";
 			for (si2 = 0; si2 < NFORMULAS; si2++) {
@@ -808,7 +879,7 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 			os << "}," << std::endl;
 		}
 		os << "};" << std::endl;
-
+		*/
 }
 
 std::string ftypeMap[12] = {"VALUE_T", "PROP_T", "NOT_T", "OR_T", "AND_T", "IMPLIES_T", "ALWAYS_T", "EVENT_T", "PALWAYS_T", "PEVENT_T", "UNTIL_T", "SINCE_T" };

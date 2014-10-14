@@ -27,12 +27,19 @@
 
 
 
+
 volatile int cstate, nstate; // current/next start -- just a set of bits for now
 volatile int estep, instep;
 
 
 int untilCheck(int step, residue* res);
 int sinceCheck(int step, residue* res);
+int eventCheck(int step, residue* res);
+int alwaysCheck(int step, residue* res);
+int peventCheck(int step, residue* res);
+int palwaysCheck(int step, residue* res);
+int (*tempCheck[6]) (int step, residue *res) = {untilCheck, sinceCheck, eventCheck, alwaysCheck, peventCheck, palwaysCheck};
+
 #ifdef PC_MODE
 void printRing(intring* ring);
 #endif
@@ -121,6 +128,54 @@ void reduce(int step, residue *res) {
 					stackPush(&redStack, root.val.children.lchild);
 				}
 				break;
+			#ifdef FULL_LOGIC
+			case (AND_T):
+				root = formulas[froot];
+				// check direction
+				if (prevNode == root.val.children.lchild) {
+					// check lchild and work on right if not done
+					fchild1 = stackPeek(&redStackVals);
+					if (fchild1 == FORM_FALSE) {
+						// could do nothing, we'll pop and push for now
+						stackPop(&redStackVals);
+						stackPush(&redStackVals, FORM_FALSE);
+					} else { // need to do the right side
+						stackPush(&redStack, froot);
+						stackPush(&redStack, root.val.children.rchild);
+					}
+				} else if (prevNode == root.val.children.rchild) { // on the way up, check vals
+					fchild1 = stackPop(&redStackVals);
+					fchild2 = stackPop(&redStackVals);
+					stackPush(&redStackVals, andForms[fchild2][fchild1]);
+				} else { // on the way down, push left
+					stackPush(&redStack, froot);
+					stackPush(&redStack, root.val.children.lchild);
+				}
+				break;
+			case (IMPLIES_T):
+				root = formulas[froot];
+				// check direction
+				if (prevNode == root.val.children.lchild) {
+					// check lchild and work on right if not done
+					fchild1 = stackPeek(&redStackVals);
+					if (fchild1 == FORM_FALSE) {
+						// could do nothing, we'll pop and push for now
+						stackPop(&redStackVals);
+						stackPush(&redStackVals, FORM_TRUE);
+					} else { // need to do the right side
+						stackPush(&redStack, froot);
+						stackPush(&redStack, root.val.children.rchild);
+					}
+				} else if (prevNode == root.val.children.rchild) { // on the way up, check vals
+					fchild1 = stackPop(&redStackVals);
+					fchild2 = stackPop(&redStackVals);
+					stackPush(&redStackVals, impForms[fchild2][fchild1]);
+				} else { // on the way down, push left
+					stackPush(&redStack, froot);
+					stackPush(&redStack, root.val.children.lchild);
+				}
+				break;
+			#endif
 			case (UNTIL_T):
 				// reusing type, saving memory space
 				child1.step = rstep;
@@ -618,6 +673,18 @@ int sinceCheck(int step, residue* res) {
 }
 #endif
 
+int eventCheck(int step, residue* res) {
+	return TEMP_RES;
+}
+int alwaysCheck(int step, residue* res) {
+	return TEMP_RES;
+}
+int peventCheck(int step, residue* res) {
+	return TEMP_RES;
+}
+int palwaysCheck(int step, residue* res) {
+	return TEMP_RES;
+}
 // We only call this when we start a new step, so no need to check
 // that we're in a new one
 void checkConsStep() {

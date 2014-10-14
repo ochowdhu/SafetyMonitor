@@ -23,6 +23,7 @@
 
 #define USEINTS
 #define ITERATIVE_RED
+#define FULL_LOGIC 
 
 extern const int ftype[NFORMULAS];
 
@@ -46,8 +47,10 @@ extern residue mainresbuffers[NBUFLEN];
 // formula simplify lookup tables for reduce
 extern const formula notForms[NFORMULAS];
 extern const formula orForms[NFORMULAS][NFORMULAS];
-extern const formula untilForms[NFORMULAS][NFORMULAS];
-extern const formula sinceForms[NFORMULAS][NFORMULAS];
+extern const formula andForms[NFORMULAS][NFORMULAS];
+extern const formula impForms[NFORMULAS][NFORMULAS];
+//extern const formula untilForms[NFORMULAS][NFORMULAS];
+//extern const formula sinceForms[NFORMULAS][NFORMULAS];
 
 // iterative reduce stack stuff
 extern formulaStack redStack;

@@ -6,9 +6,9 @@
 #ifndef __BMTLTREE_H
 #define __BMTLTREE_H
 
-#ifndef RESTRICT_LOGIC
-#define RESTRICT_LOGIC 1
-#endif
+//#ifndef RESTRICT_LOGIC
+//#define RESTRICT_LOGIC 0
+//#endif
 
 #include <set>
 #include <vector>
@@ -16,6 +16,7 @@
 #include "armUtils.h"
 
 //enum nodeType {VALUE_T, PROP_T, NOT_T, OR_T, AND_T, IMPLIES_T, ALWAYS_T, EVENT_T, PALWAYS_T, PEVENT_T, UNTIL_T, SINCE_T };
+bool RESTRICT_LOGIC = 1;
 tag tagCount = 0;
 typedef struct Node {
 	enum nodeType type;
@@ -76,6 +77,11 @@ int minbuflen(Node* root) {
 		case UNTIL_T:
 		case SINCE_T:
 			return root->val.twotempOp.hbound + 1 + MAX(minbuflen(root->val.twotempOp.lchild), minbuflen(root->val.twotempOp.rchild));
+		case ALWAYS_T:
+		case EVENT_T:
+		case PALWAYS_T:
+		case PEVENT_T:
+			return root->val.tempOp.hbound + 1 + minbuflen(root->val.tempOp.child);
 		default:
 			return -1;
 	}
@@ -128,6 +134,17 @@ bool matchNodes(Node* n1, Node* n2) {
 					return matchNodes(n1->val.twotempOp.lchild, n2->val.twotempOp.lchild) 
 					   && matchNodes(n1->val.twotempOp.rchild, n2->val.twotempOp.rchild);
 				}
+				return false;
+			case EVENT_T:
+			case ALWAYS_T:
+			case PEVENT_T:
+			case PALWAYS_T:
+				if (n1->val.tempOp.lbound == n2->val.tempOp.lbound
+					&& n1->val.tempOp.hbound == n2->val.tempOp.hbound) {
+					//
+					return matchNodes(n1->val.tempOp.child, n2->val.tempOp.child);
+				}
+				return false;
 		}
 	}
 	return false;
@@ -168,6 +185,16 @@ void uniqueAdd(std::vector<Node*>* v, Node* n) {
 						&& (*it)->val.twotempOp.rchild == n->val.twotempOp.rchild 
 						&& (*it)->val.twotempOp.lbound == n->val.twotempOp.lbound 
 						&& (*it)->val.twotempOp.hbound == n->val.twotempOp.hbound) {
+						found = true;
+					}
+					break;
+				case EVENT_T:
+				case PEVENT_T:
+				case ALWAYS_T:
+				case PALWAYS_T:
+					if ((*it)->val.tempOp.child == n->val.tempOp.child 
+						&& (*it)->val.tempOp.lbound == n->val.tempOp.lbound 
+						&& (*it)->val.tempOp.hbound == n->val.tempOp.hbound) {
 						found = true;
 					}
 					break;
@@ -218,6 +245,16 @@ void uniqueAdd(std::vector<Node*>* v, Node* n, std::vector<Node*>* v2) {
 						found = true;
 					}
 					break;
+				case EVENT_T:
+				case PEVENT_T:
+				case ALWAYS_T:
+				case PALWAYS_T:
+					if ((*it)->val.tempOp.child == n->val.tempOp.child 
+						&& (*it)->val.tempOp.lbound == n->val.tempOp.lbound 
+						&& (*it)->val.tempOp.hbound == n->val.tempOp.hbound) {
+						found = true;
+					}
+					break;
 			}
 		} else {
 			continue;
@@ -255,6 +292,16 @@ void uniqueAdd(std::vector<Node*>* v, Node* n, std::vector<Node*>* v2) {
 						&& (*it)->val.twotempOp.rchild == n->val.twotempOp.rchild 
 						&& (*it)->val.twotempOp.lbound == n->val.twotempOp.lbound 
 						&& (*it)->val.twotempOp.hbound == n->val.twotempOp.hbound) {
+						found = true;
+					}
+					break;
+				case EVENT_T:
+				case PEVENT_T:
+				case ALWAYS_T:
+				case PALWAYS_T:
+					if ((*it)->val.tempOp.child == n->val.tempOp.child 
+						&& (*it)->val.tempOp.lbound == n->val.tempOp.lbound 
+						&& (*it)->val.tempOp.hbound == n->val.tempOp.hbound) {
 						found = true;
 					}
 					break;
@@ -317,6 +364,21 @@ Node *makeBinNode(enum nodeType type, Node* lchild, Node* rchild) {
 	n->nodeTag = tagCount++;
 	n->stidx = -1;
 	return n;
+}
+Node *makeImpNode(Node *lchild, Node *rchild) {
+	if (RESTRICT_LOGIC) {
+		return makeBinNode(OR_T, makeNotNode(lchild), rchild);
+	} else {
+		return makeBinNode(IMPLIES_T, lchild, rchild);
+	}
+}
+Node *makeAndNode(Node *lchild, Node *rchild) {
+	if (RESTRICT_LOGIC) {
+		return makeNotNode(makeBinNode(OR_T, makeNotNode(lchild), makeNotNode(rchild)));
+	} else {
+		return makeBinNode(AND_T, lchild, rchild);
+	}
+
 }
 Node *makeTempNode(enum nodeType type, int lbound, int hbound, Node* child) {
 	Node *n = new Node();
