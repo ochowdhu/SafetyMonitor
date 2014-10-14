@@ -214,6 +214,9 @@ int main(int argc, char** argv) {
 				  << "#define FORM_DELAY (" << fdelay(ast) << ")" << std::endl
 				  << "#define POLICY (" << policyTag << ")" << std::endl
 				  << "#define STACK_DEPTH (" << 3+stackDepth(ast) << ")" << std::endl;
+		if (!RESTRICT_LOGIC) {
+			gendefs << "#define FULL_LOGIC" << std::endl;
+		}
 		// throw masks into gendefs for now
 		confPrintMasks(all, gendefs);
 		// Now, monconfig.c

@@ -82,6 +82,7 @@ void updateState() {
 	//	cstate |= field[0];
 	cstate |= field[1] << 1;
 	cstate |= field[2] << 2;
+	instep++;
 }
 
 int sim = TRUE;
@@ -142,9 +143,8 @@ int main(int argc, char** argv) {
 		// fill cstate
 		cstate = 0;
 		////// FILL STATE
-		updateState();
+		updateState();	// updates instep now
 		////////////////
-		instep = instep + 1;
 		
 		// first increment the structure
 		incrStruct(instep);
@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
 			#ifdef MON_CONS
 			checkConsStep();
 			#endif
-		
+
 			#ifdef MON_AGGR
 			//////// START AGGRESSIVE CHECK //////////////
 			////////////////////////////////////////////

@@ -58,6 +58,11 @@ int fdelay(Node* root) {
 			return root->val.twotempOp.hbound + MAX(fdelay(root->val.twotempOp.lchild), fdelay(root->val.twotempOp.rchild));
 		case SINCE_T:
 			return MAX(fdelay(root->val.twotempOp.lchild), fdelay(root->val.twotempOp.rchild));
+		case ALWAYS_T:
+		case EVENT_T:
+		case PEVENT_T:
+		case PALWAYS_T:
+			return root->val.tempOp.hbound + fdelay(root->val.tempOp.child);
 		default:
 			return -1;
 	}

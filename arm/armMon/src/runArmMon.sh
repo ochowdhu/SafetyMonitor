@@ -1,7 +1,7 @@
 ## runArmMon.sh -- add formula, compile, and run formula
 
-#basepath=~/Private/research/
-basepath=~/Documents/Work/
+basepath=~/Private/research/
+#basepath=~/Documents/Work/
 
 formula=$1
 tracedir="$basepath/thesis/SafetyMonitor/arm/armMon/traces"
@@ -24,9 +24,10 @@ fi
 
 # generate config
 cd $codedir
-echo "$1" | "$confdir/bmtl" > /dev/null 2>&1
+echo "$1" | "$confdir/bmtl" "$4" > /dev/null 2>&1
 
 echo "USING ARGS $args"
+echo "bmtl called with arg $4"
 
 cd $builddir
 cmake $args ../

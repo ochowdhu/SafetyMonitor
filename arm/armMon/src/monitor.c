@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "monitor.h"
 #include "monconfig.h"
+#include "gendefs.h" // need FULL_LOGIC
 
 
 #ifndef PC_MODE
@@ -34,11 +35,15 @@ volatile int estep, instep;
 
 int untilCheck(int step, residue* res);
 int sinceCheck(int step, residue* res);
+#ifdef FULL_LOGIC
 int eventCheck(int step, residue* res);
 int alwaysCheck(int step, residue* res);
 int peventCheck(int step, residue* res);
 int palwaysCheck(int step, residue* res);
 int (*tempCheck[6]) (int step, residue *res) = {untilCheck, sinceCheck, eventCheck, alwaysCheck, peventCheck, palwaysCheck};
+#else
+int (*tempCheck[2]) (int step, residue *res) = {untilCheck, sinceCheck};
+#endif
 
 #ifdef PC_MODE
 void printRing(intring* ring);
@@ -60,6 +65,7 @@ residue* stGetRes(resStructure *st, int pos) {
 // Iterative Reduce, used to be itreduce -- now just using preprocessor
 //void itreduce(int step, residue *res) {
 void reduce(int step, residue *res) {
+	//if (step < 0) { return FORM_TRUE;};
 	fNode root;
 	residue child1;
 	formula fchild1, fchild2;
@@ -177,10 +183,19 @@ void reduce(int step, residue *res) {
 				break;
 			#endif
 			case (UNTIL_T):
+			case (SINCE_T):
+			#ifdef FULL_LOGIC
+			case (EVENT_T):
+			case (ALWAYS_T):
+			case (PEVENT_T):
+			case (PALWAYS_T):
+			#endif
+			//case (UNTIL_T):
 				// reusing type, saving memory space
 				child1.step = rstep;
 				child1.form = froot;
-				type = untilCheck(step, &child1);
+				//type = untilCheck(step, &child1);
+				type = tempCheck[ftype[froot]-6](step, &child1); 
 				if (type == TEMP_TRUE) {
 					//res->form = FORM_TRUE;
 					stackPush(&redStackVals, FORM_TRUE);
@@ -192,7 +207,7 @@ void reduce(int step, residue *res) {
 				}
 				// no else, just return the residue unchanged
 				break;
-			case (SINCE_T):
+			/*case (SINCE_T):
 				child1.step = rstep;
 				child1.form = froot;
 				type = sinceCheck(step, &child1);
@@ -206,6 +221,7 @@ void reduce(int step, residue *res) {
 					stackPush(&redStackVals, child1.form);
 				}
 				break;
+				*/
 			default:
 				// shouldn't get here...
 				break;
@@ -272,16 +288,22 @@ void reduce(int step, residue *res) {
 			// but for now let's just reduce both and call into the simplify table
 			res->form = orForms[child1.form][child2.form];
 			return;
+		case (EVENT_T):
+		case (ALWAYS_T):
+		case (PEVENT_T):
+		case (PALWAYS_T):
+		case (SINCE_T):
 		case (UNTIL_T):
 			// reusing type, saving memory space
-			type = untilCheck(step, res);
+			//type = untilCheck(step, res);
+			type = tempCheck[froot-6](step, res);
 			if (type == TEMP_TRUE)
 				res->form = FORM_TRUE;
 			else if (type == TEMP_FALSE)
 				res->form = FORM_FALSE;
 			// no else, just return the residue unchanged
 			return;
-		case (SINCE_T):
+		/*case (SINCE_T):
 			type = sinceCheck(step, res);
 			if (type == TEMP_TRUE)
 				res->form = FORM_TRUE;
@@ -289,6 +311,7 @@ void reduce(int step, residue *res) {
 				res->form = FORM_FALSE;
 			// no else, just return the residue unchanged
 			return;
+		*/
 		default:
 			// shouldn't get here...
 			return;
@@ -493,6 +516,8 @@ int sinceCheck(int step, residue *res) {
 	// get temporal bounds
 	l = res->step - formulas[res->form].val.t_children.hbound;
 	h = res->step - formulas[res->form].val.t_children.lbound;
+	l = MAX(l,1); // step 1 is first step, don't look before this
+	h = MAX(h,1);
 
 	// No Beta case
 	beta = theStruct[formulas[formulas[res->form].val.t_children.rchild].structidx].ftime;
@@ -569,6 +594,8 @@ int sinceCheck(int step, residue* res) {
 	// get temporal bounds
 	l = res->step - formulas[res->form].val.t_children.hbound;
 	h = res->step - formulas[res->form].val.t_children.lbound;
+	l = MAX(l,1); // step 1 is first step, don't look before this
+	h = MAX(h,1);
 	
 	// initialize everything
 	a_alive = -1;
@@ -673,18 +700,172 @@ int sinceCheck(int step, residue* res) {
 }
 #endif
 
+#ifdef FULL_LOGIC
+#ifdef USEINTS
 int eventCheck(int step, residue* res) {
+	int l, h; // temporal bounds
+	intring *beta; 
+	intNode *nnb;
+	resbuf *reslist;
+	residue *resp;
+	// interval vars
+	int islow, ishigh;
+
+
+	// get temporal bounds
+	l = res->step + formulas[res->form].val.t_children.lbound;
+	h = res->step + formulas[res->form].val.t_children.hbound;
+	// True case
+	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ttime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		// intervals intersect if max of high and min of low make a non-empty interval
+		islow = MAX(nnb->ival.start, l);
+		ishigh = MIN(nnb->ival.end, h);
+		if (islow <= ishigh) {
+			return TEMP_TRUE;
+		}
+	}
+	// No Beta Case
+	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ftime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		// fail if false is a superset of check range (can't possibly be true)
+		if (nnb->ival.start <= l && nnb->ival.end >= h) {
+			return TEMP_FALSE;
+		// everything after this isn't in [l,h]
+		} else if (nnb->ival.end < l) {
+			break;
+		}
+	}
 	return TEMP_RES;
 }
+#else
+#endif
+#ifdef USEINTS
 int alwaysCheck(int step, residue* res) {
+	int l, h; // temporal bounds
+	intring *beta; 
+	intNode *nnb;
+	resbuf *reslist;
+	residue *resp;
+	// interval vars
+	int islow, ishigh;
+
+	// get temporal bounds
+	l = res->step + formulas[res->form].val.t_children.lbound;
+	h = res->step + formulas[res->form].val.t_children.hbound;
+	// False case
+	// any false intersects with [l,h] is false
+	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ftime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		// intervals intersect if max of high and min of low make a non-empty interval
+		islow = MAX(nnb->ival.start, l);
+		ishigh = MIN(nnb->ival.end, h);
+		if (islow <= ishigh) {
+			return TEMP_FALSE;
+		}
+	}
+	// True case 
+	// need to find an interval that is a superset of [l,h]
+	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ttime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		// fail if false is a superset of check range (can't possibly be true)
+		if (nnb->ival.start <= l && nnb->ival.end >= h) {
+			return TEMP_TRUE;
+		// everything after this isn't in [l,h]
+		} else if (nnb->ival.end < l) {
+			break;
+		}
+	}
 	return TEMP_RES;
 }
+#else
+#endif
+#ifdef USEINTS
 int peventCheck(int step, residue* res) {
+	int l, h; // temporal bounds
+	intring *beta; 
+	intNode *nnb;
+	resbuf *reslist;
+	residue *resp;
+	// interval vars
+	int islow, ishigh;
+
+
+	// get temporal bounds
+	l = res->step - formulas[res->form].val.t_children.hbound;
+	h = res->step - formulas[res->form].val.t_children.lbound;
+	l = MAX(l,1); // step 1 is first step, don't look before this
+	h = MAX(h,1);
+	// True case
+	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ttime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		// intervals intersect if max of high and min of low make a non-empty interval
+		islow = MAX(nnb->ival.start, l);
+		ishigh = MIN(nnb->ival.end, h);
+		if (islow <= ishigh) {
+			return TEMP_TRUE;
+		}
+	}
+	// No Beta Case
+	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ftime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		// fail if false is a superset of check range (can't possibly be true)
+		if (nnb->ival.start <= l && nnb->ival.end >= h) {
+			return TEMP_FALSE;
+		// everything after this isn't in [l,h]
+		} else if (nnb->ival.end < l) {
+			break;
+		}
+	}
 	return TEMP_RES;
 }
+#else
+#endif
+#ifdef USEINTS
 int palwaysCheck(int step, residue* res) {
+	int l, h; // temporal bounds
+	intring *beta; 
+	intNode *nnb;
+	resbuf *reslist;
+	residue *resp;
+	// interval vars
+	int islow, ishigh;
+
+	// get temporal bounds
+	l = res->step - formulas[res->form].val.t_children.hbound;
+	h = res->step - formulas[res->form].val.t_children.lbound;
+	l = MAX(l,1); // step 1 is first step, don't look before this
+	h = MAX(h,1);
+	// False case
+	// any false intersects with [l,h] is false
+	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ftime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		// intervals intersect if max of high and min of low make a non-empty interval
+		islow = MAX(nnb->ival.start, l);
+		ishigh = MIN(nnb->ival.end, h);
+		if (islow <= ishigh) {
+			return TEMP_FALSE;
+		}
+	}
+	// True case 
+	// need to find an interval that is a superset of [l,h]
+	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ttime;
+	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
+		// fail if false is a superset of check range (can't possibly be true)
+		if (nnb->ival.start <= l && nnb->ival.end >= h) {
+			return TEMP_TRUE;
+		// everything after this isn't in [l,h]
+		} else if (nnb->ival.end < l) {
+			break;
+		}
+	}
 	return TEMP_RES;
 }
+#else
+#endif
+#endif // FULL_LOGIC
+
+
 // We only call this when we start a new step, so no need to check
 // that we're in a new one
 void checkConsStep() {

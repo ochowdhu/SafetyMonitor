@@ -102,7 +102,7 @@ void RingAddStep(int step, intring *ring) {
 	intNode *it, *lastit;
 	intNode *next;
 	char added;
-	added	= FALSE;
+	added = FALSE;
 	lastit = NULL;
 	it = ring->start;
 	while (it != ring->end) {

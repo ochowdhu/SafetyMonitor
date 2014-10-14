@@ -23,7 +23,6 @@
 
 #define USEINTS
 #define ITERATIVE_RED
-#define FULL_LOGIC 
 
 extern const int ftype[NFORMULAS];
 
