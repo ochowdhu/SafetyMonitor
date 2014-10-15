@@ -23,6 +23,7 @@
 #define MON_CONS
 #define MON_AGGR
 #endif
+#define IM_REDUCE
 
 #define NFIELDS 100
 // csv stuff
@@ -87,7 +88,16 @@ void updateState() {
 	cstate |= field[5] << 5;
 	cstate |= field[6] << 6;
 	cstate |= field[7] << 7;
+	cstate |= field[8] << 8;
+	cstate |= field[9] << 9;
+	cstate |= field[10] << 10;
+	cstate |= field[11] << 11;
+	cstate |= field[12] << 12;
+	cstate |= field[13] << 13;
+	cstate |= field[14] << 14;
+	cstate |= field[15] << 15;
 
+	//printf("allT: %d, allF: %d, alt1: %d, perF3: %d\n", getProp(MASK_allT), getProp(MASK_allF), getProp(MASK_alt1), getProp(MASK_perF3));
 	instep++;
 	//printf("cstate is %x @ %d\n", cstate, instep);
 }
@@ -166,7 +176,7 @@ int main(int argc, char** argv) {
 		
 			// add residue to list
 			cons_res.step = instep;
-			cons_res.form = POLICY;
+			cons_res.form = POLICIES[0];
 			//printf("before reduction, cons_res is (%d,%d)\n", cons_res.step, cons_res.form);
 			#ifdef IM_REDUCE
 			reduce(instep, &cons_res);
@@ -174,6 +184,7 @@ int main(int argc, char** argv) {
 			//printf("after reduction, cons_res is (%d,%d)\n", cons_res.step, cons_res.form);
 			rbInsert(&mainresbuf, cons_res.step, cons_res.form);
 			//printf("added (%d,%d) to ring\n", cons_res.step, cons_res.form);
+
 			#ifdef MON_CONS
 			checkConsStep();
 			//checkConsStepLoop();

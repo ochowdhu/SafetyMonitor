@@ -343,6 +343,7 @@ int untilCheck(int step, residue *res) {
 	// get temporal bounds
 	l = res->step + formulas[res->form].val.t_children.lbound;
 	h = res->step + formulas[res->form].val.t_children.hbound;
+	
 	// No Beta Case
 	beta = theStruct[formulas[formulas[res->form].val.t_children.rchild].structidx].ftime;
 	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {

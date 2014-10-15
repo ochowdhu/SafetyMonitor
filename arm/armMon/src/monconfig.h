@@ -25,6 +25,7 @@
 #define ITERATIVE_RED
 
 extern const int ftype[NFORMULAS];
+extern const formula POLICIES[NPOLICIES];
 
 // structure table
 extern resStructure theStruct[NSTRUCT];

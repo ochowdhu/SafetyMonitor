@@ -1,10 +1,10 @@
 /** Auto Generated definitions */
-#define NFORMULAS (7)
-#define NSTRUCT (1)
-#define NBUFLEN (92)
-#define FORM_DELAY (89)
-#define POLICY (6)
-#define STACK_DEPTH (6)
+#define NFORMULAS (8)
+#define NSTRUCT (2)
+#define NBUFLEN (9)
+#define FORM_DELAY (5)
+#define NPOLICIES (1)
+#define STACK_DEPTH (4)
 #define FULL_LOGIC
 // Provided masks instead of derived from formula!!
 #define MASK_time (1<<(0))
@@ -15,5 +15,7 @@
 #define MASK_perT10 (1<<(5))
 #define MASK_perT100 (1<<(6))
 #define MASK_perT1000 (1<<(7))
-#define MASK_perF3 (1<<(8))
-#define MASK_perF10 (1<<(9))
+#define MASK_perT10000 (1<<(8))
+#define MASK_perF3 (1<<(9))
+#define MASK_perF10 (1<<(10))
+#define MASK_perF100 (1<<(11))
