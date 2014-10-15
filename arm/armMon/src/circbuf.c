@@ -74,6 +74,9 @@ intNode* ibPop(intbuf *ib) {
 	return ret;
 }
 
+int ibFull(intbuf *ib) {
+		return (ib->end + 1) % ib->size == ib->start;
+}
 // //////////////////////////////
 // intring stuff
 void intRingInit(intring *ring, intbuf *pool) {
@@ -98,11 +101,26 @@ void intRingRemove(intring* ring, intNode *prev, intNode* rem) {
 	prev->next = rem->next;
 	ibPush(ring->pool, rem);
 }
+// Could leave the end node and reclaim the one before it if we wanted
+void intRingReclaim(intring* ring) {
+	intNode *it, *lastit;
+	it = ring->start;
+	while (it != ring->end) {
+		lastit = it;
+		it = it->next;
+	}
+	// update end
+	ring->end = lastit;
+	// reclaim old end node
+	intRingRemove(ring, lastit, it);
+}
 void RingAddStep(int step, intring *ring) {
 	intNode *it, *lastit;
 	intNode *next;
-	char added;
+	char added, empty;
 	added = FALSE;
+	// pool is empty, need to reclaim if we want to add a node
+	empty = (ring->pool->start == ring->pool->end); 
 	lastit = NULL;
 	it = ring->start;
 	while (it != ring->end) {
@@ -110,6 +128,7 @@ void RingAddStep(int step, intring *ring) {
 		// or we already added it and are not merging
 		if (step > (*it).ival.end + 1) {
 			if (added == FALSE) {
+				if (empty) intRingReclaim(ring);
 				next = ibPop(ring->pool);
 				next->ival.start = step;
 				next->ival.end = step;
@@ -152,6 +171,7 @@ void RingAddStep(int step, intring *ring) {
 	// got to end and didn't add, so add it to the end
 	// i.e. step < all intervals
 	if (added == FALSE) {
+		if (empty) intRingReclaim(ring);
 		next = ibPop(ring->pool);
 		next->ival.start = step;
 		next->ival.end = step;

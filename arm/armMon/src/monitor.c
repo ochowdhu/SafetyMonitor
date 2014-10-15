@@ -31,7 +31,9 @@
 
 volatile int cstate, nstate; // current/next start -- just a set of bits for now
 volatile int estep, instep;
-
+#ifdef PC_MODE
+int numreduces;
+#endif
 
 int untilCheck(int step, residue* res);
 int sinceCheck(int step, residue* res);
@@ -65,6 +67,9 @@ residue* stGetRes(resStructure *st, int pos) {
 // Iterative Reduce, used to be itreduce -- now just using preprocessor
 //void itreduce(int step, residue *res) {
 void reduce(int step, residue *res) {
+	#ifdef PC_MODE
+	numreduces++;
+	#endif
 	//if (step < 0) { return FORM_TRUE;};
 	fNode root;
 	residue child1;
@@ -715,6 +720,7 @@ int eventCheck(int step, residue* res) {
 	// get temporal bounds
 	l = res->step + formulas[res->form].val.t_children.lbound;
 	h = res->step + formulas[res->form].val.t_children.hbound;
+	//
 	// True case
 	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ttime;
 	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
@@ -796,6 +802,7 @@ int peventCheck(int step, residue* res) {
 	h = res->step - formulas[res->form].val.t_children.lbound;
 	l = MAX(l,1); // step 1 is first step, don't look before this
 	h = MAX(h,1);
+	
 	// True case
 	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ttime;
 	for (nnb = beta->start; nnb->next != NULL; nnb = nnb->next) {
@@ -883,10 +890,14 @@ void checkConsStep() {
 			reduce(estep, cresp);
 			if (cresp->form == FORM_TRUE) {
 				stepSatisfy();
-				//rbSafeRemove(&mainresbuf, start);
+				#ifdef PC_MODE
+				rbSafeRemove(&mainresbuf, start);
+				#endif
 			} else if (cresp->form == FORM_FALSE) {
 				traceViolate();
-				//rbSafeRemove(&mainresbuf, start);
+				#ifdef PC_MODE
+				rbSafeRemove(&mainresbuf, start);
+				#endif
 			} else {	// not possible...
 				//printf("failing at <%d,%d>@%d\n", cresp->step, cresp->form, instep);
 				traceFail();

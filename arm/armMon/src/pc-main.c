@@ -82,7 +82,14 @@ void updateState() {
 	//	cstate |= field[0];
 	cstate |= field[1] << 1;
 	cstate |= field[2] << 2;
+	cstate |= field[3] << 3;
+	cstate |= field[4] << 4;
+	cstate |= field[5] << 5;
+	cstate |= field[6] << 6;
+	cstate |= field[7] << 7;
+
 	instep++;
+	//printf("cstate is %x @ %d\n", cstate, instep);
 }
 
 int sim = TRUE;
@@ -112,6 +119,9 @@ int main(int argc, char** argv) {
   	host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
 	#endif
 	
+	// set numreduces for profiling
+	numreduces=0;
+	
 	struct timeval ts, te;
 	struct timespec tsm, tem;
 	timeus = 0;
@@ -140,6 +150,7 @@ int main(int argc, char** argv) {
 	while ((traceFinished = csvgetline(infile)) > 0) {
 		gettimeofday(&ts, NULL);
 		get_monotonic_time(&tsm);
+		numreduces = 0;
 		// fill cstate
 		cstate = 0;
 		////// FILL STATE
@@ -165,6 +176,7 @@ int main(int argc, char** argv) {
 			//printf("added (%d,%d) to ring\n", cons_res.step, cons_res.form);
 			#ifdef MON_CONS
 			checkConsStep();
+			//checkConsStepLoop();
 			#endif
 
 			#ifdef MON_AGGR
@@ -198,6 +210,7 @@ int main(int argc, char** argv) {
 			/////////////// END AGGRESSIVE CHECK ////////////////////
 			/////////////////////////////////////////////////////////
 		//}
+		printf("numreduces = %d\n", numreduces);
 		gettimeofday(&te, NULL);
 		get_monotonic_time(&tem);
 		//long long add = (te.tv_sec - ts.tv_sec) * 1000000;
@@ -221,7 +234,7 @@ int main(int argc, char** argv) {
 
 
 void traceViolate() {
-	//printf("Trace VIOLATED!!!\n");
+	printf("Trace VIOLATED!!!\n");
 	tracesat = 0;
 }
 void stepSatisfy() {

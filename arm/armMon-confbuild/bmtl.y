@@ -19,6 +19,7 @@ void yyerror(const char* s);
 std::map<tag, Node*> nodeMap;
 std::set<Node*> nodeSet;
 Node* ast;
+std::vector<Node*> stList;
 tag GTAG;
 int policyTag;
 void pprintTree(Node *n);
@@ -119,12 +120,14 @@ int main(int argc, char** argv) {
 	FILE *myfile;
 	std::ofstream gendefs;
 	std::ofstream monconfig;
+	std::ifstream maskdefs;
 	gendefs.open("gendefs.h");
 	monconfig.open("genmonconfig.c");
+	maskdefs.open("maskdefs.in");
 	// create value nodes
+	invalNode = makeValueNode(2);
 	falseNode = makeValueNode(0);
 	trueNode = makeValueNode(1);
-	invalNode = makeValueNode(2);
 	// set the formula tags correctly
 	invalNode->formTag = 0;
 	falseNode->formTag = 1;
@@ -173,7 +176,12 @@ int main(int argc, char** argv) {
 			std::cout << std::endl;
 		}
 		*/	
-		std::vector<Node*> all(ast->nList);
+		//std::vector<Node*> all(ast->nList);
+		std::vector<Node*> all;
+		all.push_back(invalNode);
+		all.push_back(falseNode);
+		all.push_back(trueNode);
+		all.insert(all.end(), ast->nList.begin(), ast->nList.end());
 		all.insert(all.end(), ast->gList.begin(), ast->gList.end());
 
 		std::cout << "joined list:" << std::endl;
@@ -185,7 +193,7 @@ int main(int argc, char** argv) {
 
 		}
 		std::cout << "JOINED LIST CONFIG PRINT: " << std::endl;
-		std::cout << "NFORMULAS: " << all.size()+2 <<  std::endl;
+		std::cout << "NFORMULAS: " << all.size() <<  std::endl;
 		std::cout << "NSTRUCT: " << ast->gList.size() << std::endl;
 
 
@@ -193,10 +201,10 @@ int main(int argc, char** argv) {
 /////////////////////////////////////////////////////////////////////////
 		// formTag the all list
 
-		int fi = 3;
+		int fi = 0;
 		for (it = all.begin(); it != all.end(); it++) {
 			(*it)->formTag = fi++;
-			std::cout << (*it)->formTag << "|Node: ";
+			std::cout << (*it)->formTag << "==" << (*it)->nodeTag << "|Node: ";
 			lispPrint(*it, std::cout);
 			std::cout << std::endl;
 		}
@@ -208,8 +216,9 @@ int main(int argc, char** argv) {
 		std::cout << "AUTO-GENERATE CONFIG:" << std::endl;
 		// First, into gendefs.h we need NFORMULAS, NSTRUCT, NBUFLEN, FORMDELAY
 		gendefs << "/** Auto Generated definitions */" << std::endl
-				  << "#define NFORMULAS (" << all.size()+3 << ")" << std::endl
-				  << "#define NSTRUCT (" << ast->gList.size() << ")" << std::endl
+				  << "#define NFORMULAS (" << all.size() << ")" << std::endl
+				//  << "#define NSTRUCT (" << ast->gList.size() << ")" << std::endl
+				  << "#define NSTRUCT (" << stList.size() << ")" << std::endl
 				  << "#define NBUFLEN (" << minbuflen(ast)+2 << ")" << std::endl
 				  << "#define FORM_DELAY (" << fdelay(ast) << ")" << std::endl
 				  << "#define POLICY (" << policyTag << ")" << std::endl
@@ -218,7 +227,16 @@ int main(int argc, char** argv) {
 			gendefs << "#define FULL_LOGIC" << std::endl;
 		}
 		// throw masks into gendefs for now
-		confPrintMasks(all, gendefs);
+		bool gotmask = false;
+		std::string mask;
+		while (std::getline(maskdefs, mask)) {
+			gotmask = true;
+			gendefs << mask << std::endl;
+		}
+		maskdefs.close();
+		if (!gotmask) {
+			confPrintMasks(all, gendefs);
+		}
 		// Now, monconfig.c
 		monconfig << "/** Auto Generated monitor configuration */" << std::endl
 				  << "// FORMULA: ";
@@ -226,8 +244,8 @@ int main(int argc, char** argv) {
 		monconfig << std::endl;
 
 		monconfig << "#include \"monconfig.h\"" << std::endl;
-		confBuildFtype(all.size()+3, all, monconfig);
-		confBuildSimpTables(all.size()+3, all, monconfig);
+		confBuildFtype(all.size(), all, monconfig);
+		confBuildSimpTables(all.size(), all, monconfig);
 
 		///// STRUCTURES HAVE TO BE BEFORE FORMULAS
 		///// confBuildStruct loads the structidx's into the nodes!!
@@ -251,7 +269,8 @@ int main(int argc, char** argv) {
 				  << "intRingInit(&intringbuffer[i][1], &intbuffer[i][1]);" << std::endl
 				  << "}";
 		//confBuildStruct(ast->gList, monconfig);
-		confBuildStruct(ast->gList, monconfig);
+		//confBuildStruct(ast->gList, monconfig);
+		confBuildStruct(stList, monconfig);
 		monconfig <<"}" << std::endl << std::endl;
 
 
@@ -340,6 +359,8 @@ void tagAndBuild2(Node* root) {
 	Node* np2;
 	switch (root->type) {
 		case VALUE_T:
+		//	np = getValueNode(root->val.value);
+		//	uniqueAdd(&root->nList, np);
 			break;
 		case PROP_T:
 			root->nodeTag = GTAG++;
@@ -424,6 +445,9 @@ void tagAndBuild2(Node* root) {
 				np = getSetNode(*itl);
 			}
 
+			// add child to struct list
+			uniqueAdd(&stList, np);
+			// add self to nList
 			uniqueAdd(&root->nList, getSetNode(makeTempNode(root->type, root->val.tempOp.lbound, root->val.tempOp.hbound, np)), &root->gList);
 			break;
 		case SINCE_T:
@@ -479,6 +503,9 @@ void tagAndBuild2(Node* root) {
 			//uniqueAdd(&root->nList, makeTwoTempNode(root->type, root->val.twotempOp.lbound, root->val.twotempOp.hbound, root->val.twotempOp.lchild, root->val.twotempOp.rchild), &root->gList);
 			uniqueAdd(&root->nList, getSetNode(makeTwoTempNode(root->type, root->val.twotempOp.lbound, root->val.twotempOp.hbound, np, np2)), &root->gList);
 
+			// add child to struct list
+			uniqueAdd(&stList, np);
+			uniqueAdd(&stList, np2);
 			break;
 	}
 }
@@ -671,9 +698,11 @@ void confPrintMasks(std::vector<Node*> forms, std::ostream &os) {
 void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
 	std::vector<Node*>::iterator it;
 	// INVALID/TRUE/FALSE come from template...
+	/*
 	os << "formulas[0].type = VALUE_T;" << std::endl << "formulas[0].val.value = INVALID;" << std::endl;
 	os << "formulas[1].type = VALUE_T;" << std::endl << "formulas[1].val.value = FALSE;" << std::endl;
 	os << "formulas[2].type = VALUE_T;" << std::endl << "formulas[2].val.value = TRUE;" << std::endl;
+	*/
 	for (it = forms.begin(); it != forms.end(); it++) {
 		std::string stype = typeStrings[(*it)->type];
 		//std::cout << "Type " << (*it)->type << " is " << stype << std::endl;
@@ -888,7 +917,8 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 std::string ftypeMap[12] = {"VALUE_T", "PROP_T", "NOT_T", "OR_T", "AND_T", "IMPLIES_T", "ALWAYS_T", "EVENT_T", "PALWAYS_T", "PEVENT_T", "UNTIL_T", "SINCE_T" };
 void confBuildFtype(int nforms, std::vector<Node*> list, std::ostream &os) {
 	std::vector<Node*>::iterator it;
-	os << "const int ftype[NFORMULAS] = { VALUE_T, VALUE_T, VALUE_T, ";
+	//os << "const int ftype[NFORMULAS] = { VALUE_T, VALUE_T, VALUE_T, ";
+	os << "const int ftype[NFORMULAS] = { "; 
 	for (it = list.begin(); it != list.end(); it++) {
 		os << ftypeMap[(*it)->type] << ", ";
 	}

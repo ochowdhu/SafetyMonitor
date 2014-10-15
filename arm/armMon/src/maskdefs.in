@@ -1,11 +1,3 @@
-/** Auto Generated definitions */
-#define NFORMULAS (7)
-#define NSTRUCT (1)
-#define NBUFLEN (92)
-#define FORM_DELAY (89)
-#define POLICY (6)
-#define STACK_DEPTH (6)
-#define FULL_LOGIC
 // Provided masks instead of derived from formula!!
 #define MASK_time (1<<(0))
 #define MASK_allT (1<<(1))

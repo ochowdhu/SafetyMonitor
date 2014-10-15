@@ -9,7 +9,7 @@ typedef struct formula {
 } formula;
 */
 // formula's are uniquely id'ed by their table offset
-typedef char formula;
+typedef int formula;
 
 enum nodeType {VALUE_T, PROP_T, NOT_T, OR_T, AND_T, IMPLIES_T, UNTIL_T, SINCE_T, EVENT_T, ALWAYS_T, PEVENT_T, PALWAYS_T};
 //#else

@@ -1,15 +1,42 @@
 Just keeping some notes here
 
 TODO: 
-	implement full logic
+	XXXimplement full logic
+		TEST!!
 	check interval/list preprocessor switches
-	implement hard conservative?
+	XXXimplement hard conservative?
 
 artificial trace data ---
 	We have 3 "dimensions"
 		conservative/aggressive
+			tradeoff # computations for "speed to eval"
 		interval/lists
+			tradeoff space and worst case execution for common/best case execution
 		restricted/full logic
+			tradeoff space for execution speed (formula dependent)
+
+important properties for an algorithm:
+	total execution time per step
+		# reduce calls per step
+	steps to reduce/time to reduce
+		avg?
+		min?
+		max?
+
+
+table:
+					total exec		steps2red	avg		min		max
+increasing duration
+cons					static		static		dur		dur*	dur
+aggr					incr		dyn			<dur	1		dur
+
+Show properties:
+	conservative -- steady total execution, steady time to reduce
+	aggressive -- time to exec increases as duration increases, time to reduce trace/formula dependent
+
+single temporal with increasing duration
+	cons -- exec steady, time to reduce == delay
+	aggr -- exec time increases, time to reduce depends on formula, better than cons
 
 
 Traces we need to run:
@@ -22,6 +49,7 @@ Traces we need to run:
 		formulas that are better for full
 			across durations!
 		any that are worse for full?
+			can always write in restricted...
 
 	aggressive vs conservative
 		overall computation

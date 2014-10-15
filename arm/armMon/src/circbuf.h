@@ -63,6 +63,7 @@ extern void rbSafeRemove(resbuf *rb, int pos);
 extern void ibInit(intbuf *ib, int size, intNode **array);
 extern void ibPush(intbuf *ib, intNode *n);
 extern intNode* ibPop(intbuf *ib);
+extern int ibFull(intbuf *ib);
 //extern void ibPush(intbuf *ib, int start, int end);
 //extern interval* ibGet(intbuf *ib, int pos);
 

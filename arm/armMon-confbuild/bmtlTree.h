@@ -21,7 +21,7 @@ tag tagCount = 0;
 typedef struct Node {
 	enum nodeType type;
 	union {
-		bool value;
+		int value;
 		char* propName;			// for propositions
 		struct Node* child; // for not
 		struct {Node* lchild; struct Node* rchild;} binOp; // for and, or, implies
@@ -34,6 +34,10 @@ typedef struct Node {
 	tag formTag;
 	std::vector<Node*> nList;
 	std::vector<Node*> gList;
+	// ideally we'd build the sList in the AST and work our way up,
+	// but for right now I'm going to do a global sList in the parser so 
+	// we don't have to copy the list around all over
+	//std::vector<Node*> sList;
 	int stidx;
 } Node;
 
@@ -335,7 +339,7 @@ Node *getValueNode(bool nval) {
 	}
 	return falseNode;
 }
-Node *makeValueNode(bool nval) {
+Node *makeValueNode(int nval) {
 	Node *n = new Node();
 	n->type = VALUE_T;
 	n->val.value = nval;
@@ -391,6 +395,8 @@ Node *makeTempNode(enum nodeType type, int lbound, int hbound, Node* child) {
 	n->val.tempOp.child = child;
 	n->val.tempOp.lbound = lbound;
 	n->val.tempOp.hbound = hbound;
+	n->nodeTag = tagCount++;
+	n->stidx = -1;
 	return n;
 }
 Node *makeTwoTempNode(enum nodeType type, int lbound, int hbound, Node* lchild, Node* rchild) {
