@@ -275,13 +275,13 @@ int main(int argc, char** argv) {
 
 
 void traceViolate() {
-	printf("Trace VIOLATED!!! @ %d\n",instep);
+	//printf("Trace VIOLATED!!! @ %d\n",instep);
 	tracesat = 0;
 }
 void stepSatisfy() {
 	// do nothing...	
 }
 void traceFail() {
-	printf("FAILED REDUCE\n");
+	printf("FAILED REDUCE!!! @ %d\n", instep);
 	exit(-2);
 }

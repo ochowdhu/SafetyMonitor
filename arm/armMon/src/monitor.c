@@ -493,7 +493,7 @@ int untilCheck(int step, residue* res) {
 	
 	/////////////////////////////////
 	// Could just update res->form here instead of passing up to reduce...
-	//printf("UNTILCHECK: bactual: %d, au: %d, al: %d, bal: %d\n, bn: %d", b_actual, a_until, a_alive, b_alive, b_none); 
+	//printf("UNTILCHECK@%d: bactual: %d, au: %d, al: %d, bal: %d, bn: %d\n", instep, b_actual, a_until, a_alive, b_alive, b_none); 
 	if (b_actual != -1 && a_until != -1 && b_actual <= a_until) {
 		return TEMP_TRUE;
 	} else if (b_alive != -1 && a_alive != -1 && a_alive < b_alive) {
@@ -896,7 +896,7 @@ void checkConsStep(resbuf *buf) {
 	if (start != end) {		// not empty
 		cresp = rbGet(buf, start);						// get first residue in list
 		if ((cresp->step + FORM_DELAY) <= instep) {		// if it's old enough, we'll check it
-			reduce(estep, cresp);
+			reduce(instep, cresp);
 			//printf("reduced <%d,%d>@%d\n", cresp->step, cresp->form, instep);
 			if (cresp->form == FORM_TRUE) {
 				stepSatisfy();
