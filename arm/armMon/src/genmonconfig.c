@@ -1,42 +1,32 @@
 /** Auto Generated monitor configuration */
-// FORMULA: ['impprop', ['palwaysprop', 1, 2, ['prop', 'perF3']], ['alwaysprop', 3, 3, ['alwaysprop', 1, 2, ['prop', 'perF3']]]]
+// FORMULA: ['prop', 'allT']
 #include "monconfig.h"
-const int ftype[NFORMULAS] = { VALUE_T, VALUE_T, VALUE_T, PROP_T, PALWAYS_T, ALWAYS_T, ALWAYS_T, IMPLIES_T, };
-const formula notForms[NFORMULAS] = {0,2,1,0,0,0,0,0,};
-const formula orForms[NFORMULAS][NFORMULAS] = {{0,0,0,0,0,0,0,0,},
-{0,1,2,3,4,5,6,7,},
-{0,2,2,2,2,2,2,2,},
-{0,3,2,0,0,0,0,0,},
-{0,4,2,0,0,0,0,0,},
-{0,5,2,0,0,0,0,0,},
-{0,6,2,0,0,0,0,0,},
-{0,7,2,0,0,0,0,0,},
+const int ftype[NFORMULAS] = { VALUE_T, VALUE_T, VALUE_T, PROP_T, };
+const formula notForms[NFORMULAS] = {0,2,1,0,};
+const formula orForms[NFORMULAS][NFORMULAS] = {{0,0,0,0,},
+{0,1,2,3,},
+{0,2,2,2,},
+{0,3,2,0,},
 };
-const formula andForms[NFORMULAS][NFORMULAS] = {{0,0,0,0,0,0,0,0,},
-{0,1,1,1,1,1,1,1,},
-{0,1,2,3,4,5,6,7,},
-{0,1,3,0,0,0,0,0,},
-{0,1,4,0,0,0,0,0,},
-{0,1,5,0,0,0,0,0,},
-{0,1,6,0,0,0,0,0,},
-{0,1,7,0,0,0,0,0,},
+const formula andForms[NFORMULAS][NFORMULAS] = {{0,0,0,0,},
+{0,1,1,1,},
+{0,1,2,3,},
+{0,1,3,0,},
 };
-const formula impForms[NFORMULAS][NFORMULAS] = {{0,0,0,0,0,0,0,0,},
-{0,2,2,2,2,2,2,2,},
-{0,1,2,3,4,5,6,7,},
-{0,0,0,0,0,0,0,0,},
-{0,0,0,0,0,0,7,0,},
-{0,0,0,0,0,0,0,0,},
-{0,0,0,0,0,0,0,0,},
-{0,0,0,0,0,0,0,0,},
+const formula impForms[NFORMULAS][NFORMULAS] = {{0,0,0,0,},
+{0,2,2,2,},
+{0,1,2,3,},
+{0,0,0,0,},
 };
-const formula POLICIES[NPOLICIES] = { 7, };
+const formula POLICIES[NPOLICIES] = { 3, };
 // build structures
 void build_struct(void) {
 int i,j;
 fstackInit(&redStack, STACK_DEPTH, redStackBuf);
 fstackInit(&redStackVals, STACK_DEPTH, redStackValsBuf);
-resbInit(&mainresbuf, NBUFLEN, mainresbuffers);
+for (i = 0; i < NPOLICIES; i++) { 
+resbInit(&mainresbuf[i], NBUFLEN, mainresbuffers[i]);
+}
 for (i = 0; i < NSTRUCT; i++) { 
 resbInit(&rbuffers[i], NBUFLEN, resbuffers[i]); 
 for (j = 0; j < NBUFLEN; j++) {
@@ -47,9 +37,7 @@ ibInit(&intbuffer[i][0], NBUFLEN, intnodebufP[i][0]);
 ibInit(&intbuffer[i][1], NBUFLEN, intnodebufP[i][1]);
 intRingInit(&intringbuffer[i][0], &intbuffer[i][0]);
 intRingInit(&intringbuffer[i][1], &intbuffer[i][1]);
-}initResStruct(&theStruct[0], 3, FORM_DELAY, &rbuffers[0], &intringbuffer[0][0], &intringbuffer[0][1]);
-initResStruct(&theStruct[1], 5, FORM_DELAY, &rbuffers[1], &intringbuffer[1][0], &intringbuffer[1][1]);
-}
+}}
 
 // structure table
 resStructure theStruct[NSTRUCT];
@@ -60,8 +48,8 @@ resbuf rbuffers[NSTRUCT];
 interval ibuffers[NSTRUCT][NBUFLEN*2];
 residue resbuffers[NSTRUCT][NBUFLEN];
 // main list of residues
-resbuf mainresbuf;
-residue mainresbuffers[NBUFLEN];
+resbuf mainresbuf[NPOLICIES];
+residue mainresbuffers[NPOLICIES][NBUFLEN];
 // iterative stack stuff
 formulaStack redStack;
 formulaStack redStackVals;
@@ -82,24 +70,7 @@ formulas[1].val.value = 0;
 formulas[2].type = VALUE_T;
 formulas[2].val.value = 1;
 formulas[3].type = PROP_T;
-formulas[3].val.propMask = MASK_perF3;
-formulas[3].structidx = 0;
-formulas[4].type = PALWAYS_T;
-formulas[4].val.t_children.lchild = 3;
-formulas[4].val.t_children.lbound = 1;
-formulas[4].val.t_children.hbound = 2;
-formulas[5].type = ALWAYS_T;
-formulas[5].val.t_children.lchild = 3;
-formulas[5].val.t_children.lbound = 1;
-formulas[5].val.t_children.hbound = 2;
-formulas[5].structidx = 1;
-formulas[6].type = ALWAYS_T;
-formulas[6].val.t_children.lchild = 5;
-formulas[6].val.t_children.lbound = 3;
-formulas[6].val.t_children.hbound = 3;
-formulas[7].type = IMPLIES_T;
-formulas[7].val.children.lchild = 4;
-formulas[7].val.children.rchild = 6;
+formulas[3].val.propMask = MASK_allT;
 }
 
 void incrStruct(int step) { 

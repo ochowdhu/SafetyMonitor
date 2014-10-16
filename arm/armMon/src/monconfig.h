@@ -41,8 +41,8 @@ extern intring intringbuffer[NSTRUCT][2];
 extern residue resbuffers[NSTRUCT][NBUFLEN];
 
 // main list of residues
-extern resbuf mainresbuf;
-extern residue mainresbuffers[NBUFLEN];
+extern resbuf mainresbuf[NPOLICIES];
+extern residue mainresbuffers[NPOLICIES][NBUFLEN];
 
 // formula simplify lookup tables for reduce
 extern const formula notForms[NFORMULAS];

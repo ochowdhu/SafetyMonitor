@@ -876,28 +876,33 @@ int palwaysCheck(int step, residue* res) {
 
 // We only call this when we start a new step, so no need to check
 // that we're in a new one
-void checkConsStep() {
+void checkConsStep(resbuf *buf) {
 	residue* cresp;
 	int start, end;
 	
 	// got rid of the loop, just check the first entry (should never need more than this)
 	// loop incase we got delayed somehow
 	// could just check delay of start (since we never need to check more than one entry)
-	start = mainresbuf.start;
-	end = mainresbuf.end;
+	//start = mainresbuf.start;
+	//end = mainresbuf.end;
+	start = buf->start;
+	end = buf->end;
 	if (start != end) {		// not empty
-		cresp = rbGet(&mainresbuf, start);						// get first residue in list
+		//cresp = rbGet(&mainresbuf, start);						// get first residue in list
+		cresp = rbGet(buf, start);						// get first residue in list
 		if ((cresp->step + FORM_DELAY) <= instep) {		// if it's old enough, we'll check it
 			reduce(estep, cresp);
 			if (cresp->form == FORM_TRUE) {
 				stepSatisfy();
 				#ifdef PC_MODE
-				rbSafeRemove(&mainresbuf, start);
+				//rbSafeRemove(&mainresbuf, start);
+				rbSafeRemove(buf, start);
 				#endif
 			} else if (cresp->form == FORM_FALSE) {
 				traceViolate();
 				#ifdef PC_MODE
-				rbSafeRemove(&mainresbuf, start);
+				//rbSafeRemove(&mainresbuf, start);
+				rbSafeRemove(buf, start);
 				#endif
 			} else {	// not possible...
 				//printf("failing at <%d,%d>@%d\n", cresp->step, cresp->form, instep);
@@ -910,26 +915,31 @@ void checkConsStep() {
 }
 
 // Loop version -- shouldn't be necessary since we run checkCons every step, but keeping it around just incase
-void checkConsStepLoop() {
+void checkConsStepLoop(resbuf *buf) {
 	residue* cresp;
 	int start, end;
 	// don't think we need this loop, but want to debug with it first
 	// loop incase we got delayed somehow
 	// could just check delay of start (since we never need to check more than one entry)
-	start = mainresbuf.start;
-	end = mainresbuf.end;
+	//start = mainresbuf.start;
+	//end = mainresbuf.end;
+	start = buf->start;
+	end = buf->end;
 	while (start != end) {
-		cresp = rbGet(&mainresbuf, start);
+		//cresp = rbGet(&mainresbuf, start);
+		cresp = rbGet(buf, start);
 		//cons_res = *(rbGet(&mainresbuf, start));
 		//if ((estep - cresp->step) >= delay) {
 		if ((cresp->step + FORM_DELAY) <= instep) {
 			reduce(estep, cresp);
 			if (cresp->form == FORM_TRUE) {
 				stepSatisfy();
-				rbSafeRemove(&mainresbuf, start);
+				//rbSafeRemove(&mainresbuf, start);
+				rbSafeRemove(buf, start);
 			} else if (cresp->form == FORM_FALSE) {
 				traceViolate();
-				rbSafeRemove(&mainresbuf, start);
+				//rbSafeRemove(&mainresbuf, start);
+				rbSafeRemove(buf, start);
 			} else {	// not possible...
 					// LEDS?
 			}
@@ -938,7 +948,8 @@ void checkConsStepLoop() {
 			// mainresbuf is ordered, later residues can't be from earlier
 			break;
 		}
-		start = (start + 1) % mainresbuf.size;
+		//start = (start + 1) % mainresbuf.size;
+		start = (start + 1) % buf->size;
 	}
 }
 

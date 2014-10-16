@@ -1,8 +1,8 @@
 /** Auto Generated definitions */
-#define NFORMULAS (8)
-#define NSTRUCT (2)
-#define NBUFLEN (9)
-#define FORM_DELAY (5)
+#define NFORMULAS (4)
+#define NSTRUCT (0)
+#define NBUFLEN (2)
+#define FORM_DELAY (0)
 #define NPOLICIES (1)
 #define STACK_DEPTH (4)
 #define FULL_LOGIC

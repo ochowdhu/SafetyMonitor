@@ -1,7 +1,7 @@
 ## runArmMon.sh -- add formula, compile, and run formula
 
-basepath=~/Private/research/
-#basepath=~/Documents/Work/
+#basepath=~/Private/research/
+basepath=~/Documents/Work/
 
 formula=$1
 tracedir="$basepath/thesis/SafetyMonitor/arm/armMon/traces"

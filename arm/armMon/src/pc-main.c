@@ -173,49 +173,54 @@ int main(int argc, char** argv) {
 	
 		// if we've received a new state (instep) that we haven't checked (estep), check
 		//if (estep <= instep) {
-		
+		int s = 0;
+		for (s = 0; s < NPOLICIES; s++) {
 			// add residue to list
 			cons_res.step = instep;
-			cons_res.form = POLICIES[0];
+			cons_res.form = POLICIES[s];
 			//printf("before reduction, cons_res is (%d,%d)\n", cons_res.step, cons_res.form);
 			#ifdef IM_REDUCE
 			reduce(instep, &cons_res);
 			#endif
 			//printf("after reduction, cons_res is (%d,%d)\n", cons_res.step, cons_res.form);
-			rbInsert(&mainresbuf, cons_res.step, cons_res.form);
+			rbInsert(&mainresbuf[s], cons_res.step, cons_res.form);
 			//printf("added (%d,%d) to ring\n", cons_res.step, cons_res.form);
-
+		}
 			#ifdef MON_CONS
-			checkConsStep();
+			for (s = 0; s < NPOLICIES; s++) {
+				checkConsStep(&mainresbuf[s]);
 			//checkConsStepLoop();
+			}
 			#endif
-
+		
 			#ifdef MON_AGGR
-			//////// START AGGRESSIVE CHECK //////////////
-			////////////////////////////////////////////
-			start = mainresbuf.start;
-			end = mainresbuf.end;
-			while (start != end) {
-				resp = rbGet(&mainresbuf, start);
-				reduce(instep, resp);
-				//printf("in step: %d, reduced %d to %d\n", instep, resp->step, resp->form);
-				if (resp->form == FORM_TRUE) {
-					//printf("step %d is TRUE\n", resp->step);
-					//rbRemoveFirst(&mainresbuf);
-					rbSafeRemove(&mainresbuf, start);
-					stepSatisfy();
-				} else if (resp->form == FORM_FALSE) {
-					//printf("step %d is FALSE\n", resp->step);
-					rbSafeRemove(&mainresbuf, start);
-					traceViolate();
-					// LEDS?
-				} 
-				/*else {	// not possible...
-					printf("%d@@step %d is ELSE? -- %d\n", instep, resp->step, resp->form);
-					exit(-1);
-					// LEDS?
-				}*/
-				start = (start + 1) % mainresbuf.size;
+			for (s = 0; s < NPOLICIES; s++) {
+				//////// START AGGRESSIVE CHECK //////////////
+				////////////////////////////////////////////
+				start = mainresbuf[s].start;
+				end = mainresbuf[s].end;
+				while (start != end) {
+					resp = rbGet(&mainresbuf[s], start);
+					reduce(instep, resp);
+					//printf("in step: %d, reduced %d to %d\n", instep, resp->step, resp->form);
+					if (resp->form == FORM_TRUE) {
+						//printf("step %d is TRUE\n", resp->step);
+						//rbRemoveFirst(&mainresbuf);
+						rbSafeRemove(&mainresbuf[s], start);
+						stepSatisfy();
+					} else if (resp->form == FORM_FALSE) {
+						//printf("step %d is FALSE\n", resp->step);
+						rbSafeRemove(&mainresbuf[s], start);
+						traceViolate();
+						// LEDS?
+					} 
+					/*else {	// not possible...
+						printf("%d@@step %d is ELSE? -- %d\n", instep, resp->step, resp->form);
+						exit(-1);
+						// LEDS?
+					}*/
+					start = (start + 1) % mainresbuf[s].size;
+				}
 			}
 			#endif
 			/////////////// END AGGRESSIVE CHECK ////////////////////

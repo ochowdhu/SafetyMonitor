@@ -32,8 +32,8 @@ typedef struct {
 extern void initResStruct(resStructure* st, formula form, int delay, resbuf *res, intring *t, intring *f);
 extern residue* stGetRes(resStructure *st, int pos);
 extern void reduce(int step, residue *res);
-extern void checkConsStep(void);
-extern void checkConsStepLoop(void);
+extern void checkConsStep(resbuf *buf);
+extern void checkConsStepLoop(resbuf *buf);
 
 //extern formula getForm(fNode n);
 extern fNode getNode(formula f);

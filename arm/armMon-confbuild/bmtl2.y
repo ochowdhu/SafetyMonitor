@@ -261,7 +261,9 @@ int main(int argc, char** argv) {
 		monconfig  << "int i,j;" << std::endl
 				  << "fstackInit(&redStack, STACK_DEPTH, redStackBuf);" << std::endl
 				  << "fstackInit(&redStackVals, STACK_DEPTH, redStackValsBuf);" << std::endl
-				  << "resbInit(&mainresbuf, NBUFLEN, mainresbuffers);" << std::endl
+				  << "for (i = 0; i < NPOLICIES; i++) { " << std::endl
+				  << "resbInit(&mainresbuf[i], NBUFLEN, mainresbuffers[i]);" << std::endl
+				  << "}" << std::endl
 				  << "for (i = 0; i < NSTRUCT; i++) { " << std::endl
 				  << "resbInit(&rbuffers[i], NBUFLEN, resbuffers[i]); " << std::endl 
 				  << "for (j = 0; j < NBUFLEN; j++) {" << std::endl
@@ -290,8 +292,8 @@ int main(int argc, char** argv) {
 				  << "interval ibuffers[NSTRUCT][NBUFLEN*2];" << std::endl
 				  << "residue resbuffers[NSTRUCT][NBUFLEN];" << std::endl
 				  << "// main list of residues" << std::endl
-				  << "resbuf mainresbuf;" << std::endl 
-				  << "residue mainresbuffers[NBUFLEN];" << std::endl
+				  << "resbuf mainresbuf[NPOLICIES];" << std::endl 
+				  << "residue mainresbuffers[NPOLICIES][NBUFLEN];" << std::endl
 				  << "// iterative stack stuff" << std::endl 
 				  << "formulaStack redStack;" << std::endl
 				  << "formulaStack redStackVals;" << std::endl
