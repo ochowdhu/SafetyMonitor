@@ -21,7 +21,7 @@
 #define FORM_FALSE 1
 #define FORM_TRUE 2
 
-#define USEINTS
+// always going to use iterative reduce
 #define ITERATIVE_RED
 
 extern const int ftype[NFORMULAS];

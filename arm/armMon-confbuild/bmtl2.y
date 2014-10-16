@@ -7,7 +7,10 @@
 #include <algorithm>
 #include <fstream>
 #include <cstring>
-
+// getopt stuff
+//#include <unistd>
+#include <ctype.h>
+#include <stdlib.h>
 // flex stuff
 extern "C" int yylex();
 extern "C" int yyparse();
@@ -127,14 +130,39 @@ int main(int argc, char** argv) {
 	invalNode->formTag = 0;
 	falseNode->formTag = 1;
 	trueNode->formTag = 2;
-	if (argc > 1) {
-		if (strncmp("unres", argv[1],5) == 0) {
-			RESTRICT_LOGIC = 0;
+
+
+	enum mtype_t {AGGR,CONS,BOTH};
+	mtype_t mtype = BOTH;
+	bool useints = true;
+	// getopts
+	// options:
+	// -l : use lists instead of intervals [default interval]
+	// -a/-c : use aggressive/conservative only [default both]
+	// -f	: use full logic
+	// -p <file>	: input policy
+	int opt;
+	while ((opt = getopt(argc, argv, "lacfp:")) != EOF) {
+		switch (opt) {
+			case 'l':
+				useints = false;
+				break;
+			case 'a':
+				mtype = AGGR;
+				break;
+			case 'c':
+				mtype = CONS;
+				break;
+			case 'f':
+				RESTRICT_LOGIC = 0;
+				break;
+			case 'p':
+				yyin = fopen(optarg, "r");
+				break;
+			case '?':
+				std::cerr << "got a weird option " << opt << std::endl;
 		}
-		if (argc > 2) {
-			yyin = fopen(argv[1], "r");
-		}
-	} 
+	}
 
 	do {
 		yyparse();
@@ -222,9 +250,12 @@ int main(int argc, char** argv) {
 				  << "#define FORM_DELAY (" << max_fdelay << ")" << std::endl
 				  << "#define NPOLICIES (" << policies.size() << ")" << std::endl
 				  << "#define STACK_DEPTH (" << 3+max_stackdepth << ")" << std::endl;
-		if (!RESTRICT_LOGIC) {
-			gendefs << "#define FULL_LOGIC" << std::endl;
-		}
+
+		if (mtype == BOTH || mtype == AGGR) { gendefs << "#define MON_AGGR" << std::endl; }
+		if (mtype == BOTH || mtype == CONS) { gendefs << "#define MON_CONS" << std::endl; }
+		if (!RESTRICT_LOGIC) { gendefs << "#define FULL_LOGIC" << std::endl; }
+		if (useints) { gendefs <<"#define USEINTS" << std::endl; }
+
 		// throw masks into gendefs for now
 		bool gotmask = false;
 		std::string mask;

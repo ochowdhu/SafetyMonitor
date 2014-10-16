@@ -19,10 +19,11 @@
 #include <mach/mach.h>
 #endif
 
-#ifndef MON_TYPE
+/*#ifndef MON_TYPE
 #define MON_CONS
 #define MON_AGGR
 #endif
+*/
 #define IM_REDUCE
 
 #define NFIELDS 100
@@ -32,8 +33,9 @@ char field[NFIELDS];	/* fields */
 //long long timeus;
 unsigned long timeus;
 unsigned long mytimer;
-double mtimeus = 0;
-int stepcount = 0;
+unsigned long stepcount = 0;
+unsigned long nt_incr = 0, nt_polinc=0, nt_cons=0, nt_aggr=0;
+unsigned long lmtime = 0;
 
 // OSX clock stuff
 #ifdef __MACH__
@@ -57,6 +59,9 @@ double get_elapsed_time(struct timespec *before, struct timespec *after){
   return deltat_s + deltat_ns*1e-9;
 }
 
+unsigned long get_elapsed_ltime(struct timespec *before, struct timespec *after) {
+	return (after->tv_sec - before->tv_sec)*1000000000 + (after->tv_nsec-before->tv_nsec);
+}
 //stolen from 'the practice of programming'
 int csvgetline(FILE *fin)
 {	
@@ -106,7 +111,6 @@ int sim = TRUE;
 // monitor vars
 int delay;	
 int cstep;	// current step count
-int lcount;
 int tracesat;
 
 
@@ -122,24 +126,28 @@ int main(int argc, char** argv) {
 	instep = 0;
 	estep = 0;	
 	cstate = 0;
-	nstate = 0x02;
-	lcount = 1;
+	nstate = 0;	// don't use it, but better to leave it initialized
 	
+	// keep track of violated or not
+	tracesat = 1;
+
+	/////////////////
+	///// profiling stuff
 	#ifdef __MACH__
   	host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
 	#endif
-	
 	// set numreduces for profiling
 	numreduces=0;
-	
-	struct timeval ts, te;
-	struct timespec tsm, tem;
+	// timing vars
+	struct timespec tsm, tem, total_tsm, total_tem;
 	timeus = 0;
 	mytimer = 0;
-	// keep track of violated or not
-	tracesat = 1;
+	nt_incr = 0;
+	// ////////////////
+	// input file
 	FILE *infile;
 	infile = fopen(argv[1], "r");
+	/////////////////////////////////////////////
 	///////// Start monitor ///////////////////
 	// build structure
 	build_formula();
@@ -156,23 +164,38 @@ int main(int argc, char** argv) {
 	}
 	printf("read header line\n");
 	printf("%s", buf);
+	printf("Checking trace...\n");
 	// was while(1)
+	// get entire time to finish
+	get_monotonic_time(&total_tsm);
 	while ((traceFinished = csvgetline(infile)) > 0) {
-		gettimeofday(&ts, NULL);
-		get_monotonic_time(&tsm);
-		numreduces = 0;
+		//get_monotonic_time(&tsm);
+		//numreduces = 0;
+		
 		// fill cstate
-		cstate = 0;
+		/////////////////////////////////////////
 		////// FILL STATE
+		cstate = 0;
 		updateState();	// updates instep now
 		////////////////
 		
+
+
+		///////////////////////////////////////////////
+		////////// INCREMENT STRUCTURE
 		// first increment the structure
+		get_monotonic_time(&tsm);
 		incrStruct(instep);
-		// add residue to list
+		get_monotonic_time(&tem);
+		nt_incr += get_elapsed_ltime(&tsm, &tem);
+		/////////////////////////////////////////////////////
 	
-		// if we've received a new state (instep) that we haven't checked (estep), check
-		//if (estep <= instep) {
+
+
+
+		/////////////////////////////////////////////////
+		//////// ADD POLICIES TO MAIN LISTS
+		get_monotonic_time(&tsm);
 		int s = 0;
 		for (s = 0; s < NPOLICIES; s++) {
 			// add residue to list
@@ -186,61 +209,63 @@ int main(int argc, char** argv) {
 			rbInsert(&mainresbuf[s], cons_res.step, cons_res.form);
 			//printf("added (%d,%d) to ring\n", cons_res.step, cons_res.form);
 		}
-			#ifdef MON_CONS
-			for (s = 0; s < NPOLICIES; s++) {
-				checkConsStep(&mainresbuf[s]);
-			//checkConsStepLoop();
-			}
-			#endif
-		
-			#ifdef MON_AGGR
-			for (s = 0; s < NPOLICIES; s++) {
-				//////// START AGGRESSIVE CHECK //////////////
-				////////////////////////////////////////////
-				start = mainresbuf[s].start;
-				end = mainresbuf[s].end;
-				while (start != end) {
-					resp = rbGet(&mainresbuf[s], start);
-					reduce(instep, resp);
-					//printf("in step: %d, reduced %d to %d\n", instep, resp->step, resp->form);
-					if (resp->form == FORM_TRUE) {
-						//printf("step %d is TRUE\n", resp->step);
-						//rbRemoveFirst(&mainresbuf);
-						rbSafeRemove(&mainresbuf[s], start);
-						stepSatisfy();
-					} else if (resp->form == FORM_FALSE) {
-						//printf("step %d is FALSE\n", resp->step);
-						rbSafeRemove(&mainresbuf[s], start);
-						traceViolate();
-						// LEDS?
-					} 
-					/*else {	// not possible...
-						printf("%d@@step %d is ELSE? -- %d\n", instep, resp->step, resp->form);
-						exit(-1);
-						// LEDS?
-					}*/
-					start = (start + 1) % mainresbuf[s].size;
-				}
-			}
-			#endif
-			/////////////// END AGGRESSIVE CHECK ////////////////////
-			/////////////////////////////////////////////////////////
-		//}
-		printf("numreduces = %d\n", numreduces);
-		gettimeofday(&te, NULL);
 		get_monotonic_time(&tem);
-		//long long add = (te.tv_sec - ts.tv_sec) * 1000000;
-		unsigned int add; double addm;
-		add = (te.tv_usec - ts.tv_usec);
-		addm = get_elapsed_time(&tsm, &tem);
+		nt_polinc += get_elapsed_ltime(&tsm, &tem);
+		/////////////////////////////////////////////////
+
+
+		////////////////////////////////////////////////
+		///////// CONSERVATIVE CHECK
+		get_monotonic_time(&tsm);
+		#ifdef MON_CONS
+		for (s = 0; s < NPOLICIES; s++) {
+			checkConsStep(&mainresbuf[s]);
+		//checkConsStepLoop();
+		}
+		#endif
+		get_monotonic_time(&tem);
+		nt_cons += get_elapsed_ltime(&tsm, &tem);
+		///////////////////////////////////////////////
+	
+		
+		/////////////////////////////////////////////////////////
+		/////////// AGGRESSIVE CHECK
+		get_monotonic_time(&tsm);
+		#ifdef MON_AGGR
+		for (s = 0; s < NPOLICIES; s++) {
+			start = mainresbuf[s].start;
+			end = mainresbuf[s].end;
+			while (start != end) {
+				resp = rbGet(&mainresbuf[s], start);
+				reduce(instep, resp);
+				//printf("in step: %d, reduced %d to %d\n", instep, resp->step, resp->form);
+				if (resp->form == FORM_TRUE) {
+					//printf("step %d is TRUE\n", resp->step);
+					rbSafeRemove(&mainresbuf[s], start);
+					stepSatisfy();
+				} else if (resp->form == FORM_FALSE) {
+					//printf("step %d is FALSE\n", resp->step);
+					rbSafeRemove(&mainresbuf[s], start);
+					traceViolate();
+				} 
+				start = (start + 1) % mainresbuf[s].size;
+			}
+		}
+		#endif
+		get_monotonic_time(&tem);
+		nt_aggr += get_elapsed_ltime(&tsm, &tem);
+		/////////////// END AGGRESSIVE CHECK ////////////////////
+
+		
+		//get_monotonic_time(&tem);
 		stepcount = stepcount + 1;
-		printf("loop time is %d, mach time is %f, mtotal: %f step: %d\n", add, addm, mtimeus, stepcount);
-		mtimeus = mtimeus + addm;
+		//printf("TIMES: incr: %09lu, policy: %09lu, cons: %09lu, aggr: %09lu, steps: %09lu\n", nt_incr, nt_polinc, nt_cons, nt_aggr, stepcount);
 	}
+	get_monotonic_time(&total_tem);
 	////////////////////////////////////////////////
 	// FINISHED CHECKING, print stats
-	printf("elapsed time to check is %d, mach time is %f, at %d steps\n", timeus, mtimeus, stepcount);
-	printf("finished loop\n");
+	printf("numreduces = %d\n", numreduces);
+	printf("TIMES: total: %09lu, incr: %09lu, policy: %09lu, cons: %09lu, aggr: %09lu, steps: %lu\n", get_elapsed_ltime(&total_tsm,&total_tem), nt_incr, nt_polinc, nt_cons, nt_aggr, stepcount);
 	printf("Trace finished. Satisfied is %s\n", tracesat ? "true" : "false");
 	#ifdef __MACH__
   	mach_port_deallocate(mach_task_self(), cclock);
@@ -250,7 +275,7 @@ int main(int argc, char** argv) {
 
 
 void traceViolate() {
-	printf("Trace VIOLATED!!!\n");
+	printf("Trace VIOLATED!!! @ %d\n",instep);
 	tracesat = 0;
 }
 void stepSatisfy() {

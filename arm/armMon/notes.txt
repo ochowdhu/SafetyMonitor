@@ -1,5 +1,13 @@
 Just keeping some notes here
 
+WRITEUP STUFF:
+	monitor initialization can be tricky -- how to handle past time that looks
+	before trace?
+		right now the temporal operator returns true -- still check the rest
+		of the formula. Could do throwaway or spin-up instead.
+		This means that formula must be built to survive startup (no
+		"~[[0,10]] X" without a guard, it will fail at steps 0-10
+			rewrite as <<0,10>> ~X or do future time to get around
 TODO: 
 	XXXimplement full logic
 		TEST!!

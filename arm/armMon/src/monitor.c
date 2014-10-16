@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include "monitor.h"
 #include "monconfig.h"
-#include "gendefs.h" // need FULL_LOGIC
+#include "gendefs.h" // need FULL_LOGIC/USEINTS
 
 
 #ifndef PC_MODE
@@ -67,9 +67,6 @@ residue* stGetRes(resStructure *st, int pos) {
 // Iterative Reduce, used to be itreduce -- now just using preprocessor
 //void itreduce(int step, residue *res) {
 void reduce(int step, residue *res) {
-	#ifdef PC_MODE
-	numreduces++;
-	#endif
 	//if (step < 0) { return FORM_TRUE;};
 	fNode root;
 	residue child1;
@@ -86,6 +83,9 @@ void reduce(int step, residue *res) {
 	stackPush(&redStack, res->form);
 	// Begin Loop
 	while (stackEmpty(&redStack) == 0) {
+		#ifdef PC_MODE
+		numreduces++;
+		#endif
 		froot = stackPop(&redStack);
 		type = ftype[froot];
 		//printf("reducing %d from %d\n", froot, prevNode);
@@ -522,8 +522,10 @@ int sinceCheck(int step, residue *res) {
 	// get temporal bounds
 	l = res->step - formulas[res->form].val.t_children.hbound;
 	h = res->step - formulas[res->form].val.t_children.lbound;
+	if (h < 1) {
+		return TEMP_TRUE;
+	}
 	l = MAX(l,1); // step 1 is first step, don't look before this
-	h = MAX(h,1);
 
 	// No Beta case
 	beta = theStruct[formulas[formulas[res->form].val.t_children.rchild].structidx].ftime;
@@ -801,8 +803,11 @@ int peventCheck(int step, residue* res) {
 	// get temporal bounds
 	l = res->step - formulas[res->form].val.t_children.hbound;
 	h = res->step - formulas[res->form].val.t_children.lbound;
+	// cheat to handle initialization -- everything before the trace works
+	if (h < 1) {
+		return TEMP_TRUE;
+	}
 	l = MAX(l,1); // step 1 is first step, don't look before this
-	h = MAX(h,1);
 	
 	// True case
 	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ttime;
@@ -842,8 +847,11 @@ int palwaysCheck(int step, residue* res) {
 	// get temporal bounds
 	l = res->step - formulas[res->form].val.t_children.hbound;
 	h = res->step - formulas[res->form].val.t_children.lbound;
+	if (h < 1) {
+		return TEMP_TRUE;
+	}
 	l = MAX(l,1); // step 1 is first step, don't look before this
-	h = MAX(h,1);
+
 	// False case
 	// any false intersects with [l,h] is false
 	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ftime;
@@ -883,33 +891,27 @@ void checkConsStep(resbuf *buf) {
 	// got rid of the loop, just check the first entry (should never need more than this)
 	// loop incase we got delayed somehow
 	// could just check delay of start (since we never need to check more than one entry)
-	//start = mainresbuf.start;
-	//end = mainresbuf.end;
 	start = buf->start;
 	end = buf->end;
 	if (start != end) {		// not empty
-		//cresp = rbGet(&mainresbuf, start);						// get first residue in list
 		cresp = rbGet(buf, start);						// get first residue in list
 		if ((cresp->step + FORM_DELAY) <= instep) {		// if it's old enough, we'll check it
 			reduce(estep, cresp);
+			//printf("reduced <%d,%d>@%d\n", cresp->step, cresp->form, instep);
 			if (cresp->form == FORM_TRUE) {
 				stepSatisfy();
 				#ifdef PC_MODE
-				//rbSafeRemove(&mainresbuf, start);
 				rbSafeRemove(buf, start);
 				#endif
 			} else if (cresp->form == FORM_FALSE) {
 				traceViolate();
 				#ifdef PC_MODE
-				//rbSafeRemove(&mainresbuf, start);
 				rbSafeRemove(buf, start);
 				#endif
 			} else {	// not possible...
-				//printf("failing at <%d,%d>@%d\n", cresp->step, cresp->form, instep);
 				traceFail();
 				// LEDS?
 			}
-			//estep++;
 		}
 	}
 }
@@ -921,34 +923,26 @@ void checkConsStepLoop(resbuf *buf) {
 	// don't think we need this loop, but want to debug with it first
 	// loop incase we got delayed somehow
 	// could just check delay of start (since we never need to check more than one entry)
-	//start = mainresbuf.start;
-	//end = mainresbuf.end;
 	start = buf->start;
 	end = buf->end;
 	while (start != end) {
-		//cresp = rbGet(&mainresbuf, start);
 		cresp = rbGet(buf, start);
-		//cons_res = *(rbGet(&mainresbuf, start));
-		//if ((estep - cresp->step) >= delay) {
 		if ((cresp->step + FORM_DELAY) <= instep) {
 			reduce(estep, cresp);
 			if (cresp->form == FORM_TRUE) {
 				stepSatisfy();
-				//rbSafeRemove(&mainresbuf, start);
 				rbSafeRemove(buf, start);
 			} else if (cresp->form == FORM_FALSE) {
 				traceViolate();
-				//rbSafeRemove(&mainresbuf, start);
 				rbSafeRemove(buf, start);
 			} else {	// not possible...
-					// LEDS?
+				traceFail();
 			}
 			estep++;
 		} else {
 			// mainresbuf is ordered, later residues can't be from earlier
 			break;
 		}
-		//start = (start + 1) % mainresbuf.size;
 		start = (start + 1) % buf->size;
 	}
 }

@@ -1,11 +1,13 @@
 /** Auto Generated definitions */
-#define NFORMULAS (4)
-#define NSTRUCT (0)
-#define NBUFLEN (2)
-#define FORM_DELAY (0)
+#define NFORMULAS (10)
+#define NSTRUCT (2)
+#define NBUFLEN (103)
+#define FORM_DELAY (100)
 #define NPOLICIES (1)
-#define STACK_DEPTH (4)
-#define FULL_LOGIC
+#define STACK_DEPTH (7)
+#define MON_AGGR
+#define MON_CONS
+#define USEINTS
 // Provided masks instead of derived from formula!!
 #define MASK_time (1<<(0))
 #define MASK_allT (1<<(1))
