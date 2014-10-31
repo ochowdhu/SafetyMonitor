@@ -18,6 +18,10 @@
 //enum nodeType {VALUE_T, PROP_T, NOT_T, OR_T, AND_T, IMPLIES_T, ALWAYS_T, EVENT_T, PALWAYS_T, PEVENT_T, UNTIL_T, SINCE_T };
 bool RESTRICT_LOGIC = 1;
 tag tagCount = 0;
+tag notTagCount = 0;
+tag orTagCount = 0;
+tag andTagCount = 0;
+tag impTagCount = 0;
 typedef struct Node {
 	enum nodeType type;
 	union {
@@ -32,6 +36,10 @@ typedef struct Node {
 	std::set<confNode, confCompare> tempList;
 	tag nodeTag;
 	tag formTag;
+	tag notTag;
+	tag orTag;
+	tag andTag;
+	tag impTag;
 	std::vector<Node*> nList;
 	std::vector<Node*> gList;
 	// ideally we'd build the sList in the AST and work our way up,
@@ -109,7 +117,12 @@ int stackDepth(Node* root) {
 			return 2 + MAX(stackDepth(root->val.binOp.lchild), stackDepth(root->val.binOp.rchild));
 		case UNTIL_T:
 		case SINCE_T:
-			return 1;
+			return 1 + MAX(stackDepth(root->val.twotempOp.lchild), stackDepth(root->val.twotempOp.rchild));
+		case EVENT_T:
+		case ALWAYS_T:
+		case PALWAYS_T:
+		case PEVENT_T:
+			return 1 + stackDepth(root->val.tempOp.child);
 		default:
 			return -1;
 	}
@@ -345,6 +358,15 @@ Node *makeValueNode(int nval) {
 	n->val.value = nval;
 	n->nodeTag = tagCount++;
 	n->stidx = -1;
+	/*n->notTag = -1;
+	n->orTag = -1;
+	n->andTag = -1;
+	n->impTag = -1;
+	*/
+	n->notTag = notTagCount++;
+	n->orTag = orTagCount++;
+	n->andTag = andTagCount++;
+	n->impTag = impTagCount++;
 	return n;
 }
 
@@ -354,6 +376,10 @@ Node *makePropNode(char* name) {
 	n->val.propName = name;
 	n->nodeTag = tagCount++;
 	n->stidx = -1;
+	n->notTag = -1;
+	n->orTag = -1;
+	n->andTag = -1;
+	n->impTag = -1;
 	return n;
 }
 
@@ -363,6 +389,12 @@ Node *makeNotNode(Node* child) {
 	n->val.child = child;
 	n->nodeTag = tagCount++;
 	n->stidx = -1;
+	n->notTag = -1;
+	n->orTag = -1;
+	n->andTag = -1;
+	n->impTag = -1;
+	//if (child->notTag == -1)
+	//	child->notTag = notTagCount++;
 	return n;
 }
 Node *makeBinNode(enum nodeType type, Node* lchild, Node* rchild) {
@@ -372,6 +404,10 @@ Node *makeBinNode(enum nodeType type, Node* lchild, Node* rchild) {
 	n->val.binOp.rchild = rchild;
 	n->nodeTag = tagCount++;
 	n->stidx = -1;
+	n->notTag = -1;
+	n->orTag = -1;
+	n->andTag = -1;
+	n->impTag = -1;
 	return n;
 }
 Node *makeImpNode(Node *lchild, Node *rchild) {
@@ -397,6 +433,10 @@ Node *makeTempNode(enum nodeType type, int lbound, int hbound, Node* child) {
 	n->val.tempOp.hbound = hbound;
 	n->nodeTag = tagCount++;
 	n->stidx = -1;
+	n->notTag = -1;
+	n->orTag = -1;
+	n->andTag = -1;
+	n->impTag = -1;
 	return n;
 }
 Node *makeTwoTempNode(enum nodeType type, int lbound, int hbound, Node* lchild, Node* rchild) {
@@ -408,6 +448,10 @@ Node *makeTwoTempNode(enum nodeType type, int lbound, int hbound, Node* lchild, 
 	n->val.twotempOp.hbound = hbound;
 	n->nodeTag = tagCount++;
 	n->stidx = -1;
+	n->notTag = -1;
+	n->orTag = -1;
+	n->andTag = -1;
+	n->impTag = -1;
 	return n;
 }
 

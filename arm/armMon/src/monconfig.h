@@ -24,6 +24,9 @@
 // always going to use iterative reduce
 #define ITERATIVE_RED
 
+#define getProp(m) ((cstate[m/WORDSZ] & (1<<(m)))!=0)
+extern volatile int cstate[NPROP/WORDSZ+(NPROP%WORDSZ!=0)], nstate[NPROP/WORDSZ+(NPROP%WORDSZ!=0)];
+
 extern const int ftype[NFORMULAS];
 extern const formula POLICIES[NPOLICIES];
 
@@ -46,17 +49,19 @@ extern residue mainresbuffers[NPOLICIES][NBUFLEN];
 
 // formula simplify lookup tables for reduce
 extern const formula notForms[NFORMULAS];
-extern const formula orForms[NFORMULAS][NFORMULAS];
-extern const formula andForms[NFORMULAS][NFORMULAS];
-extern const formula impForms[NFORMULAS][NFORMULAS];
+extern const formula orForms[NFORMULAS*NFORMULAS];
+extern const formula andForms[NFORMULAS*NFORMULAS];
+extern const formula impForms[NFORMULAS*NFORMULAS];
 //extern const formula untilForms[NFORMULAS][NFORMULAS];
 //extern const formula sinceForms[NFORMULAS][NFORMULAS];
 
 // iterative reduce stack stuff
 extern formulaStack redStack;
 extern formulaStack redStackVals;
+extern formulaStack redStackDir;
 extern formula redStackBuf[STACK_DEPTH];
 extern formula redStackValsBuf[STACK_DEPTH];
+extern formula redStackDirBuf[STACK_DEPTH];
 
 extern void build_formula(void);
 extern void build_struct(void);

@@ -29,7 +29,8 @@
 
 
 
-volatile int cstate, nstate; // current/next start -- just a set of bits for now
+volatile int cstate[NPROP/WORDSZ+(NPROP%WORDSZ!=0)], nstate[NPROP/WORDSZ+(NPROP%WORDSZ!=0)];
+//volatile int cstate, nstate; // current/next start -- just a set of bits for now
 volatile int estep, instep;
 #ifdef PC_MODE
 int numreduces;
@@ -70,17 +71,19 @@ void reduce(int step, residue *res) {
 	//if (step < 0) { return FORM_TRUE;};
 	fNode root;
 	residue child1;
-	formula fchild1, fchild2;
+	formula fchild1, fchild2, newDir;
 	int type;
 	int rstep; 
-	formula froot, prevNode;
-	prevNode = 0;
+	formula froot;//, prevNode;
+	//prevNode = 0;
 	// clear stacks
 	stackReset(&redStack);
 	stackReset(&redStackVals);
+	stackReset(&redStackDir);
 	// set up stuff
 	rstep = res->step;
 	stackPush(&redStack, res->form);
+	stackPush(&redStackDir, DIR_DOWNLEFT);
 	// Begin Loop
 	while (stackEmpty(&redStack) == 0) {
 		#ifdef PC_MODE
@@ -93,6 +96,8 @@ void reduce(int step, residue *res) {
 			//////////
 			case (VALUE_T):
 				stackPush(&redStackVals, froot);
+				// flip direction to up, keep left/right
+				stackFlipTop(&redStackDir);
 				break;
 			case (PROP_T):
 				// get prop from formula table
@@ -102,12 +107,15 @@ void reduce(int step, residue *res) {
 				} else {
 					stackPush(&redStackVals,FORM_FALSE);
 				}
+				// flip direction to up, keep left/right
+				stackFlipTop(&redStackDir);
 				break;
 			case (NOT_T):
 				root = formulas[froot];
+				// not preserves direction
+				newDir = stackPeek(&redStackDir);
 				// check direction
-				// coming back up
-				if (prevNode == root.val.child) {
+				if (newDir & DIR_UP) {
 					// this works for all three -- notForms gives correct True/False
 					fchild1 = stackPop(&redStackVals);
 					stackPush(&redStackVals, notForms[fchild1]);
@@ -119,71 +127,92 @@ void reduce(int step, residue *res) {
 			case (OR_T):
 				root = formulas[froot];
 				// check direction
-				if (prevNode == root.val.children.lchild) {
+				newDir = stackPop(&redStackDir);
+				if (newDir == DIR_UPLEFT) {
 					// check lchild and work on right if not done
 					fchild1 = stackPeek(&redStackVals);
 					if (fchild1 == FORM_TRUE) {
 						// could do nothing, we'll pop and push for now
 						stackPop(&redStackVals);
 						stackPush(&redStackVals, FORM_TRUE);
+						stackFlipTop(&redStackDir);
 					} else { // need to do the right side
 						stackPush(&redStack, froot);
 						stackPush(&redStack, root.val.children.rchild);
+						stackPush(&redStackDir, newDir);
+						stackPush(&redStackDir, DIR_DOWNRIGHT);
 					}
-				} else if (prevNode == root.val.children.rchild) { // on the way up, check vals
+				} else if (newDir == DIR_UPRIGHT) {
 					fchild1 = stackPop(&redStackVals);
 					fchild2 = stackPop(&redStackVals);
-					stackPush(&redStackVals, orForms[fchild2][fchild1]);
+					stackPush(&redStackVals, orForms[fchild2*NFORMULAS+fchild1]);
+					stackFlipTop(&redStackDir);
 				} else { // on the way down, push left
 					stackPush(&redStack, froot);
 					stackPush(&redStack, root.val.children.lchild);
+					stackPush(&redStackDir, newDir);
+					stackPush(&redStackDir, DIR_DOWNLEFT);
 				}
 				break;
 			#ifdef FULL_LOGIC
 			case (AND_T):
 				root = formulas[froot];
 				// check direction
-				if (prevNode == root.val.children.lchild) {
+				newDir = stackPop(&redStackDir);
+				if (newDir == DIR_UPLEFT) {
 					// check lchild and work on right if not done
 					fchild1 = stackPeek(&redStackVals);
 					if (fchild1 == FORM_FALSE) {
 						// could do nothing, we'll pop and push for now
 						stackPop(&redStackVals);
 						stackPush(&redStackVals, FORM_FALSE);
+						stackFlipTop(&redStackDir);
 					} else { // need to do the right side
 						stackPush(&redStack, froot);
 						stackPush(&redStack, root.val.children.rchild);
+						stackPush(&redStackDir, newDir);
+						stackPush(&redStackDir, DIR_DOWNRIGHT);
 					}
-				} else if (prevNode == root.val.children.rchild) { // on the way up, check vals
+				} else if (newDir == DIR_UPRIGHT) {
 					fchild1 = stackPop(&redStackVals);
 					fchild2 = stackPop(&redStackVals);
-					stackPush(&redStackVals, andForms[fchild2][fchild1]);
+					stackPush(&redStackVals, andForms[fchild2*NFORMULAS+fchild1]);
+					stackFlipTop(&redStackDir);
 				} else { // on the way down, push left
 					stackPush(&redStack, froot);
 					stackPush(&redStack, root.val.children.lchild);
+					stackPush(&redStackDir, newDir);
+					stackPush(&redStackDir, DIR_DOWNLEFT);
 				}
 				break;
 			case (IMPLIES_T):
 				root = formulas[froot];
 				// check direction
-				if (prevNode == root.val.children.lchild) {
+				newDir = stackPop(&redStackDir);
+				if (newDir == DIR_UPLEFT) {
 					// check lchild and work on right if not done
 					fchild1 = stackPeek(&redStackVals);
 					if (fchild1 == FORM_FALSE) {
 						// could do nothing, we'll pop and push for now
 						stackPop(&redStackVals);
 						stackPush(&redStackVals, FORM_TRUE);
+						stackFlipTop(&redStackDir);
 					} else { // need to do the right side
 						stackPush(&redStack, froot);
 						stackPush(&redStack, root.val.children.rchild);
+						stackPush(&redStackDir, newDir);
+						stackPush(&redStackDir, DIR_DOWNRIGHT);
 					}
-				} else if (prevNode == root.val.children.rchild) { // on the way up, check vals
+				} else if (newDir == DIR_UPRIGHT) {
 					fchild1 = stackPop(&redStackVals);
 					fchild2 = stackPop(&redStackVals);
-					stackPush(&redStackVals, impForms[fchild2][fchild1]);
+					stackPush(&redStackVals, impForms[fchild2*NFORMULAS+fchild1]);
+					stackFlipTop(&redStackDir);
 				} else { // on the way down, push left
 					stackPush(&redStack, froot);
 					stackPush(&redStack, root.val.children.lchild);
+					stackPush(&redStackDir, newDir);
+					stackPush(&redStackDir, DIR_DOWNLEFT);
 				}
 				break;
 			#endif
@@ -211,6 +240,7 @@ void reduce(int step, residue *res) {
 					stackPush(&redStackVals, child1.form);
 				}
 				// no else, just return the residue unchanged
+				stackFlipTop(&redStackDir);
 				break;
 			/*case (SINCE_T):
 				child1.step = rstep;
@@ -235,7 +265,8 @@ void reduce(int step, residue *res) {
 			//////////////
 			//////////////
 		}
-		prevNode = froot;
+		// leaving incase we want this for debug
+		//prevNode = froot;
 	}
 	res->form = stackPop(&redStackVals);
 	stackReset(&redStack);
@@ -291,7 +322,7 @@ void reduce(int step, residue *res) {
 			reduce(step, &child2);
 			// we can optimize by reducing and checking individual steps
 			// but for now let's just reduce both and call into the simplify table
-			res->form = orForms[child1.form][child2.form];
+			res->form = orForms[child1.form*NFORMULAS+child2.form];
 			return;
 		case (EVENT_T):
 		case (ALWAYS_T):
@@ -732,6 +763,8 @@ int eventCheck(int step, residue* res) {
 		ishigh = MIN(nnb->ival.end, h);
 		if (islow <= ishigh) {
 			return TEMP_TRUE;
+		} else if (nnb->ival.end < l) {
+			break;
 		}
 	}
 	// No Beta Case
@@ -771,7 +804,10 @@ int alwaysCheck(int step, residue* res) {
 		ishigh = MIN(nnb->ival.end, h);
 		if (islow <= ishigh) {
 			return TEMP_FALSE;
+		} else if (nnb->ival.end < l) {
+			break;
 		}
+
 	}
 	// True case 
 	// need to find an interval that is a superset of [l,h]
@@ -817,7 +853,10 @@ int peventCheck(int step, residue* res) {
 		ishigh = MIN(nnb->ival.end, h);
 		if (islow <= ishigh) {
 			return TEMP_TRUE;
+		} else if (nnb->ival.end < l) {
+			break;
 		}
+
 	}
 	// No Beta Case
 	beta = theStruct[formulas[formulas[res->form].val.t_children.lchild].structidx].ftime;
@@ -861,7 +900,10 @@ int palwaysCheck(int step, residue* res) {
 		ishigh = MIN(nnb->ival.end, h);
 		if (islow <= ishigh) {
 			return TEMP_FALSE;
+		} else if (nnb->ival.end < l) {
+			break;
 		}
+
 	}
 	// True case 
 	// need to find an interval that is a superset of [l,h]

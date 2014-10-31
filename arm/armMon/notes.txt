@@ -1,5 +1,8 @@
 Just keeping some notes here
 
+Started working on smaller simplification tables to handle bigger scaling --
+retag seems reasonable, just need to finish implementing and test it
+
 WRITEUP STUFF:
 	monitor initialization can be tricky -- how to handle past time that looks
 	before trace?
@@ -8,11 +11,12 @@ WRITEUP STUFF:
 		This means that formula must be built to survive startup (no
 		"~[[0,10]] X" without a guard, it will fail at steps 0-10
 			rewrite as <<0,10>> ~X or do future time to get around
+	
 TODO: 
-	XXXimplement full logic
-		TEST!!
-	check interval/list preprocessor switches
-	XXXimplement hard conservative?
+	TEST!!
+	run experiments
+	-- need to get GM data running on pc-version
+	start doing simulator timing analysis
 
 artificial trace data ---
 	We have 3 "dimensions"
@@ -22,6 +26,7 @@ artificial trace data ---
 			tradeoff space and worst case execution for common/best case execution
 		restricted/full logic
 			tradeoff space for execution speed (formula dependent)
+			approx 2k code size
 
 important properties for an algorithm:
 	total execution time per step

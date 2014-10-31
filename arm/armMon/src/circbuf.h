@@ -5,6 +5,12 @@
 #ifndef __CIRCBUF_H
 #define __CIRCBUF_H
 
+// direction stack directions
+#define DIR_DOWNLEFT 0
+#define DIR_DOWNRIGHT 1
+#define DIR_UPLEFT 2
+#define DIR_UPRIGHT 3
+#define DIR_UP 2
 
 // Circular buffers for residues:
 
@@ -50,6 +56,7 @@ extern void stackDec(formulaStack *fs);
 extern int stackEmpty(formulaStack *fs);
 extern formula stackPeek(formulaStack *fs);
 extern void stackReset(formulaStack *fs);
+extern void stackFlipTop(formulaStack *fs);
 
 extern void resbInit(resbuf *rb, int size, residue *array);
 extern int rbFull(resbuf *rb);
@@ -58,6 +65,7 @@ extern void rbInsert(resbuf *rb, int step, formula f);
 extern residue* rbGet(resbuf *rb, int pos);
 extern void rbRemoveFirst(resbuf *rb);
 extern void rbSafeRemove(resbuf *rb, int pos);
+extern unsigned int rbLiveSize(resbuf *rb);
 
 // new interval stuff
 extern void ibInit(intbuf *ib, int size, intNode **array);

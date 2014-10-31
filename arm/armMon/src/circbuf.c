@@ -7,7 +7,6 @@
 #define FALSE 0
 
 
-
 void resbInit(resbuf *rb, int size, residue *array) {
 	rb->size = size;
 	rb->start = 0;
@@ -51,6 +50,13 @@ void rbSafeRemove(resbuf *rb, int pos) {
 	}
 }
 
+unsigned int rbLiveSize(resbuf *rb) {
+	int c = rb->end - rb->start;
+	if (c < 0) {
+		c += rb->size;
+	}
+	return c;
+}
 ///////////// residue buffer above
 ///////////// interval buffer below
 void ibInit(intbuf *ib, int size, intNode **array) {
@@ -222,5 +228,8 @@ void stackReset(formulaStack *fs) {
 	for (i = 0; i < fs->size; i++) {
 		fs->stack[i] = 0;
 	}*/
+}
+void stackFlipTop(formulaStack *fs) {
+	fs->stack[fs->sp] |= DIR_UP;
 }
 //// END FORMULA STACK STUFF

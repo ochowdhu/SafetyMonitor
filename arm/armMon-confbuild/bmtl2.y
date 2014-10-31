@@ -39,6 +39,7 @@ void confBuildStruct(std::vector<Node*> forms, std::ostream &os);
 void confBuildSimpTables(int nform, std::vector<Node*> list, std::ostream &os);
 void confBuildFtype(int nform, std::vector<Node*> list, std::ostream &os);
 void confBuildPolicies(std::vector<int> list, std::ostream &os);
+void buildTables2(std::vector<Node*> n, std::ostream &os);
 
 Node* getSetNode(Node* node);
 %}
@@ -280,7 +281,16 @@ int main(int argc, char** argv) {
 
 		monconfig << "#include \"monconfig.h\"" << std::endl;
 		confBuildFtype(all.size(), all, monconfig);
-		confBuildSimpTables(all.size(), all, monconfig);
+		buildTables2(all,monconfig);
+		// now that we built the tables, can fill counts in gendefs
+		gendefs << "#define NF_NOT (" << notTagCount << ")" << std::endl
+				<< "#define NF_OR (" << orTagCount << ")" << std::endl;
+		if (!RESTRICT_LOGIC) {
+			gendefs << "#define NF_AND (" << andTagCount << ")" << std::endl
+					<< "#define NF_IMP (" << impTagCount << ")" << std::endl;
+
+		}
+		//confBuildSimpTables(all.size(), all, monconfig);
 		confBuildPolicies(policyTags, monconfig);
 
 
@@ -292,6 +302,7 @@ int main(int argc, char** argv) {
 		monconfig  << "int i,j;" << std::endl
 				  << "fstackInit(&redStack, STACK_DEPTH, redStackBuf);" << std::endl
 				  << "fstackInit(&redStackVals, STACK_DEPTH, redStackValsBuf);" << std::endl
+				  << "fstackInit(&redStackDir, STACK_DEPTH, redStackDirBuf);" << std::endl
 				  << "for (i = 0; i < NPOLICIES; i++) { " << std::endl
 				  << "resbInit(&mainresbuf[i], NBUFLEN, mainresbuffers[i]);" << std::endl
 				  << "}" << std::endl
@@ -328,8 +339,10 @@ int main(int argc, char** argv) {
 				  << "// iterative stack stuff" << std::endl 
 				  << "formulaStack redStack;" << std::endl
 				  << "formulaStack redStackVals;" << std::endl
+				  << "formulaStack redStackDir;" << std::endl
 				  << "formula redStackBuf[STACK_DEPTH];" << std::endl
 				  << "formula redStackValsBuf[STACK_DEPTH];" << std::endl
+				  << "formula redStackDirBuf[STACK_DEPTH];" << std::endl
 				  << "// interval stuff" << std::endl
 				  << "intNode intnodebuf[NSTRUCT][2][NBUFLEN];" << std::endl
 				  << "intNode *intnodebufP[NSTRUCT][2][NBUFLEN];" << std::endl
@@ -818,15 +831,315 @@ void confBuildStruct(std::vector<Node*> forms, std::ostream &os) {
 
 /* We don't actually need temporal simplification tables since we don't do 
    simplification on them. Removing them to save space */
+
+//void _old_confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) {
+//		std::cout << "in buildSimpTables" << std::endl;
+//		///// SIMPLIFICATION TABLE STUFF
+//		std::vector<Node*>::iterator it;
+//		std::cout << "nformulas is " << nforms << std::endl;
+//		int NFORMULAS = nforms;
+//		std::cout << "not? " << nforms << std::endl;
+//		int *notforms = new int[NFORMULAS];
+//		std::cout << "or? " << nforms << std::endl;
+//		//int **orForms = new int[NFORMULAS][NFORMULAS];
+//		int *orForms = new int[NFORMULAS*NFORMULAS];
+//		//////// unrestricted //////////
+//		std::cout << "and? " << nforms << std::endl;
+//		//int **andForms = new int[NFORMULAS][NFORMULAS];
+//		int *andForms = new int[NFORMULAS*NFORMULAS];
+//		std::cout << "imp? " << nforms << std::endl;
+//		//int **impForms = new int[NFORMULAS][NFORMULAS];
+//		int *impForms = new int[NFORMULAS*NFORMULAS];
+//		//int untilForms[NFORMULAS][NFORMULAS];
+//		//int sinceForms[NFORMULAS][NFORMULAS];
+//
+//
+//		std::cout << "initialize..." << std::endl;
+//		int si, si2;
+//		// initialize simplification tables:
+//		for (si = 0; si < NFORMULAS; si++) {
+//			notForms[si] = 0;
+//			// 2-dimensional ones
+//			for (si2 = 0; si2 < NFORMULAS; si2++) {
+//				orForms[si][si2] = 0;
+//				andForms[si][si2] = 0;
+//				impForms[si][si2] = 0;
+//				//untilForms[si][si2] = 0;
+//				//sinceForms[si][si2] = 0;
+//			}
+//		}
+//
+//		std::cout << "T/F fill..." << std::endl;
+//		// do true/false filling:
+//		// fill NOT 1/2
+//		notForms[1] = 2; // not false is true
+//		notForms[2] = 1; // not true is false
+//		// fill BINARY 
+//		// TRUE ROW
+//		// DON'T DO 0 -- we want to leave INVALID invalid
+//		for (si = 1; si < NFORMULAS; si++) {
+//			// true row is true
+//			orForms[2][si] = 2;
+//			orForms[si][2] = 2;
+//			// true row is passthrough
+//			andForms[2][si] = si;
+//			andForms[si][2] = si;
+//			// true implies is pass-through
+//			impForms[2][si] = si;
+//		}
+//		// FALSE ROW
+//		// DON'T DO 0 -- we want to leave INVALID invalid
+//		for (si = 1; si < NFORMULAS; si++) {
+//			// false row is pass-through
+//			orForms[1][si] = si;
+//			orForms[si][1] = si;
+//			// and false is false
+//			andForms[1][si] = 1;
+//			andForms[si][1] = 1;
+//			// implies false is true, true is pass-through
+//			impForms[1][si] = 2;
+//		}
+//
+//		std::cout << "filling tables..." << std::endl;
+//		// fill simplification tables
+//		for (it = list.begin(); it!=list.end(); it++) {
+//			if ((*it)->type == NOT_T) {
+//				notForms[(*it)->val.child->formTag] = (*it)->formTag;
+//			} else if ((*it)->type == OR_T) {
+//				orForms[(*it)->val.binOp.lchild->formTag][(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
+//			} else if ((*it)->type == AND_T) {
+//				andForms[(*it)->val.binOp.lchild->formTag][(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
+//			} else if ((*it)->type == IMPLIES_T) {
+//				impForms[(*it)->val.binOp.lchild->formTag][(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
+//			} /*else if ((*it)->type == UNTIL_T) {
+//				untilForms[(*it)->val.twotempOp.lchild->formTag][(*it)->val.twotempOp.rchild->formTag] = (*it)->formTag;
+//			} else if ((*it)->type == SINCE_T) {
+//				sinceForms[(*it)->val.twotempOp.lchild->formTag][(*it)->val.twotempOp.rchild->formTag] = (*it)->formTag;
+//			}*/
+//		}
+//		// PRINT NOT
+//		os << "const formula notForms[NFORMULAS] = {";
+//		for (si = 0; si < NFORMULAS; si++) {
+//			os << notForms[si] << ",";
+//		}
+//		os << "};" << std::endl;
+//		// PRINT OR
+//		os << "const formula orForms[NFORMULAS][NFORMULAS] = {";
+//		for (si = 0; si < NFORMULAS; si++) {
+//			os << "{";
+//			for (si2 = 0; si2 < NFORMULAS; si2++) {
+//				os << orForms[si][si2] << ",";
+//			}
+//			os << "}," << std::endl;
+//		}
+//		os << "};" << std::endl;
+//		if (!RESTRICT_LOGIC) {
+//			// PRINT AND 
+//			os << "const formula andForms[NFORMULAS][NFORMULAS] = {";
+//			for (si = 0; si < NFORMULAS; si++) {
+//				os << "{";
+//				for (si2 = 0; si2 < NFORMULAS; si2++) {
+//					os << andForms[si][si2] << ",";
+//				}
+//				os << "}," << std::endl;
+//			}
+//			os << "};" << std::endl;
+//			// PRINT IMPLIES
+//			os << "const formula impForms[NFORMULAS][NFORMULAS] = {";
+//			for (si = 0; si < NFORMULAS; si++) {
+//				os << "{";
+//				for (si2 = 0; si2 < NFORMULAS; si2++) {
+//					os << impForms[si][si2] << ",";
+//				}
+//				os << "}," << std::endl;
+//			}
+//			os << "};" << std::endl;
+//		}
+//		// PRINT UNTIL
+//		/*os << "const formula untilForms[NFORMULAS][NFORMULAS] = {";
+//		for (si = 0; si < NFORMULAS; si++) {
+//			os << "{";
+//			for (si2 = 0; si2 < NFORMULAS; si2++) {
+//				os << untilForms[si][si2] << ",";
+//			}
+//			os << "}," << std::endl;
+//		}
+//		os << "};" << std::endl;
+//
+//		// PRINT SINCE
+//		os << "const formula sinceForms[NFORMULAS][NFORMULAS] = {";
+//		for (si = 0; si < NFORMULAS; si++) {
+//			os << "{";
+//			for (si2 = 0; si2 < NFORMULAS; si2++) {
+//				os << sinceForms[si][si2] << ",";
+//			}
+//			os << "}," << std::endl;
+//		}
+//		os << "};" << std::endl;
+//		*/
+//}
+
+void buildTables2(std::vector<Node*> list, std::ostream &os) {
+	std::vector<Node*>::iterator it;
+	int nforms = list.size();
+
+	// put the right values in for these guys
+	// doing this in makeValueNode() for now
+	//invalNode->notTag = notTagCount++; invalNode->orTag = orTagCount++;
+	//trueNode->notTag = notTagCount++; trueNode->orTag = orTagCount++;
+	//falseNode->notTag = notTagCount++; falseNode->orTag = orTagCount++;
+	// fill tags for everything
+	for (it = list.begin(); it!=list.end(); it++) {
+		if ((*it)->type == NOT_T) {
+			if ((*it)->val.child->notTag < 0) {
+				(*it)->val.child->notTag = notTagCount++;
+			}
+		}
+		if ((*it)->type == OR_T) {
+			if ((*it)->val.binOp.lchild->orTag < 0) {
+				(*it)->val.binOp.lchild->orTag = orTagCount++;
+			}
+			if ((*it)->val.binOp.rchild->orTag < 0) {
+				(*it)->val.binOp.rchild->orTag = orTagCount++;
+			}
+		}
+		if ((*it)->type == AND_T) {
+			if ((*it)->val.binOp.lchild->andTag < 0) {
+				(*it)->val.binOp.lchild->andTag = andTagCount++;
+			}
+			if ((*it)->val.binOp.rchild->andTag < 0) {
+				(*it)->val.binOp.rchild->andTag = andTagCount++;
+			}
+		}
+		if ((*it)->type == IMPLIES_T) {
+			if ((*it)->val.binOp.lchild->impTag < 0) {
+				(*it)->val.binOp.lchild->impTag = impTagCount++;
+			}
+			if ((*it)->val.binOp.rchild->impTag < 0) {
+				(*it)->val.binOp.rchild->impTag = impTagCount++;
+			}
+		}
+	}
+	int i,ii;
+	int nNots = notTagCount; int nOrs = orTagCount; int nAnds = andTagCount; int nImps = impTagCount;
+	int *notForms = new int[nNots];
+	int *orForms = new int[nOrs*nOrs];
+	//////// unrestricted //////////
+	int *andForms = new int[nAnds*nAnds];
+	int *impForms = new int[nImps*nImps];
+	///////////////////////////////////////
+	// init
+	for (i = 0; i < nOrs; i++) {
+		for (ii = 0; ii < nOrs; ii++) {
+			orForms[i*nOrs+ii] = 0;
+		}
+	}
+	for (i = 0; i < nAnds; i++) {
+		for (ii = 0; ii < nAnds; ii++) {
+			andForms[i*nAnds+ii] = 0;
+		}
+	}
+	for (i = 0; i < nImps; i++) {
+		for (ii = 0; ii < nImps; ii++) {
+			impForms[i*nImps+ii] = 0;
+		}
+	}
+	///////////////////////////////////////
+	// fill value_t
+	notForms[0] = 0;
+	notForms[1] = 2;
+	notForms[2] = 1;
+	///// fill ors
+	for (i = 1; i < nOrs; i++) {
+		// true row is true
+		orForms[2*nOrs+i] = 2;
+		orForms[i*nOrs+2] = 2;
+		// false row is pass-through
+		orForms[1*nOrs+i] = i;
+		orForms[i*nOrs+1] = i;
+	}
+	for (i = 1; i < nAnds; i++) {
+		// true row is passthrough
+		andForms[2*nAnds+i] = i;
+		andForms[i*nAnds+2] = i;
+		// false row is false
+		andForms[1*nAnds+i] = 1;
+		andForms[i*nAnds+1] = 1;
+	}
+	for (i = 1; i < nImps; i++) {
+		// true implies is pass-through
+		impForms[2*nImps+i] = i;
+		// false implies is true
+		impForms[1*nImps+i] = 2;
+		// anthing implies true is true
+		impForms[i*nImps+2] = 2;
+		// anything implies false shouldn't reduce, need to check for bugs
+	}
+
+	// loop over lists and fill the real vals
+	for (it = list.begin(); it!=list.end(); it++) {
+		if ((*it)->type == NOT_T) {
+			notForms[(*it)->val.child->notTag] = (*it)->formTag;
+		} else if ((*it)->type == OR_T) {
+			orForms[(*it)->val.binOp.lchild->orTag*nOrs+(*it)->val.binOp.rchild->orTag] = (*it)->formTag;
+		} else if ((*it)->type == AND_T) {
+			andForms[(*it)->val.binOp.lchild->andTag*nAnds+(*it)->val.binOp.rchild->andTag] = (*it)->formTag;
+		} else if ((*it)->type == IMPLIES_T) {
+			impForms[(*it)->val.binOp.lchild->impTag*nImps+(*it)->val.binOp.rchild->impTag] = (*it)->formTag;
+
+		}
+	}
+
+
+	// PRINT NOT
+	os << "const formula notForms[NF_NOT] = {";
+	for (i = 0; i < nNots; i++) {
+		os << notForms[i] << ",";
+	}
+	os << "};" << std::endl;
+	// PRINT OR
+	os << "const formula orForms[NF_OR*NF_OR] = {";
+	for (i = 0; i < nOrs; i++) {
+		//os << "{";
+		for (ii = 0; ii < nOrs; ii++) {
+			os << orForms[i*nOrs+ii] << ",";
+		}
+		//os << "}," << std::endl;
+	}
+	os << "};" << std::endl;
+	if (!RESTRICT_LOGIC) {
+		// PRINT AND 
+		os << "const formula andForms[NF_AND*NF_AND] = {";
+		for (i = 0; i < nAnds; i++) {
+		//	os << "{";
+			for (ii = 0; ii < nAnds; ii++) {
+				os << andForms[i*nAnds+ii] << ",";
+			}
+		//	os << "}," << std::endl;
+		}
+		os << "};" << std::endl;
+		// PRINT IMPLIES
+		os << "const formula impForms[NF_IMP*NF_IMP] = {";
+		for (i = 0; i < nImps; i++) {
+		//	os << "{";
+			for (ii = 0; ii < nImps; ii++) {
+				os << impForms[i*nImps+ii] << ",";
+			}
+		//	os << "}," << std::endl;
+		}
+		os << "};" << std::endl;
+	}
+}
+
 void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) {
 		///// SIMPLIFICATION TABLE STUFF
 		std::vector<Node*>::iterator it;
 		int NFORMULAS = nforms;
-		int notForms[NFORMULAS];
-		int orForms[NFORMULAS][NFORMULAS];
+		int *notForms = new int[NFORMULAS];
+		int *orForms = new int[NFORMULAS*NFORMULAS];
 		//////// unrestricted //////////
-		int andForms[NFORMULAS][NFORMULAS];
-		int impForms[NFORMULAS][NFORMULAS];
+		int *andForms = new int[NFORMULAS*NFORMULAS];
+		int *impForms = new int[NFORMULAS*NFORMULAS];
 		//int untilForms[NFORMULAS][NFORMULAS];
 		//int sinceForms[NFORMULAS][NFORMULAS];
 
@@ -837,9 +1150,9 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 			notForms[si] = 0;
 			// 2-dimensional ones
 			for (si2 = 0; si2 < NFORMULAS; si2++) {
-				orForms[si][si2] = 0;
-				andForms[si][si2] = 0;
-				impForms[si][si2] = 0;
+				orForms[si*NFORMULAS+si2] = 0;
+				andForms[si*NFORMULAS+si2] = 0;
+				impForms[si*NFORMULAS+si2] = 0;
 				//untilForms[si][si2] = 0;
 				//sinceForms[si][si2] = 0;
 			}
@@ -854,25 +1167,25 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 		// DON'T DO 0 -- we want to leave INVALID invalid
 		for (si = 1; si < NFORMULAS; si++) {
 			// true row is true
-			orForms[2][si] = 2;
-			orForms[si][2] = 2;
+			orForms[2*NFORMULAS+si] = 2;
+			orForms[si*NFORMULAS+2] = 2;
 			// true row is passthrough
-			andForms[2][si] = si;
-			andForms[si][2] = si;
+			andForms[2*NFORMULAS+si] = si;
+			andForms[si*NFORMULAS+2] = si;
 			// true implies is pass-through
-			impForms[2][si] = si;
+			impForms[2*NFORMULAS+si] = si;
 		}
 		// FALSE ROW
 		// DON'T DO 0 -- we want to leave INVALID invalid
 		for (si = 1; si < NFORMULAS; si++) {
 			// false row is pass-through
-			orForms[1][si] = si;
-			orForms[si][1] = si;
+			orForms[1*NFORMULAS+si] = si;
+			orForms[si*NFORMULAS+1] = si;
 			// and false is false
-			andForms[1][si] = 1;
-			andForms[si][1] = 1;
+			andForms[1*NFORMULAS+si] = 1;
+			andForms[si*NFORMULAS+1] = 1;
 			// implies false is true, true is pass-through
-			impForms[1][si] = 2;
+			impForms[1*NFORMULAS+si] = 2;
 		}
 
 		// fill simplification tables
@@ -880,11 +1193,11 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 			if ((*it)->type == NOT_T) {
 				notForms[(*it)->val.child->formTag] = (*it)->formTag;
 			} else if ((*it)->type == OR_T) {
-				orForms[(*it)->val.binOp.lchild->formTag][(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
+				orForms[(*it)->val.binOp.lchild->formTag*NFORMULAS+(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
 			} else if ((*it)->type == AND_T) {
-				andForms[(*it)->val.binOp.lchild->formTag][(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
+				andForms[(*it)->val.binOp.lchild->formTag*NFORMULAS+(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
 			} else if ((*it)->type == IMPLIES_T) {
-				impForms[(*it)->val.binOp.lchild->formTag][(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
+				impForms[(*it)->val.binOp.lchild->formTag*NFORMULAS+(*it)->val.binOp.rchild->formTag] = (*it)->formTag;
 			} /*else if ((*it)->type == UNTIL_T) {
 				untilForms[(*it)->val.twotempOp.lchild->formTag][(*it)->val.twotempOp.rchild->formTag] = (*it)->formTag;
 			} else if ((*it)->type == SINCE_T) {
@@ -898,34 +1211,34 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 		}
 		os << "};" << std::endl;
 		// PRINT OR
-		os << "const formula orForms[NFORMULAS][NFORMULAS] = {";
+		os << "const formula orForms[NFORMULAS*NFORMULAS] = {";
 		for (si = 0; si < NFORMULAS; si++) {
-			os << "{";
+			//os << "{";
 			for (si2 = 0; si2 < NFORMULAS; si2++) {
-				os << orForms[si][si2] << ",";
+				os << orForms[si*NFORMULAS+si2] << ",";
 			}
-			os << "}," << std::endl;
+			//os << "}," << std::endl;
 		}
 		os << "};" << std::endl;
 		if (!RESTRICT_LOGIC) {
 			// PRINT AND 
-			os << "const formula andForms[NFORMULAS][NFORMULAS] = {";
+			os << "const formula andForms[NFORMULAS*NFORMULAS] = {";
 			for (si = 0; si < NFORMULAS; si++) {
-				os << "{";
+			//	os << "{";
 				for (si2 = 0; si2 < NFORMULAS; si2++) {
-					os << andForms[si][si2] << ",";
+					os << andForms[si*NFORMULAS+si2] << ",";
 				}
-				os << "}," << std::endl;
+			//	os << "}," << std::endl;
 			}
 			os << "};" << std::endl;
 			// PRINT IMPLIES
-			os << "const formula impForms[NFORMULAS][NFORMULAS] = {";
+			os << "const formula impForms[NFORMULAS*NFORMULAS] = {";
 			for (si = 0; si < NFORMULAS; si++) {
-				os << "{";
+			//	os << "{";
 				for (si2 = 0; si2 < NFORMULAS; si2++) {
-					os << impForms[si][si2] << ",";
+					os << impForms[si*NFORMULAS+si2] << ",";
 				}
-				os << "}," << std::endl;
+			//	os << "}," << std::endl;
 			}
 			os << "};" << std::endl;
 		}
@@ -951,8 +1264,11 @@ void confBuildSimpTables(int nforms, std::vector<Node*> list, std::ostream &os) 
 		}
 		os << "};" << std::endl;
 		*/
+	delete notForms; 
+	delete orForms; 
+	delete andForms; 
+	delete impForms;
 }
-
 std::string ftypeMap[12] = {"VALUE_T", "PROP_T", "NOT_T", "OR_T", "AND_T", "IMPLIES_T", "ALWAYS_T", "EVENT_T", "PALWAYS_T", "PEVENT_T", "UNTIL_T", "SINCE_T" };
 void confBuildFtype(int nforms, std::vector<Node*> list, std::ostream &os) {
 	std::vector<Node*>::iterator it;

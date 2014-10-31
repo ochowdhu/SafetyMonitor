@@ -12,9 +12,9 @@
 
 
 // get proposition value
-#define getProp(m) ((cstate & m)!=0)
+//#define getProp(m) ((cstate & m)!=0)
 
-extern volatile int cstate, nstate; // current/next start -- just a set of bits for now
+//extern volatile int cstate, nstate; // current/next start -- just a set of bits for now
 extern volatile int estep, instep;
 #ifdef PC_MODE
 extern int numreduces;
