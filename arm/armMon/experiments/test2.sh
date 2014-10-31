@@ -5,7 +5,7 @@ testdir=test2
 bindir=../src/build
 tracedir=../traces/
 
-ntests=5
+ntests=3
 formulas=("<0,10> allF" "<0,50> allF" "<0,100> allF" "<0,500> allF" "<0,1000> allF" "<0,15000> allF")
 
 
@@ -26,6 +26,7 @@ do
 		echo "$i: finished \"-f\" tests for \"$cform\""
 
 		bash $bindir/../runArmMon.sh "$cform" "$tracedir/pTrace50m.csv" -a -f >> "$testdir/pTrace50m-af-f$f.log" 2>&1
+
 		echo "$i: finished \"-a -f\" tests for \"$cform\""
 
 		bash $bindir/../runArmMon.sh "$cform" "$tracedir/pTrace50m.csv" -c -f >> "$testdir/pTrace50m-cf-f$f.log" 2>&1
