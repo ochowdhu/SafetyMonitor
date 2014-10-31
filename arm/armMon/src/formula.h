@@ -3,6 +3,7 @@
 #ifndef __FORMULA_H
 #define __FORMULA_H
 
+#include "gendefs.h"
 /*
 typedef struct formula {
 	char type;
@@ -20,6 +21,12 @@ typedef struct fNode {
 	enum nodeType type;
 	formula theFormula;
 	int structidx;
+	formula notTag;
+	formula orTag;
+#ifdef FULL_LOGIC
+	formula andTag;
+	formula impTag;
+#endif
 	union {
 		char value;		// for true/false
 		int propMask;	// for proposition

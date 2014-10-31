@@ -28,7 +28,7 @@
 
 #define NFIELDS 1000
 // csv stuff
-char buf[4096];		/* input line buffer */
+char buf[8092];		/* input line buffer */
 char field[NFIELDS];	/* fields */
 //long long timeus;
 unsigned long timeus;
@@ -73,7 +73,9 @@ int csvgetline(FILE *fin)
 		return -1;
 	}
 	nfield = 0;
+	//printf("getline on buf %s\n", buf);
 	for (q = buf; (p=strtok(q, ",\n\r")) != NULL; q = NULL) {
+	//	printf("tokenizing, p is %s\n", p);
 		if (strcmp(p,"0") != 0) {
 			field[nfield] = 1;
 		} else {
@@ -91,9 +93,12 @@ void updateState() {
 		cstate[i] = 0;
 	}
 	for (i = 0; i < NPROP; i++) {
-		cstate[i/WORDSZ] |= (field[i] << i%WORDSZ);
+		//printf("updating cstate[%d] with %d << %d\n", i/WORDSZ, field[i], i%WORDSZ);
+		cstate[i/WORDSZ] |= (field[i] << (i%WORDSZ));
+		//printf("value from field: %d == prop %d is %d\n", field[i], i, getProp(i));
+		//printf("cstate[i] is %x\n", cstate[i/WORDSZ]);
 	}
-	cstate[0] |= field[0] << 0;
+	/*cstate[0] |= field[0] << 0;
 	cstate[0] |= field[1] << 1;
 	cstate[0] |= field[2] << 2;
 	cstate[0] |= field[3] << 3;
@@ -109,6 +114,7 @@ void updateState() {
 	cstate[0] |= field[13] << 13;
 	cstate[0] |= field[14] << 14;
 	cstate[0] |= field[15] << 15;
+	*/
 
 	//printf("allT: %d, allF: %d, alt1: %d, perF3: %d\n", getProp(MASK_allT), getProp(MASK_allF), getProp(MASK_alt1), getProp(MASK_perF3));
 	instep++;

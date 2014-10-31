@@ -64,6 +64,17 @@ residue* stGetRes(resStructure *st, int pos) {
 	return &(st->residues->buf[pos]);
 }
 
+#ifdef PC_MODE
+void printDS() {
+	printf("stack: [");
+	int sp = redStackDir.sp;
+	while (sp > 0) {
+		printf("%d ", redStackDir.stack[sp--]);
+	}
+	printf("]\n");
+}
+#endif
+
 #ifdef ITERATIVE_RED
 // Iterative Reduce, used to be itreduce -- now just using preprocessor
 //void itreduce(int step, residue *res) {
@@ -74,7 +85,7 @@ void reduce(int step, residue *res) {
 	formula fchild1, fchild2, newDir;
 	int type;
 	int rstep; 
-	formula froot;//, prevNode;
+	formula froot, prevNode;
 	//prevNode = 0;
 	// clear stacks
 	stackReset(&redStack);
@@ -91,7 +102,9 @@ void reduce(int step, residue *res) {
 		#endif
 		froot = stackPop(&redStack);
 		type = ftype[froot];
-		//printf("reducing %d from %d\n", froot, prevNode);
+		//printf("reducing %d (%d) from %d in D:[%d %d]\n", froot,type, prevNode, stackPeek(&redStackDir), redStackDir.stack[redStackDir.sp-1]);
+		//printDS();
+		//printf("reducing %d type %d in dir %d\n", froot, type, stackPeek(&redStackDir));
 		switch (type) {
 			//////////
 			case (VALUE_T):
@@ -118,7 +131,7 @@ void reduce(int step, residue *res) {
 				if (newDir & DIR_UP) {
 					// this works for all three -- notForms gives correct True/False
 					fchild1 = stackPop(&redStackVals);
-					stackPush(&redStackVals, notForms[fchild1]);
+					stackPush(&redStackVals, notForms[formulas[fchild1].notTag]);
 				} else { // going down -- just push not and child to stack
 					stackPush(&redStack, froot);
 					stackPush(&redStack, root.val.child);
@@ -139,13 +152,13 @@ void reduce(int step, residue *res) {
 					} else { // need to do the right side
 						stackPush(&redStack, froot);
 						stackPush(&redStack, root.val.children.rchild);
-						stackPush(&redStackDir, newDir);
 						stackPush(&redStackDir, DIR_DOWNRIGHT);
 					}
 				} else if (newDir == DIR_UPRIGHT) {
 					fchild1 = stackPop(&redStackVals);
 					fchild2 = stackPop(&redStackVals);
-					stackPush(&redStackVals, orForms[fchild2*NFORMULAS+fchild1]);
+					//stackPush(&redStackVals, orForms[fchild2*NFORMULAS+fchild1]);
+					stackPush(&redStackVals, orForms[formulas[fchild2].orTag][formulas[fchild1].orTag]);
 					stackFlipTop(&redStackDir);
 				} else { // on the way down, push left
 					stackPush(&redStack, froot);
@@ -170,13 +183,12 @@ void reduce(int step, residue *res) {
 					} else { // need to do the right side
 						stackPush(&redStack, froot);
 						stackPush(&redStack, root.val.children.rchild);
-						stackPush(&redStackDir, newDir);
 						stackPush(&redStackDir, DIR_DOWNRIGHT);
 					}
 				} else if (newDir == DIR_UPRIGHT) {
 					fchild1 = stackPop(&redStackVals);
 					fchild2 = stackPop(&redStackVals);
-					stackPush(&redStackVals, andForms[fchild2*NFORMULAS+fchild1]);
+					stackPush(&redStackVals, andForms[formulas[fchild2].andTag][formulas[fchild1].andTag]);
 					stackFlipTop(&redStackDir);
 				} else { // on the way down, push left
 					stackPush(&redStack, froot);
@@ -200,13 +212,12 @@ void reduce(int step, residue *res) {
 					} else { // need to do the right side
 						stackPush(&redStack, froot);
 						stackPush(&redStack, root.val.children.rchild);
-						stackPush(&redStackDir, newDir);
 						stackPush(&redStackDir, DIR_DOWNRIGHT);
 					}
 				} else if (newDir == DIR_UPRIGHT) {
 					fchild1 = stackPop(&redStackVals);
 					fchild2 = stackPop(&redStackVals);
-					stackPush(&redStackVals, impForms[fchild2*NFORMULAS+fchild1]);
+					stackPush(&redStackVals, impForms[formulas[fchild2].impTag][formulas[fchild1].impTag]);
 					stackFlipTop(&redStackDir);
 				} else { // on the way down, push left
 					stackPush(&redStack, froot);
@@ -266,8 +277,9 @@ void reduce(int step, residue *res) {
 			//////////////
 		}
 		// leaving incase we want this for debug
-		//prevNode = froot;
+		prevNode = froot;
 	}
+	//printf("finished red\n");
 	res->form = stackPop(&redStackVals);
 	stackReset(&redStack);
 	stackReset(&redStackVals);
@@ -305,7 +317,7 @@ void reduce(int step, residue *res) {
 			// not fully reduced, return formula
 			} else {
 				// get formula from table
-				res->form = notForms[child1.form];
+				res->form = notForms[formulas[child1.form].notTag];
 			}
 			return;
 		case (OR_T):
@@ -322,7 +334,8 @@ void reduce(int step, residue *res) {
 			reduce(step, &child2);
 			// we can optimize by reducing and checking individual steps
 			// but for now let's just reduce both and call into the simplify table
-			res->form = orForms[child1.form*NFORMULAS+child2.form];
+			//res->form = orForms[child1.form*NFORMULAS+child2.form];
+			res->form = orForms[formulas[child1.form].orTag][formulas[child2.form].orTag];
 			return;
 		case (EVENT_T):
 		case (ALWAYS_T):

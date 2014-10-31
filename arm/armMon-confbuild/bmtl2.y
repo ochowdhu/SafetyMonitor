@@ -762,16 +762,34 @@ void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
 			case VALUE_T:
 				os << "formulas[" << (*it)->formTag << "].type = VALUE_T;" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.value = " << (*it)->val.value << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].notTag = " << (*it)->notTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].orTag = " << (*it)->orTag << ";" << std::endl;
+				if (!RESTRICT_LOGIC) {
+					os << "formulas[" << (*it)->formTag << "].andTag = " << (*it)->andTag << ";" << std::endl;
+					os << "formulas[" << (*it)->formTag << "].impTag = " << (*it)->impTag << ";" << std::endl;
+				}
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case PROP_T:
 				os << "formulas[" << (*it)->formTag << "].type = PROP_T;" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.propMask = MASK_" << (*it)->val.propName << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].notTag = " << (*it)->notTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].orTag = " << (*it)->orTag << ";" << std::endl;
+				if (!RESTRICT_LOGIC) {
+					os << "formulas[" << (*it)->formTag << "].andTag = " << (*it)->andTag << ";" << std::endl;
+					os << "formulas[" << (*it)->formTag << "].impTag = " << (*it)->impTag << ";" << std::endl;
+				}
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case NOT_T:
 				os << "formulas[" << (*it)->formTag << "].type = NOT_T;" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.child = " << (*it)->val.child->formTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].notTag = " << (*it)->notTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].orTag = " << (*it)->orTag << ";" << std::endl;
+				if (!RESTRICT_LOGIC) {
+					os << "formulas[" << (*it)->formTag << "].andTag = " << (*it)->andTag << ";" << std::endl;
+					os << "formulas[" << (*it)->formTag << "].impTag = " << (*it)->impTag << ";" << std::endl;
+				}
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case AND_T:
@@ -780,11 +798,23 @@ void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
 				os << "formulas[" << (*it)->formTag << "].type = " << stype << ";"  << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.children.lchild = " << (*it)->val.binOp.lchild->formTag << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.children.rchild = " << (*it)->val.binOp.rchild->formTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].notTag = " << (*it)->notTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].orTag = " << (*it)->orTag << ";" << std::endl;
+				if (!RESTRICT_LOGIC) {
+					os << "formulas[" << (*it)->formTag << "].andTag = " << (*it)->andTag << ";" << std::endl;
+					os << "formulas[" << (*it)->formTag << "].impTag = " << (*it)->impTag << ";" << std::endl;
+				}
 				if ((*it)->stidx != -1) os << "formulas[" << (*it)->formTag << "].structidx = " << (*it)->stidx << ";" << std::endl;
 				break;
 			case SINCE_T:
 			case UNTIL_T:
 				os << "formulas[" << (*it)->formTag << "].type = " << stype << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].notTag = " << (*it)->notTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].orTag = " << (*it)->orTag << ";" << std::endl;
+				if (!RESTRICT_LOGIC) {
+					os << "formulas[" << (*it)->formTag << "].andTag = " << (*it)->andTag << ";" << std::endl;
+					os << "formulas[" << (*it)->formTag << "].impTag = " << (*it)->impTag << ";" << std::endl;
+				}
 				os << "formulas[" << (*it)->formTag << "].val.t_children.lchild = " << (*it)->val.twotempOp.lchild->formTag << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->formTag << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.lbound = " << (*it)->val.twotempOp.lbound << ";" << std::endl;
@@ -796,6 +826,12 @@ void confFormPrint(std::vector<Node*> forms, std::ostream &os) {
 			case EVENT_T:
 			case ALWAYS_T:
 				os << "formulas[" << (*it)->formTag << "].type = " << stype << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].notTag = " << (*it)->notTag << ";" << std::endl;
+				os << "formulas[" << (*it)->formTag << "].orTag = " << (*it)->orTag << ";" << std::endl;
+				if (!RESTRICT_LOGIC) {
+					os << "formulas[" << (*it)->formTag << "].andTag = " << (*it)->andTag << ";" << std::endl;
+					os << "formulas[" << (*it)->formTag << "].impTag = " << (*it)->impTag << ";" << std::endl;
+				}
 				os << "formulas[" << (*it)->formTag << "].val.t_children.lchild = " << (*it)->val.tempOp.child->formTag << ";" << std::endl;
 				//os << "formulas[" << (*it)->formTag << "].val.t_children.rchild = " << (*it)->val.twotempOp.rchild->formTag << ";" << std::endl;
 				os << "formulas[" << (*it)->formTag << "].val.t_children.lbound = " << (*it)->val.tempOp.lbound << ";" << std::endl;
@@ -1054,21 +1090,13 @@ void buildTables2(std::vector<Node*> list, std::ostream &os) {
 		// true row is true
 		orForms[2*nOrs+i] = 2;
 		orForms[i*nOrs+2] = 2;
-		// false row is pass-through
-		orForms[1*nOrs+i] = i;
-		orForms[i*nOrs+1] = i;
 	}
 	for (i = 1; i < nAnds; i++) {
-		// true row is passthrough
-		andForms[2*nAnds+i] = i;
-		andForms[i*nAnds+2] = i;
 		// false row is false
 		andForms[1*nAnds+i] = 1;
 		andForms[i*nAnds+1] = 1;
 	}
 	for (i = 1; i < nImps; i++) {
-		// true implies is pass-through
-		impForms[2*nImps+i] = i;
 		// false implies is true
 		impForms[1*nImps+i] = 2;
 		// anthing implies true is true
@@ -1078,10 +1106,26 @@ void buildTables2(std::vector<Node*> list, std::ostream &os) {
 
 	// loop over lists and fill the real vals
 	for (it = list.begin(); it!=list.end(); it++) {
+		// AND with true is passthrough -- need to map formTag
+		if ((*it)->andTag > 0) {
+			andForms[2*nAnds+(*it)->andTag] = (*it)->formTag;	
+			andForms[(*it)->andTag*nAnds+2] = (*it)->formTag;	
+		}
+		// OR with false is passthrough -- need to map formTag
+		if ((*it)->orTag > 0) {
+			orForms[1*nOrs+(*it)->orTag] = (*it)->formTag;
+			orForms[(*it)->orTag*nOrs+1] = (*it)->formTag;
+		}
+		// TRUE IMPLIES is passthrough -- need to map formTag
+		if ((*it)->impTag > 0) {
+			impForms[2*nImps+(*it)->impTag] = (*it)->formTag;
+		}
+		////////////////////////////////
 		if ((*it)->type == NOT_T) {
 			notForms[(*it)->val.child->notTag] = (*it)->formTag;
 		} else if ((*it)->type == OR_T) {
 			orForms[(*it)->val.binOp.lchild->orTag*nOrs+(*it)->val.binOp.rchild->orTag] = (*it)->formTag;
+			//orForms[(*it)->val.binOp.rchild->orTag*nOrs+(*it)->val.binOp.lchild->orTag] = (*it)->formTag;
 		} else if ((*it)->type == AND_T) {
 			andForms[(*it)->val.binOp.lchild->andTag*nAnds+(*it)->val.binOp.rchild->andTag] = (*it)->formTag;
 		} else if ((*it)->type == IMPLIES_T) {
@@ -1098,34 +1142,34 @@ void buildTables2(std::vector<Node*> list, std::ostream &os) {
 	}
 	os << "};" << std::endl;
 	// PRINT OR
-	os << "const formula orForms[NF_OR*NF_OR] = {";
+	os << "const formula orForms[NF_OR][NF_OR] = {";
 	for (i = 0; i < nOrs; i++) {
-		//os << "{";
+		os << "{";
 		for (ii = 0; ii < nOrs; ii++) {
 			os << orForms[i*nOrs+ii] << ",";
 		}
-		//os << "}," << std::endl;
+		os << "}," << std::endl;
 	}
 	os << "};" << std::endl;
 	if (!RESTRICT_LOGIC) {
 		// PRINT AND 
-		os << "const formula andForms[NF_AND*NF_AND] = {";
+		os << "const formula andForms[NF_AND][NF_AND] = {";
 		for (i = 0; i < nAnds; i++) {
-		//	os << "{";
+			os << "{";
 			for (ii = 0; ii < nAnds; ii++) {
 				os << andForms[i*nAnds+ii] << ",";
 			}
-		//	os << "}," << std::endl;
+			os << "}," << std::endl;
 		}
 		os << "};" << std::endl;
 		// PRINT IMPLIES
-		os << "const formula impForms[NF_IMP*NF_IMP] = {";
+		os << "const formula impForms[NF_IMP][NF_IMP] = {";
 		for (i = 0; i < nImps; i++) {
-		//	os << "{";
+			os << "{";
 			for (ii = 0; ii < nImps; ii++) {
 				os << impForms[i*nImps+ii] << ",";
 			}
-		//	os << "}," << std::endl;
+			os << "}," << std::endl;
 		}
 		os << "};" << std::endl;
 	}

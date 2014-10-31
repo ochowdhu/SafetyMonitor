@@ -1,61 +1,47 @@
 /** Auto Generated monitor configuration */
-// FORMULA: ['orprop', ['prop', 'x0000'], ['prop', 'x0001']]
-// FORMULA: ['orprop', ['prop', 'x0001'], ['prop', 'x0002']]
-// FORMULA: ['orprop', ['prop', 'x0002'], ['prop', 'x0003']]
-// FORMULA: ['orprop', ['prop', 'x0003'], ['prop', 'x0004']]
-// FORMULA: ['orprop', ['prop', 'x0004'], ['prop', 'x0005']]
-// FORMULA: ['orprop', ['prop', 'x0005'], ['prop', 'x0006']]
-// FORMULA: ['orprop', ['prop', 'x0006'], ['prop', 'x0007']]
-// FORMULA: ['orprop', ['prop', 'x0007'], ['prop', 'x0008']]
-// FORMULA: ['orprop', ['prop', 'x0008'], ['prop', 'x0009']]
-// FORMULA: ['orprop', ['prop', 'x0009'], ['prop', 'x000a']]
-// FORMULA: ['orprop', ['prop', 'x000a'], ['prop', 'x000b']]
-// FORMULA: ['orprop', ['prop', 'x000b'], ['prop', 'x000c']]
-// FORMULA: ['orprop', ['prop', 'x000c'], ['prop', 'x000d']]
-// FORMULA: ['orprop', ['prop', 'x000d'], ['prop', 'x000e']]
-// FORMULA: ['orprop', ['prop', 'x000e'], ['prop', 'x000f']]
-// FORMULA: ['orprop', ['prop', 'x000f'], ['prop', 'x0010']]
-// FORMULA: ['orprop', ['prop', 'x0010'], ['prop', 'x0011']]
-// FORMULA: ['orprop', ['prop', 'x0011'], ['prop', 'x0012']]
-// FORMULA: ['orprop', ['prop', 'x0012'], ['prop', 'x0013']]
-// FORMULA: ['orprop', ['prop', 'x0013'], ['prop', 'x0014']]
-// FORMULA: ['orprop', ['prop', 'x0014'], ['prop', 'x0015']]
-// FORMULA: ['orprop', ['prop', 'x0015'], ['prop', 'x0016']]
-// FORMULA: ['orprop', ['prop', 'x0016'], ['prop', 'x0017']]
-// FORMULA: ['orprop', ['prop', 'x0017'], ['prop', 'x0018']]
-// FORMULA: ['orprop', ['prop', 'x0018'], ['prop', 'x0019']]
-// FORMULA: ['orprop', ['prop', 'x0019'], ['prop', 'x001a']]
-// FORMULA: ['orprop', ['prop', 'x001a'], ['prop', 'x001b']]
-// FORMULA: ['orprop', ['prop', 'x001b'], ['prop', 'x001c']]
-// FORMULA: ['orprop', ['prop', 'x001c'], ['prop', 'x001d']]
-// FORMULA: ['orprop', ['prop', 'x001d'], ['prop', 'x001e']]
-// FORMULA: ['orprop', ['prop', 'x001e'], ['prop', 'x001f']]
-// FORMULA: ['orprop', ['prop', 'x001f'], ['prop', 'x0020']]
-// FORMULA: ['orprop', ['prop', 'x0020'], ['prop', 'x0021']]
-// FORMULA: ['orprop', ['prop', 'x0021'], ['prop', 'x0022']]
-// FORMULA: ['orprop', ['prop', 'x0022'], ['prop', 'x0023']]
-// FORMULA: ['orprop', ['prop', 'x0023'], ['prop', 'x0024']]
-// FORMULA: ['orprop', ['prop', 'x0024'], ['prop', 'x0025']]
-// FORMULA: ['orprop', ['prop', 'x0025'], ['prop', 'x0026']]
-// FORMULA: ['orprop', ['prop', 'x0026'], ['prop', 'x0027']]
-// FORMULA: ['orprop', ['prop', 'x0027'], ['prop', 'x0028']]
-// FORMULA: ['orprop', ['prop', 'x0028'], ['prop', 'x0029']]
-// FORMULA: ['orprop', ['prop', 'x0029'], ['prop', 'x002a']]
-// FORMULA: ['orprop', ['prop', 'x002a'], ['prop', 'x002b']]
-// FORMULA: ['orprop', ['prop', 'x002b'], ['prop', 'x002c']]
-// FORMULA: ['orprop', ['prop', 'x002c'], ['prop', 'x002d']]
-// FORMULA: ['orprop', ['prop', 'x002d'], ['prop', 'x002e']]
-// FORMULA: ['orprop', ['prop', 'x002e'], ['prop', 'x002f']]
-// FORMULA: ['orprop', ['prop', 'x002f'], ['prop', 'x0030']]
-// FORMULA: ['orprop', ['prop', 'x0030'], ['prop', 'x0031']]
-// FORMULA: ['orprop', ['prop', 'x0031'], ['prop', 'x0032']]
+// FORMULA: ['orprop', ['prop', 'x0000'], ['notprop', ['orprop', ['prop', 'x0001'], ['notprop', ['impprop', ['prop', 'x0002'], ['prop', 'x0004']]]]]]
 #include "monconfig.h"
-const int ftype[NFORMULAS] = { VALUE_T, VALUE_T, VALUE_T, PROP_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, PROP_T, OR_T, };
-const formula notForms[NF_NOT] = {0,2,1,};
-const formula orForms[NF_OR*NF_OR] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,3,2,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,2,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,2,0,0,0,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,2,0,0,0,0,11,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,2,0,0,0,0,0,13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,2,0,0,0,0,0,0,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,2,0,0,0,0,0,0,0,17,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,2,0,0,0,0,0,0,0,0,19,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,11,2,0,0,0,0,0,0,0,0,0,21,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,12,2,0,0,0,0,0,0,0,0,0,0,23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,2,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,14,2,0,0,0,0,0,0,0,0,0,0,0,0,27,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,2,0,0,0,0,0,0,0,0,0,0,0,0,0,29,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,31,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,17,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,33,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,35,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,19,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,37,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,20,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,39,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,21,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,43,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,23,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,45,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,24,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,47,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,49,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,26,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,51,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,27,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,53,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,28,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,55,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,29,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,57,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,30,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,59,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,31,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,61,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,32,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,63,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,33,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,65,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,34,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,67,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,35,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,69,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,36,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,71,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,37,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,73,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,38,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,75,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,39,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,77,0,0,0,0,0,0,0,0,0,0,0,0,0,0,40,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,79,0,0,0,0,0,0,0,0,0,0,0,0,0,41,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,81,0,0,0,0,0,0,0,0,0,0,0,0,42,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,83,0,0,0,0,0,0,0,0,0,0,0,43,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,85,0,0,0,0,0,0,0,0,0,0,44,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,87,0,0,0,0,0,0,0,0,0,45,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,89,0,0,0,0,0,0,0,0,46,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,91,0,0,0,0,0,0,0,47,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,93,0,0,0,0,0,0,48,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,95,0,0,0,0,0,49,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,97,0,0,0,0,50,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,99,0,0,0,51,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,101,0,0,52,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,103,0,53,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,};
-const formula andForms[NF_AND*NF_AND] = {0,0,0,0,1,1,0,1,2,};
-const formula impForms[NF_IMP*NF_IMP] = {0,0,0,0,2,2,0,1,2,};
-const formula POLICIES[NPOLICIES] = { 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 99, 101, 103, };
+const int ftype[NFORMULAS] = { VALUE_T, VALUE_T, VALUE_T, PROP_T, PROP_T, PROP_T, PROP_T, IMPLIES_T, NOT_T, NOT_T, NOT_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, NOT_T, NOT_T, NOT_T, NOT_T, NOT_T, NOT_T, NOT_T, NOT_T, NOT_T, NOT_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, OR_T, };
+const formula notForms[NF_NOT] = {0,2,1,8,9,10,17,18,19,20,21,22,23,24,25,26,};
+const formula orForms[NF_OR][NF_OR] = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,1,2,4,5,8,6,9,7,10,3,17,11,18,19,12,20,13,21,22,14,23,15,24,25,16,26,},
+{0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,},
+{0,4,2,0,11,12,13,14,15,16,27,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,5,2,11,0,0,0,0,0,0,29,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,8,2,12,0,0,0,0,0,0,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,6,2,13,0,0,0,0,0,0,36,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,9,2,14,0,0,0,0,0,0,37,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,7,2,15,0,0,0,0,0,0,43,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,10,2,16,0,0,0,0,0,0,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,3,2,27,29,30,36,37,43,44,0,28,31,32,33,34,35,38,39,40,41,42,45,46,47,48,49,},
+{0,17,2,0,0,0,0,0,0,0,28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,11,2,0,0,0,0,0,0,0,31,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,18,2,0,0,0,0,0,0,0,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,19,2,0,0,0,0,0,0,0,33,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,12,2,0,0,0,0,0,0,0,34,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,20,2,0,0,0,0,0,0,0,35,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,13,2,0,0,0,0,0,0,0,38,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,21,2,0,0,0,0,0,0,0,39,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,22,2,0,0,0,0,0,0,0,40,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,14,2,0,0,0,0,0,0,0,41,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,23,2,0,0,0,0,0,0,0,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,15,2,0,0,0,0,0,0,0,45,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,24,2,0,0,0,0,0,0,0,46,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,25,2,0,0,0,0,0,0,0,47,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,16,2,0,0,0,0,0,0,0,48,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+{0,26,2,0,0,0,0,0,0,0,49,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,},
+};
+const formula andForms[NF_AND][NF_AND] = {{0,0,0,},
+{0,1,1,},
+{0,1,2,},
+};
+const formula impForms[NF_IMP][NF_IMP] = {{0,0,0,0,0,},
+{0,2,2,2,2,},
+{0,1,2,5,6,},
+{0,0,2,0,7,},
+{0,0,2,0,0,},
+};
+const formula POLICIES[NPOLICIES] = { 49, };
 // build structures
 void build_struct(void) {
 int i,j;
@@ -105,262 +91,334 @@ residue resbuffers[NSTRUCT][NBUFLEN];
 void build_formula(void) {
 formulas[0].type = VALUE_T;
 formulas[0].val.value = 2;
+formulas[0].notTag = 0;
+formulas[0].orTag = 0;
+formulas[0].andTag = 0;
+formulas[0].impTag = 0;
 formulas[1].type = VALUE_T;
 formulas[1].val.value = 0;
+formulas[1].notTag = 1;
+formulas[1].orTag = 1;
+formulas[1].andTag = 1;
+formulas[1].impTag = 1;
 formulas[2].type = VALUE_T;
 formulas[2].val.value = 1;
+formulas[2].notTag = 2;
+formulas[2].orTag = 2;
+formulas[2].andTag = 2;
+formulas[2].impTag = 2;
 formulas[3].type = PROP_T;
 formulas[3].val.propMask = MASK_x0000;
+formulas[3].notTag = -1;
+formulas[3].orTag = 10;
+formulas[3].andTag = -1;
+formulas[3].impTag = -1;
 formulas[4].type = PROP_T;
 formulas[4].val.propMask = MASK_x0001;
-formulas[5].type = OR_T;
-formulas[5].val.children.lchild = 3;
-formulas[5].val.children.rchild = 4;
+formulas[4].notTag = 6;
+formulas[4].orTag = 3;
+formulas[4].andTag = -1;
+formulas[4].impTag = -1;
+formulas[5].type = PROP_T;
+formulas[5].val.propMask = MASK_x0002;
+formulas[5].notTag = 3;
+formulas[5].orTag = 4;
+formulas[5].andTag = -1;
+formulas[5].impTag = 3;
 formulas[6].type = PROP_T;
-formulas[6].val.propMask = MASK_x0002;
-formulas[7].type = OR_T;
-formulas[7].val.children.lchild = 4;
+formulas[6].val.propMask = MASK_x0004;
+formulas[6].notTag = 4;
+formulas[6].orTag = 6;
+formulas[6].andTag = -1;
+formulas[6].impTag = 4;
+formulas[7].type = IMPLIES_T;
+formulas[7].val.children.lchild = 5;
 formulas[7].val.children.rchild = 6;
-formulas[8].type = PROP_T;
-formulas[8].val.propMask = MASK_x0003;
-formulas[9].type = OR_T;
-formulas[9].val.children.lchild = 6;
-formulas[9].val.children.rchild = 8;
-formulas[10].type = PROP_T;
-formulas[10].val.propMask = MASK_x0004;
+formulas[7].notTag = 5;
+formulas[7].orTag = 8;
+formulas[7].andTag = -1;
+formulas[7].impTag = -1;
+formulas[8].type = NOT_T;
+formulas[8].val.child = 5;
+formulas[8].notTag = 8;
+formulas[8].orTag = 5;
+formulas[8].andTag = -1;
+formulas[8].impTag = -1;
+formulas[9].type = NOT_T;
+formulas[9].val.child = 6;
+formulas[9].notTag = 11;
+formulas[9].orTag = 7;
+formulas[9].andTag = -1;
+formulas[9].impTag = -1;
+formulas[10].type = NOT_T;
+formulas[10].val.child = 7;
+formulas[10].notTag = 14;
+formulas[10].orTag = 9;
+formulas[10].andTag = -1;
+formulas[10].impTag = -1;
 formulas[11].type = OR_T;
-formulas[11].val.children.lchild = 8;
-formulas[11].val.children.rchild = 10;
-formulas[12].type = PROP_T;
-formulas[12].val.propMask = MASK_x0005;
+formulas[11].val.children.lchild = 4;
+formulas[11].val.children.rchild = 5;
+formulas[11].notTag = 7;
+formulas[11].orTag = 12;
+formulas[11].andTag = -1;
+formulas[11].impTag = -1;
+formulas[12].type = OR_T;
+formulas[12].val.children.lchild = 4;
+formulas[12].val.children.rchild = 8;
+formulas[12].notTag = 9;
+formulas[12].orTag = 15;
+formulas[12].andTag = -1;
+formulas[12].impTag = -1;
 formulas[13].type = OR_T;
-formulas[13].val.children.lchild = 10;
-formulas[13].val.children.rchild = 12;
-formulas[14].type = PROP_T;
-formulas[14].val.propMask = MASK_x0006;
+formulas[13].val.children.lchild = 4;
+formulas[13].val.children.rchild = 6;
+formulas[13].notTag = 10;
+formulas[13].orTag = 17;
+formulas[13].andTag = -1;
+formulas[13].impTag = -1;
+formulas[14].type = OR_T;
+formulas[14].val.children.lchild = 4;
+formulas[14].val.children.rchild = 9;
+formulas[14].notTag = 12;
+formulas[14].orTag = 20;
+formulas[14].andTag = -1;
+formulas[14].impTag = -1;
 formulas[15].type = OR_T;
-formulas[15].val.children.lchild = 12;
-formulas[15].val.children.rchild = 14;
-formulas[16].type = PROP_T;
-formulas[16].val.propMask = MASK_x0007;
-formulas[17].type = OR_T;
-formulas[17].val.children.lchild = 14;
-formulas[17].val.children.rchild = 16;
-formulas[18].type = PROP_T;
-formulas[18].val.propMask = MASK_x0008;
-formulas[19].type = OR_T;
-formulas[19].val.children.lchild = 16;
-formulas[19].val.children.rchild = 18;
-formulas[20].type = PROP_T;
-formulas[20].val.propMask = MASK_x0009;
-formulas[21].type = OR_T;
-formulas[21].val.children.lchild = 18;
-formulas[21].val.children.rchild = 20;
-formulas[22].type = PROP_T;
-formulas[22].val.propMask = MASK_x000a;
-formulas[23].type = OR_T;
-formulas[23].val.children.lchild = 20;
-formulas[23].val.children.rchild = 22;
-formulas[24].type = PROP_T;
-formulas[24].val.propMask = MASK_x000b;
-formulas[25].type = OR_T;
-formulas[25].val.children.lchild = 22;
-formulas[25].val.children.rchild = 24;
-formulas[26].type = PROP_T;
-formulas[26].val.propMask = MASK_x000c;
+formulas[15].val.children.lchild = 4;
+formulas[15].val.children.rchild = 7;
+formulas[15].notTag = 13;
+formulas[15].orTag = 22;
+formulas[15].andTag = -1;
+formulas[15].impTag = -1;
+formulas[16].type = OR_T;
+formulas[16].val.children.lchild = 4;
+formulas[16].val.children.rchild = 10;
+formulas[16].notTag = 15;
+formulas[16].orTag = 25;
+formulas[16].andTag = -1;
+formulas[16].impTag = -1;
+formulas[17].type = NOT_T;
+formulas[17].val.child = 4;
+formulas[17].notTag = -1;
+formulas[17].orTag = 11;
+formulas[17].andTag = -1;
+formulas[17].impTag = -1;
+formulas[18].type = NOT_T;
+formulas[18].val.child = 11;
+formulas[18].notTag = -1;
+formulas[18].orTag = 13;
+formulas[18].andTag = -1;
+formulas[18].impTag = -1;
+formulas[19].type = NOT_T;
+formulas[19].val.child = 8;
+formulas[19].notTag = -1;
+formulas[19].orTag = 14;
+formulas[19].andTag = -1;
+formulas[19].impTag = -1;
+formulas[20].type = NOT_T;
+formulas[20].val.child = 12;
+formulas[20].notTag = -1;
+formulas[20].orTag = 16;
+formulas[20].andTag = -1;
+formulas[20].impTag = -1;
+formulas[21].type = NOT_T;
+formulas[21].val.child = 13;
+formulas[21].notTag = -1;
+formulas[21].orTag = 18;
+formulas[21].andTag = -1;
+formulas[21].impTag = -1;
+formulas[22].type = NOT_T;
+formulas[22].val.child = 9;
+formulas[22].notTag = -1;
+formulas[22].orTag = 19;
+formulas[22].andTag = -1;
+formulas[22].impTag = -1;
+formulas[23].type = NOT_T;
+formulas[23].val.child = 14;
+formulas[23].notTag = -1;
+formulas[23].orTag = 21;
+formulas[23].andTag = -1;
+formulas[23].impTag = -1;
+formulas[24].type = NOT_T;
+formulas[24].val.child = 15;
+formulas[24].notTag = -1;
+formulas[24].orTag = 23;
+formulas[24].andTag = -1;
+formulas[24].impTag = -1;
+formulas[25].type = NOT_T;
+formulas[25].val.child = 10;
+formulas[25].notTag = -1;
+formulas[25].orTag = 24;
+formulas[25].andTag = -1;
+formulas[25].impTag = -1;
+formulas[26].type = NOT_T;
+formulas[26].val.child = 16;
+formulas[26].notTag = -1;
+formulas[26].orTag = 26;
+formulas[26].andTag = -1;
+formulas[26].impTag = -1;
 formulas[27].type = OR_T;
-formulas[27].val.children.lchild = 24;
-formulas[27].val.children.rchild = 26;
-formulas[28].type = PROP_T;
-formulas[28].val.propMask = MASK_x000d;
+formulas[27].val.children.lchild = 3;
+formulas[27].val.children.rchild = 4;
+formulas[27].notTag = -1;
+formulas[27].orTag = -1;
+formulas[27].andTag = -1;
+formulas[27].impTag = -1;
+formulas[28].type = OR_T;
+formulas[28].val.children.lchild = 3;
+formulas[28].val.children.rchild = 17;
+formulas[28].notTag = -1;
+formulas[28].orTag = -1;
+formulas[28].andTag = -1;
+formulas[28].impTag = -1;
 formulas[29].type = OR_T;
-formulas[29].val.children.lchild = 26;
-formulas[29].val.children.rchild = 28;
-formulas[30].type = PROP_T;
-formulas[30].val.propMask = MASK_x000e;
+formulas[29].val.children.lchild = 3;
+formulas[29].val.children.rchild = 5;
+formulas[29].notTag = -1;
+formulas[29].orTag = -1;
+formulas[29].andTag = -1;
+formulas[29].impTag = -1;
+formulas[30].type = OR_T;
+formulas[30].val.children.lchild = 3;
+formulas[30].val.children.rchild = 8;
+formulas[30].notTag = -1;
+formulas[30].orTag = -1;
+formulas[30].andTag = -1;
+formulas[30].impTag = -1;
 formulas[31].type = OR_T;
-formulas[31].val.children.lchild = 28;
-formulas[31].val.children.rchild = 30;
-formulas[32].type = PROP_T;
-formulas[32].val.propMask = MASK_x000f;
+formulas[31].val.children.lchild = 3;
+formulas[31].val.children.rchild = 11;
+formulas[31].notTag = -1;
+formulas[31].orTag = -1;
+formulas[31].andTag = -1;
+formulas[31].impTag = -1;
+formulas[32].type = OR_T;
+formulas[32].val.children.lchild = 3;
+formulas[32].val.children.rchild = 18;
+formulas[32].notTag = -1;
+formulas[32].orTag = -1;
+formulas[32].andTag = -1;
+formulas[32].impTag = -1;
 formulas[33].type = OR_T;
-formulas[33].val.children.lchild = 30;
-formulas[33].val.children.rchild = 32;
-formulas[34].type = PROP_T;
-formulas[34].val.propMask = MASK_x0010;
+formulas[33].val.children.lchild = 3;
+formulas[33].val.children.rchild = 19;
+formulas[33].notTag = -1;
+formulas[33].orTag = -1;
+formulas[33].andTag = -1;
+formulas[33].impTag = -1;
+formulas[34].type = OR_T;
+formulas[34].val.children.lchild = 3;
+formulas[34].val.children.rchild = 12;
+formulas[34].notTag = -1;
+formulas[34].orTag = -1;
+formulas[34].andTag = -1;
+formulas[34].impTag = -1;
 formulas[35].type = OR_T;
-formulas[35].val.children.lchild = 32;
-formulas[35].val.children.rchild = 34;
-formulas[36].type = PROP_T;
-formulas[36].val.propMask = MASK_x0011;
+formulas[35].val.children.lchild = 3;
+formulas[35].val.children.rchild = 20;
+formulas[35].notTag = -1;
+formulas[35].orTag = -1;
+formulas[35].andTag = -1;
+formulas[35].impTag = -1;
+formulas[36].type = OR_T;
+formulas[36].val.children.lchild = 3;
+formulas[36].val.children.rchild = 6;
+formulas[36].notTag = -1;
+formulas[36].orTag = -1;
+formulas[36].andTag = -1;
+formulas[36].impTag = -1;
 formulas[37].type = OR_T;
-formulas[37].val.children.lchild = 34;
-formulas[37].val.children.rchild = 36;
-formulas[38].type = PROP_T;
-formulas[38].val.propMask = MASK_x0012;
+formulas[37].val.children.lchild = 3;
+formulas[37].val.children.rchild = 9;
+formulas[37].notTag = -1;
+formulas[37].orTag = -1;
+formulas[37].andTag = -1;
+formulas[37].impTag = -1;
+formulas[38].type = OR_T;
+formulas[38].val.children.lchild = 3;
+formulas[38].val.children.rchild = 13;
+formulas[38].notTag = -1;
+formulas[38].orTag = -1;
+formulas[38].andTag = -1;
+formulas[38].impTag = -1;
 formulas[39].type = OR_T;
-formulas[39].val.children.lchild = 36;
-formulas[39].val.children.rchild = 38;
-formulas[40].type = PROP_T;
-formulas[40].val.propMask = MASK_x0013;
+formulas[39].val.children.lchild = 3;
+formulas[39].val.children.rchild = 21;
+formulas[39].notTag = -1;
+formulas[39].orTag = -1;
+formulas[39].andTag = -1;
+formulas[39].impTag = -1;
+formulas[40].type = OR_T;
+formulas[40].val.children.lchild = 3;
+formulas[40].val.children.rchild = 22;
+formulas[40].notTag = -1;
+formulas[40].orTag = -1;
+formulas[40].andTag = -1;
+formulas[40].impTag = -1;
 formulas[41].type = OR_T;
-formulas[41].val.children.lchild = 38;
-formulas[41].val.children.rchild = 40;
-formulas[42].type = PROP_T;
-formulas[42].val.propMask = MASK_x0014;
+formulas[41].val.children.lchild = 3;
+formulas[41].val.children.rchild = 14;
+formulas[41].notTag = -1;
+formulas[41].orTag = -1;
+formulas[41].andTag = -1;
+formulas[41].impTag = -1;
+formulas[42].type = OR_T;
+formulas[42].val.children.lchild = 3;
+formulas[42].val.children.rchild = 23;
+formulas[42].notTag = -1;
+formulas[42].orTag = -1;
+formulas[42].andTag = -1;
+formulas[42].impTag = -1;
 formulas[43].type = OR_T;
-formulas[43].val.children.lchild = 40;
-formulas[43].val.children.rchild = 42;
-formulas[44].type = PROP_T;
-formulas[44].val.propMask = MASK_x0015;
+formulas[43].val.children.lchild = 3;
+formulas[43].val.children.rchild = 7;
+formulas[43].notTag = -1;
+formulas[43].orTag = -1;
+formulas[43].andTag = -1;
+formulas[43].impTag = -1;
+formulas[44].type = OR_T;
+formulas[44].val.children.lchild = 3;
+formulas[44].val.children.rchild = 10;
+formulas[44].notTag = -1;
+formulas[44].orTag = -1;
+formulas[44].andTag = -1;
+formulas[44].impTag = -1;
 formulas[45].type = OR_T;
-formulas[45].val.children.lchild = 42;
-formulas[45].val.children.rchild = 44;
-formulas[46].type = PROP_T;
-formulas[46].val.propMask = MASK_x0016;
+formulas[45].val.children.lchild = 3;
+formulas[45].val.children.rchild = 15;
+formulas[45].notTag = -1;
+formulas[45].orTag = -1;
+formulas[45].andTag = -1;
+formulas[45].impTag = -1;
+formulas[46].type = OR_T;
+formulas[46].val.children.lchild = 3;
+formulas[46].val.children.rchild = 24;
+formulas[46].notTag = -1;
+formulas[46].orTag = -1;
+formulas[46].andTag = -1;
+formulas[46].impTag = -1;
 formulas[47].type = OR_T;
-formulas[47].val.children.lchild = 44;
-formulas[47].val.children.rchild = 46;
-formulas[48].type = PROP_T;
-formulas[48].val.propMask = MASK_x0017;
+formulas[47].val.children.lchild = 3;
+formulas[47].val.children.rchild = 25;
+formulas[47].notTag = -1;
+formulas[47].orTag = -1;
+formulas[47].andTag = -1;
+formulas[47].impTag = -1;
+formulas[48].type = OR_T;
+formulas[48].val.children.lchild = 3;
+formulas[48].val.children.rchild = 16;
+formulas[48].notTag = -1;
+formulas[48].orTag = -1;
+formulas[48].andTag = -1;
+formulas[48].impTag = -1;
 formulas[49].type = OR_T;
-formulas[49].val.children.lchild = 46;
-formulas[49].val.children.rchild = 48;
-formulas[50].type = PROP_T;
-formulas[50].val.propMask = MASK_x0018;
-formulas[51].type = OR_T;
-formulas[51].val.children.lchild = 48;
-formulas[51].val.children.rchild = 50;
-formulas[52].type = PROP_T;
-formulas[52].val.propMask = MASK_x0019;
-formulas[53].type = OR_T;
-formulas[53].val.children.lchild = 50;
-formulas[53].val.children.rchild = 52;
-formulas[54].type = PROP_T;
-formulas[54].val.propMask = MASK_x001a;
-formulas[55].type = OR_T;
-formulas[55].val.children.lchild = 52;
-formulas[55].val.children.rchild = 54;
-formulas[56].type = PROP_T;
-formulas[56].val.propMask = MASK_x001b;
-formulas[57].type = OR_T;
-formulas[57].val.children.lchild = 54;
-formulas[57].val.children.rchild = 56;
-formulas[58].type = PROP_T;
-formulas[58].val.propMask = MASK_x001c;
-formulas[59].type = OR_T;
-formulas[59].val.children.lchild = 56;
-formulas[59].val.children.rchild = 58;
-formulas[60].type = PROP_T;
-formulas[60].val.propMask = MASK_x001d;
-formulas[61].type = OR_T;
-formulas[61].val.children.lchild = 58;
-formulas[61].val.children.rchild = 60;
-formulas[62].type = PROP_T;
-formulas[62].val.propMask = MASK_x001e;
-formulas[63].type = OR_T;
-formulas[63].val.children.lchild = 60;
-formulas[63].val.children.rchild = 62;
-formulas[64].type = PROP_T;
-formulas[64].val.propMask = MASK_x001f;
-formulas[65].type = OR_T;
-formulas[65].val.children.lchild = 62;
-formulas[65].val.children.rchild = 64;
-formulas[66].type = PROP_T;
-formulas[66].val.propMask = MASK_x0020;
-formulas[67].type = OR_T;
-formulas[67].val.children.lchild = 64;
-formulas[67].val.children.rchild = 66;
-formulas[68].type = PROP_T;
-formulas[68].val.propMask = MASK_x0021;
-formulas[69].type = OR_T;
-formulas[69].val.children.lchild = 66;
-formulas[69].val.children.rchild = 68;
-formulas[70].type = PROP_T;
-formulas[70].val.propMask = MASK_x0022;
-formulas[71].type = OR_T;
-formulas[71].val.children.lchild = 68;
-formulas[71].val.children.rchild = 70;
-formulas[72].type = PROP_T;
-formulas[72].val.propMask = MASK_x0023;
-formulas[73].type = OR_T;
-formulas[73].val.children.lchild = 70;
-formulas[73].val.children.rchild = 72;
-formulas[74].type = PROP_T;
-formulas[74].val.propMask = MASK_x0024;
-formulas[75].type = OR_T;
-formulas[75].val.children.lchild = 72;
-formulas[75].val.children.rchild = 74;
-formulas[76].type = PROP_T;
-formulas[76].val.propMask = MASK_x0025;
-formulas[77].type = OR_T;
-formulas[77].val.children.lchild = 74;
-formulas[77].val.children.rchild = 76;
-formulas[78].type = PROP_T;
-formulas[78].val.propMask = MASK_x0026;
-formulas[79].type = OR_T;
-formulas[79].val.children.lchild = 76;
-formulas[79].val.children.rchild = 78;
-formulas[80].type = PROP_T;
-formulas[80].val.propMask = MASK_x0027;
-formulas[81].type = OR_T;
-formulas[81].val.children.lchild = 78;
-formulas[81].val.children.rchild = 80;
-formulas[82].type = PROP_T;
-formulas[82].val.propMask = MASK_x0028;
-formulas[83].type = OR_T;
-formulas[83].val.children.lchild = 80;
-formulas[83].val.children.rchild = 82;
-formulas[84].type = PROP_T;
-formulas[84].val.propMask = MASK_x0029;
-formulas[85].type = OR_T;
-formulas[85].val.children.lchild = 82;
-formulas[85].val.children.rchild = 84;
-formulas[86].type = PROP_T;
-formulas[86].val.propMask = MASK_x002a;
-formulas[87].type = OR_T;
-formulas[87].val.children.lchild = 84;
-formulas[87].val.children.rchild = 86;
-formulas[88].type = PROP_T;
-formulas[88].val.propMask = MASK_x002b;
-formulas[89].type = OR_T;
-formulas[89].val.children.lchild = 86;
-formulas[89].val.children.rchild = 88;
-formulas[90].type = PROP_T;
-formulas[90].val.propMask = MASK_x002c;
-formulas[91].type = OR_T;
-formulas[91].val.children.lchild = 88;
-formulas[91].val.children.rchild = 90;
-formulas[92].type = PROP_T;
-formulas[92].val.propMask = MASK_x002d;
-formulas[93].type = OR_T;
-formulas[93].val.children.lchild = 90;
-formulas[93].val.children.rchild = 92;
-formulas[94].type = PROP_T;
-formulas[94].val.propMask = MASK_x002e;
-formulas[95].type = OR_T;
-formulas[95].val.children.lchild = 92;
-formulas[95].val.children.rchild = 94;
-formulas[96].type = PROP_T;
-formulas[96].val.propMask = MASK_x002f;
-formulas[97].type = OR_T;
-formulas[97].val.children.lchild = 94;
-formulas[97].val.children.rchild = 96;
-formulas[98].type = PROP_T;
-formulas[98].val.propMask = MASK_x0030;
-formulas[99].type = OR_T;
-formulas[99].val.children.lchild = 96;
-formulas[99].val.children.rchild = 98;
-formulas[100].type = PROP_T;
-formulas[100].val.propMask = MASK_x0031;
-formulas[101].type = OR_T;
-formulas[101].val.children.lchild = 98;
-formulas[101].val.children.rchild = 100;
-formulas[102].type = PROP_T;
-formulas[102].val.propMask = MASK_x0032;
-formulas[103].type = OR_T;
-formulas[103].val.children.lchild = 100;
-formulas[103].val.children.rchild = 102;
+formulas[49].val.children.lchild = 3;
+formulas[49].val.children.rchild = 26;
+formulas[49].notTag = -1;
+formulas[49].orTag = -1;
+formulas[49].andTag = -1;
+formulas[49].impTag = -1;
 }
 
 void incrStruct(int step) { 

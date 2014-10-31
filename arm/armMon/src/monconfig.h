@@ -48,10 +48,12 @@ extern resbuf mainresbuf[NPOLICIES];
 extern residue mainresbuffers[NPOLICIES][NBUFLEN];
 
 // formula simplify lookup tables for reduce
-extern const formula notForms[NFORMULAS];
-extern const formula orForms[NFORMULAS*NFORMULAS];
-extern const formula andForms[NFORMULAS*NFORMULAS];
-extern const formula impForms[NFORMULAS*NFORMULAS];
+extern const formula notForms[NF_NOT];
+extern const formula orForms[NF_OR][NF_OR];
+#ifdef FULL_LOGIC
+extern const formula andForms[NF_AND][NF_AND];
+extern const formula impForms[NF_IMP][NF_IMP];
+#endif
 //extern const formula untilForms[NFORMULAS][NFORMULAS];
 //extern const formula sinceForms[NFORMULAS][NFORMULAS];
 
