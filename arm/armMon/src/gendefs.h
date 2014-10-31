@@ -1,10 +1,10 @@
 /** Auto Generated definitions */
-#define NFORMULAS (50)
-#define NSTRUCT (0)
-#define NBUFLEN (2)
-#define FORM_DELAY (0)
-#define NPOLICIES (1)
-#define STACK_DEPTH (12)
+#define NFORMULAS (403)
+#define NSTRUCT (200)
+#define NBUFLEN (18)
+#define FORM_DELAY (14)
+#define NPOLICIES (100)
+#define STACK_DEPTH (7)
 #define MON_AGGR
 #define MON_CONS
 #define FULL_LOGIC
@@ -1011,7 +1011,7 @@
 #define MASK_x03e7 999
 #define WORDSZ 32
 #define NPROP 1000
-#define NF_NOT (16)
-#define NF_OR (27)
+#define NF_NOT (103)
+#define NF_OR (3)
 #define NF_AND (3)
-#define NF_IMP (5)
+#define NF_IMP (3)

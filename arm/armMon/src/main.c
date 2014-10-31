@@ -33,6 +33,7 @@
 #include "circbuf.h"
 #include "monitor.h"
 #include "monconfig.h"
+#include "gendefs.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -226,23 +227,30 @@ void TIM2_IRQHandler()
 {
     if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET || sim)
     {
+				int i;
 				// safely grab nstate
 				// INTERRUPTS OFF
 				__disable_irq();
-				cstate = nstate;
+				for (i = 0; i < NPROPINTS; i++) {
+					cstate[i] = nstate[i];
+				}
 				__enable_irq();
 				// INTERRUPTS ON
 				instep++; // this might need to be atomic -- but shouldn't be used by anyone above us
 				incrStruct(instep);
 				// add residue to list
-				cons_res.step = instep;
-				cons_res.form = POLICY;
-				// reduce when we add
-				#ifdef IM_REDUCE 
-				reduce(instep, &cons_res);
-				#endif
-				rbInsert(&mainresbuf, cons_res.step, cons_res.form);
-				checkConsStep();
+				for (i = 0; i < NPOLICIES; i++) {
+					cons_res.step = instep;
+					cons_res.form = POLICIES[i];
+
+					// reduce when we add
+					#ifdef IM_REDUCE 
+					reduce(instep, &cons_res);
+					#endif
+					rbInsert(&mainresbuf[i], cons_res.step, cons_res.form);
+					// this should be ok here (don't need to do all inserts before checking 
+					checkConsStep(&mainresbuf[i]);
+				}
 
 				// just to see that we're running...
 				if ((instep % 40) == 0) { // 1s (40@25ms)
@@ -372,44 +380,46 @@ int main(void)
 		// need to be aware of state updating out from under us
 		// but it's always safe to give the "old" answer and then keep going
 		// grab state
-		NVIC_DisableIRQ(TIM2_IRQn);
-		agstep = instep;
-		start = mainresbuf.start;
-		end = mainresbuf.end;
-		NVIC_EnableIRQ(TIM2_IRQn);
-		while (start != end) {
-			///////////////////////////////////
-			// just disable the conservative trigger
+		for (i = 0; i < NPOLICIES; i++) {
 			NVIC_DisableIRQ(TIM2_IRQn);
-			resp = rbGet(&mainresbuf, start);
-			// copy residue
-			res.form = resp->form;
-			res.step = resp->step;
+			agstep = instep;
+			start = mainresbuf[i].start;
+			end = mainresbuf[i].end;
 			NVIC_EnableIRQ(TIM2_IRQn);
-			////////////////////////////////////
-			// now we can reduce our copied residue
-			reduce(instep, &res);
-			// check for aggressive violation
-			if (res.form == FORM_FALSE) {
-				// we're triggering this failure without ensuring it'll get into the buffer for now
-				// need to see how much jitter all this blocking will add
-				traceViolate();
+			while (start != end) {
+				///////////////////////////////////
+				// just disable the conservative trigger
+				NVIC_DisableIRQ(TIM2_IRQn);
+				resp = rbGet(&mainresbuf[i], start);
+				// copy residue
+				res.form = resp->form;
+				res.step = resp->step;
+				NVIC_EnableIRQ(TIM2_IRQn);
+				////////////////////////////////////
+				// now we can reduce our copied residue
+				reduce(instep, &res);
+				// check for aggressive violation
+				if (res.form == FORM_FALSE) {
+					// we're triggering this failure without ensuring it'll get into the buffer for now
+					// need to see how much jitter all this blocking will add
+					traceViolate();
+				}
+				////////////////////////////////
+				// check if we got interrupted by period
+				NVIC_DisableIRQ(TIM2_IRQn);
+				if (agstep == instep) {
+					// put res into mainresbuf[start]
+					mainresbuf[i].buf[start].form = res.form;
+					mainresbuf[i].buf[start].step = res.step;
+					start = (start + 1) % mainresbuf[i].size;
+				} else {
+					start = mainresbuf[i].start;
+					end = mainresbuf[i].end;
+					agstep = instep;
+				}
+				NVIC_EnableIRQ(TIM2_IRQn);
+				//////////////////////////////
 			}
-			////////////////////////////////
-			// check if we got interrupted by period
-			NVIC_DisableIRQ(TIM2_IRQn);
-			if (agstep == instep) {
-				// put res into mainresbuf[start]
-				mainresbuf.buf[start].form = res.form;
-				mainresbuf.buf[start].step = res.step;
-				start = (start + 1) % mainresbuf.size;
-			} else {
-				start = mainresbuf.start;
-				end = mainresbuf.end;
-				agstep = instep;
-			}
-			NVIC_EnableIRQ(TIM2_IRQn);
-			//////////////////////////////
 		}
 		// checked everything, busy wait until next tick
 		// ok to not lock here, we might miss by one iteration
