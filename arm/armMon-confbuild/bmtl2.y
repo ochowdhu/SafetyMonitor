@@ -8,7 +8,7 @@
 #include <fstream>
 #include <cstring>
 // getopt stuff
-//#include <unistd>
+#include <unistd.h>
 #include <ctype.h>
 #include <stdlib.h>
 // flex stuff

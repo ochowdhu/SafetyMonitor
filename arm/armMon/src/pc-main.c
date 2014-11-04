@@ -76,10 +76,22 @@ int csvgetline(FILE *fin)
 	//printf("getline on buf %s\n", buf);
 	for (q = buf; (p=strtok(q, ",\n\r")) != NULL; q = NULL) {
 	//	printf("tokenizing, p is %s\n", p);
-		if (strcmp(p,"0") != 0) {
-			field[nfield] = 1;
+		if (nfield == MASK_FObjLnSens_LnSenseDistToLLnEdge || nfield == MASK_FObjLnSens_LnSnsDistToRLnEdge) {
+			float val = atof(p);
+			if (val <= 1.0F)
+				field[nfield] = 1;
+			else
+				field[nfield] = 0;
+		} else if (nfield == MASK_HmiALC_HMI_e_e_ALCFeatState){
+			field[nfield] = (strcmp(p,"8")==0)? 1 : 0;
 		} else {
-			field[nfield] = 0;
+			if (strcmp(p,"0") != 0) {
+				//printf("token: %d is 1 -- %s\n", nfield, p);
+				field[nfield] = 1;
+			} else {
+				//printf("token: %d is 0 -- %s\n", nfield, p);
+				field[nfield] = 0;
+			}
 		}
 		nfield++;
 	}
@@ -98,6 +110,8 @@ void updateState() {
 		//printf("value from field: %d == prop %d is %d\n", field[i], i, getProp(i));
 		//printf("cstate[i] is %x\n", cstate[i/WORDSZ]);
 	}
+	//printf("HsEcm.EngRunActive should be %d", getProp(MASK_HsEcm_EngRunActive));
+	// load fobj_dist to lane
 	/*cstate[0] |= field[0] << 0;
 	cstate[0] |= field[1] << 1;
 	cstate[0] |= field[2] << 2;
@@ -291,7 +305,7 @@ int main(int argc, char** argv) {
 
 
 void traceViolate() {
-	//printf("Trace VIOLATED!!! @ %d\n",instep);
+	printf("Trace VIOLATED!!! @ %d\n",instep);
 	tracesat = 0;
 }
 void stepSatisfy() {

@@ -12,7 +12,7 @@
 [ \t]	;
 true	{ yylval.bval = true; return VALUE; }
 false	{ yylval.bval = false; return VALUE; }
-[_a-zA-Z][_a-zA-Z0-9]*	{yylval.sval = strdup(yytext); return PROP;}
+[_a-zA-Z][_a-zA-Z0-9\.]*	{yylval.sval = strdup(yytext); return PROP;}
 [0-9]+	{ yylval.ival = atoi(yytext); return BOUND;}
 "~"		{return NOT;}
 "&&"	{ return AND;}
