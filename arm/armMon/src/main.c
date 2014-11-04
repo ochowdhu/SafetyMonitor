@@ -19,12 +19,15 @@
   ******************************************************************************  
   */ 
 
-#define USE_FULL_ASSERT
+//#define USE_FULL_ASSERT
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4_discovery.h"
 #include "stm32f4xx_tim.h"
 #include "stm32f4xx_gpio.h"
+#include "stm32f4xx_can.h"
+#include "stm32f4xx_rcc.h"
+#include "misc.h"
 
 //#include "stm
 // Monitor includes
@@ -65,7 +68,7 @@
 ///////////////////////////
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/ 
-int delay, cstep, lcount, sim = FALSE;
+int delay, cstep, sim = FALSE;
 #define TDATASIZE 1200
 #define IM_REDUCE
 int testdata[TDATASIZE];
@@ -75,8 +78,9 @@ residue cons_res, *cresp;
 
 /* Private function prototypes -----------------------------------------------*/
 void Delay (uint32_t nCount);
-void checkConsStep(void);
 /* Private functions ---------------------------------------------------------*/
+
+
 
 /**
  * CAN Setup function
@@ -267,9 +271,9 @@ void TIM3_IRQHandler()
     if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET || sim)
     {
 				if (instep + 1 < TDATASIZE) 
-					nstate = testdata[instep+1];
+					nstate[0] = testdata[instep+1];
 				else
-					nstate = 0;
+					nstate[0] = 0;
         TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
     }
 }
@@ -279,26 +283,20 @@ void TIM3_IRQHandler()
 void updateState() {
 		switch (RxMessage.StdId) {
 			// fake value fill for now
-			case 0x123:
-				nstate &= ~(1<<1);
-				if (RxMessage.Data[0] == 1)
-						nstate |= (1<<1);
+			case 0x1A0:
+					nstate[0] = RxMessage.Data[0];
 				break;
+			//case 0x1A1:
+			//		nstate[1] = RxMessage.Data[0];
+			//	break;
 			case 0x555:
-				nstate &= ~(1<<2);
-				if (RxMessage.Data[1] > 10)
-						nstate |= (1 << 2);
+				nstate[1] = 0;
+				if (RxMessage.Data[0] > 10)
+						nstate[0] |= 0x01;
+				break;
 		}
 }
 int checkReceive(CanRxMsg *msg) {
-	TxMessage.StdId = 0x321;
-  TxMessage.ExtId = 0x01;
-  TxMessage.RTR = CAN_RTR_DATA;
-  TxMessage.IDE = CAN_ID_STD;
-  TxMessage.DLC = 3;
-	TxMessage.Data[0] = 0xAA;
-	TxMessage.Data[1] = 0x55;
-	TxMessage.Data[2] = 0xAA;
 	if ((msg->DLC != 3) || msg->StdId != 0x321) {
 		return 0;
 	}
@@ -328,19 +326,22 @@ int main(void)
 	// global variable initialization
 	instep = 0;
 	estep = 0;	
-	cstate = 0;
-	nstate = 0x00;
-	lcount = 1;
+	//cstate[0] = 0;
+	//nstate[0] = 0x00;
+	for (i = 0; i < NPROPINTS; i++) {
+		cstate[i] = 0;
+		nstate[i] = 0;
+	}
+
 	
 	for (i = 0; i < TDATASIZE; i++) {
 		testdata[i] = 0x01;
 	}
+	
 	//// non-monitor setup
 	InitCAN();
 	InitializeTimer();
-	//// Timer interrupt starts the monitor, 
-	//// so do this right before entering loop
-	//EnableTimerInterrupt();
+	//// Timer interrupt starts the monitor, call EnableTimerInterrupt() below when ready
 	
   /* Initialize LEDs mounted on STM32F4-Discovery board ***************************/
   STM_EVAL_LEDInit(LED4);
@@ -436,6 +437,9 @@ void traceViolate() {
 void stepSatisfy() {
 	STM_EVAL_LEDOn(LED4);
 }
+void traceFail() {
+	STM_EVAL_LEDOn(LED6);
+}
 
 /**
   * @brief  Inserts a delay time.
@@ -472,6 +476,7 @@ void assert_failed(uint8_t* file, uint32_t line)
 }
 #endif
  
+
 
 /******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
 

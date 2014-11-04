@@ -23,7 +23,7 @@ extern int numreduces;
 typedef struct {
 	int ctime;
 	int delay;
-	formula formula;
+	formula stformula;
 	resbuf* residues;
 	intring* ttime;
 	intring* ftime;

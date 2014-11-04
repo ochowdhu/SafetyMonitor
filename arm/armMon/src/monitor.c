@@ -10,7 +10,7 @@
 
 #ifndef PC_MODE
 // need this for checkCons to trigger failure -- should pull out fail/success functions
-#include "stm32f4_discovery.h"
+//#include "stm32f4_discovery.h"
 #endif
 
 #define BIT(n) (1 << (n))
@@ -54,7 +54,7 @@ void printRing(intring* ring);
 
 void initResStruct(resStructure* st, formula form, int delay, resbuf *res, intring *t, intring *f) {
 	st->delay = delay;
-	st->formula = form;
+	st->stformula = form;
 	st->ctime = 0;
 	st->residues = res;
 	st->ttime = t;
@@ -758,8 +758,8 @@ int eventCheck(int step, residue* res) {
 	int l, h; // temporal bounds
 	intring *beta; 
 	intNode *nnb;
-	resbuf *reslist;
-	residue *resp;
+	//resbuf *reslist;
+	//residue *resp;
 	// interval vars
 	int islow, ishigh;
 
@@ -800,8 +800,8 @@ int alwaysCheck(int step, residue* res) {
 	int l, h; // temporal bounds
 	intring *beta; 
 	intNode *nnb;
-	resbuf *reslist;
-	residue *resp;
+	//resbuf *reslist;
+	//residue *resp;
 	// interval vars
 	int islow, ishigh;
 
@@ -843,8 +843,8 @@ int peventCheck(int step, residue* res) {
 	int l, h; // temporal bounds
 	intring *beta; 
 	intNode *nnb;
-	resbuf *reslist;
-	residue *resp;
+	//resbuf *reslist;
+	//residue *resp;
 	// interval vars
 	int islow, ishigh;
 
@@ -891,8 +891,8 @@ int palwaysCheck(int step, residue* res) {
 	int l, h; // temporal bounds
 	intring *beta; 
 	intNode *nnb;
-	resbuf *reslist;
-	residue *resp;
+	//resbuf *reslist;
+	//residue *resp;
 	// interval vars
 	int islow, ishigh;
 

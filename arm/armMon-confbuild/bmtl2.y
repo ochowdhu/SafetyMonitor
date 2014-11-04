@@ -347,8 +347,8 @@ int main(int argc, char** argv) {
 				  << "intNode intnodebuf[NSTRUCT][2][NBUFLEN];" << std::endl
 				  << "intNode *intnodebufP[NSTRUCT][2][NBUFLEN];" << std::endl
 				  << "intbuf intbuffer[NSTRUCT][2];" << std::endl
-				  << "intring intringbuffer[NSTRUCT][2];" << std::endl
-				  << "residue resbuffers[NSTRUCT][NBUFLEN];" << std::endl;
+				  << "intring intringbuffer[NSTRUCT][2];" << std::endl;
+				  //<< "residue resbuffers[NSTRUCT][NBUFLEN];" << std::endl;
 
 
 		// print formulas
@@ -364,7 +364,7 @@ int main(int argc, char** argv) {
 				  << "for (i = 0; i < NSTRUCT; i++) {" << std::endl
 				  << "resStructure *cStruct = &theStruct[i];" << std::endl
 				  << "// add residue to structure" << std::endl 
-				  << "rbInsert(cStruct->residues, step, cStruct->formula);" << std::endl
+				  << "rbInsert(cStruct->residues, step, cStruct->stformula);" << std::endl
 				  << "// call reduce on all residues" << std::endl
 				  << "cres = cStruct->residues->start;" << std::endl
 				  << "eres = cStruct->residues->end;" << std::endl
