@@ -32,7 +32,7 @@ typedef struct {
 extern void initResStruct(resStructure* st, formula form, int delay, resbuf *res, intring *t, intring *f);
 extern residue* stGetRes(resStructure *st, int pos);
 extern void reduce(int step, residue *res);
-extern void checkConsStep(resbuf *buf);
+extern void checkConsStep(resbuf *buf, int i);
 extern void checkConsStepLoop(resbuf *buf);
 
 //extern formula getForm(fNode n);

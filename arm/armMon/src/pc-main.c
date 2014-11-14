@@ -37,6 +37,10 @@ unsigned long stepcount = 0;
 unsigned long nt_incr = 0, nt_polinc=0, nt_cons=0, nt_aggr=0;
 unsigned long lmtime = 0;
 unsigned long mres_count = 0;
+///// aggressive stuff
+unsigned long n_imred = 0;
+unsigned long n_early = 0;
+unsigned long ns_early = 0;
 
 // OSX clock stuff
 #ifdef __MACH__
@@ -233,7 +237,15 @@ int main(int argc, char** argv) {
 			reduce(instep, &cons_res);
 			#endif
 			//printf("after reduction, cons_res is (%d,%d)\n", cons_res.step, cons_res.form);
-			rbInsert(&mainresbuf[s], cons_res.step, cons_res.form);
+			if (ftype[cons_res.form] == VALUE_T) {
+				n_imred++;
+				if (cons_res.form == FORM_FALSE) {
+					traceViolate(s);
+				}
+			} else {
+				rbInsert(&mainresbuf[s], cons_res.step, cons_res.form);
+			}
+			
 			//printf("added (%d,%d) to ring\n", cons_res.step, cons_res.form);
 		}
 		get_monotonic_time(&tem);
@@ -247,7 +259,7 @@ int main(int argc, char** argv) {
 		#ifdef MON_CONS
 		get_monotonic_time(&tsm);
 		for (s = 0; s < NPOLICIES; s++) {
-			checkConsStep(&mainresbuf[s]);
+			checkConsStep(&mainresbuf[s], s);
 		//checkConsStepLoop();
 		}
 		get_monotonic_time(&tem);
@@ -272,10 +284,18 @@ int main(int argc, char** argv) {
 					//printf("step %d is TRUE\n", resp->step);
 					rbSafeRemove(&mainresbuf[s], start);
 					stepSatisfy();
+					if (resp->step != instep) {
+						ns_early += instep - resp->step;
+						n_early++;
+					}
 				} else if (resp->form == FORM_FALSE) {
 					//printf("step %d is FALSE\n", resp->step);
 					rbSafeRemove(&mainresbuf[s], start);
-					traceViolate();
+					traceViolate(s);
+					if (resp->step != instep) {
+						ns_early += instep - resp->step;
+						n_early++;
+					}
 				} 
 				start = (start + 1) % mainresbuf[s].size;
 			}
@@ -293,9 +313,10 @@ int main(int argc, char** argv) {
 	get_monotonic_time(&total_tem);
 	////////////////////////////////////////////////
 	// FINISHED CHECKING, print stats
-	printf("mainres count = %d\n", mres_count);
+	printf("mainres count = %lu\n", mres_count);
 	printf("numreduces = %d\n", numreduces);
 	printf("TIMES: total: %09lu, incr: %09lu, policy: %09lu, cons: %09lu, aggr: %09lu, steps: %lu\n", get_elapsed_ltime(&total_tsm,&total_tem), nt_incr, nt_polinc, nt_cons, nt_aggr, stepcount);
+	printf("AGGRCOUNT: n_imred: %09lu, n_early: %09lu, ns_early: %09lu\n", n_imred, n_early, ns_early);
 	printf("Trace finished. Satisfied is %s\n", tracesat ? "true" : "false");
 	#ifdef __MACH__
   	mach_port_deallocate(mach_task_self(), cclock);
@@ -304,7 +325,7 @@ int main(int argc, char** argv) {
 
 
 
-void traceViolate() {
+void traceViolate(int i) {
 	printf("Trace VIOLATED!!! @ %d\n",instep);
 	tracesat = 0;
 }

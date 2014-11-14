@@ -86,9 +86,9 @@ void Delay (uint32_t nCount);
  * CAN Setup function
  */
 void InitCAN() {
-	GPIO_InitTypeDef  GPIO_InitStructure;
-	CAN_InitTypeDef        CAN_InitStructure;
-	CAN_FilterInitTypeDef  CAN_FilterInitStructure;
+  GPIO_InitTypeDef  GPIO_InitStructure;
+  CAN_InitTypeDef        CAN_InitStructure;
+  CAN_FilterInitTypeDef  CAN_FilterInitStructure;
   /* CAN GPIOs configuration **************************************************/
 
   /* Enable GPIO clock */
@@ -115,15 +115,15 @@ void InitCAN() {
 
   /* CAN cell init */
   CAN_StructInit(&CAN_InitStructure);
-	// Set stuff that isn't default
+  // Set stuff that isn't default
   /* CAN Baudrate = 1 MBps (CAN clocked at 30 MHz) */
   //CAN_InitStructure.CAN_BS1 = CAN_BS1_6tq;
   //CAN_InitStructure.CAN_BS2 = CAN_BS2_8tq;
-	CAN_InitStructure.CAN_BS1 = CAN_BS1_14tq;
+  CAN_InitStructure.CAN_BS1 = CAN_BS1_14tq;
   CAN_InitStructure.CAN_BS2 = CAN_BS2_6tq;
-	CAN_InitStructure.CAN_Mode = CAN_Mode_Normal;
+  CAN_InitStructure.CAN_Mode = CAN_Mode_Normal;
   //CAN_InitStructure.CAN_Prescaler = 2; // 1Mbps
-	CAN_InitStructure.CAN_Prescaler = 4;	// 500kbps
+  CAN_InitStructure.CAN_Prescaler = 4;	// 500kbps
   CAN_Init(CANx, &CAN_InitStructure);
 
   /* CAN filter init */
@@ -144,12 +144,12 @@ void InitCAN() {
   
   /* Transmit Structure preparation */
 
-	TxMessage.StdId = 0x321;
-    TxMessage.ExtId = 0x01;
-    TxMessage.RTR = CAN_RTR_DATA;
-    TxMessage.IDE = CAN_ID_STD;
-    TxMessage.DLC = 3;
-	TxMessage.Data[0] = 0xAA;
+	TxMessage.StdId = 0x01;
+  TxMessage.ExtId = 0x01;
+  TxMessage.RTR = CAN_RTR_DATA;
+  TxMessage.IDE = CAN_ID_STD;
+  TxMessage.DLC = 3;
+	TxMessage.Data[0] = 0xFF;   // this will get filled with failed invar value
 	TxMessage.Data[1] = 0x55;
 	TxMessage.Data[2] = 0xAA;
   /* Enable FIFO 0 message pending Interrupt */
@@ -160,17 +160,17 @@ void InitCAN() {
  */
 void InitializeTimer()
 {
-    TIM_TimeBaseInitTypeDef timerInitStructure;
+  TIM_TimeBaseInitTypeDef timerInitStructure;
 
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
-    timerInitStructure.TIM_Prescaler = 42000 - 1;	// get 2kHz clock
-    timerInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
-    timerInitStructure.TIM_Period = 50 - 1 ;		// 2kHz @ 50 cycles is 25ms
-    timerInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
-    timerInitStructure.TIM_RepetitionCounter = 0;
-    TIM_TimeBaseInit(TIM2, &timerInitStructure);
-    TIM_Cmd(TIM2, ENABLE);
+  timerInitStructure.TIM_Prescaler = 42000 - 1;	// get 2kHz clock
+  timerInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  timerInitStructure.TIM_Period = 50 - 1 ;		// 2kHz @ 50 cycles is 25ms
+  timerInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+  timerInitStructure.TIM_RepetitionCounter = 0;
+  TIM_TimeBaseInit(TIM2, &timerInitStructure);
+  TIM_Cmd(TIM2, ENABLE);
 	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
 	
 		
@@ -238,9 +238,10 @@ void TIM2_IRQHandler()
 				for (i = 0; i < NPROPINTS; i++) {
 					cstate[i] = nstate[i];
 				}
+        // add any heartbeat style masks here to clear nstate
 				__enable_irq();
 				// INTERRUPTS ON
-				instep++; // this might need to be atomic -- but shouldn't be used by anyone above us
+				instep++; // this might need to be atomic -- but not used by anyone above us
 				incrStruct(instep);
 				// add residue to list
 				for (i = 0; i < NPOLICIES; i++) {
@@ -253,7 +254,7 @@ void TIM2_IRQHandler()
 					#endif
 					rbInsert(&mainresbuf[i], cons_res.step, cons_res.form);
 					// this should be ok here (don't need to do all inserts before checking 
-					checkConsStep(&mainresbuf[i]);
+					checkConsStep(&mainresbuf[i], i);
 				}
 
 				// just to see that we're running...
@@ -278,13 +279,19 @@ void TIM3_IRQHandler()
     }
 }
 
+// quick define, we'll put these into maskdefs once we know what they are
+#define MASK_HB 1
 // Fill nstate with current CAN value -- 
 // this should actually come from genmonconfig eventually
 void updateState() {
 		switch (RxMessage.StdId) {
+      // fill 'em up
+      case NET_HB:
+        nstate[0] |= ((RxMessage.Data[0] & (1 << 4)) << MASK_HB); // or whatever
+        break;
 			// fake value fill for now
 			case 0x1A0:
-					nstate[0] = RxMessage.Data[0];
+				nstate[0] = RxMessage.Data[0];
 				break;
 			//case 0x1A1:
 			//		nstate[1] = RxMessage.Data[0];
@@ -403,7 +410,7 @@ int main(void)
 				if (res.form == FORM_FALSE) {
 					// we're triggering this failure without ensuring it'll get into the buffer for now
 					// need to see how much jitter all this blocking will add
-					traceViolate();
+					traceViolate(i);
 				}
 				////////////////////////////////
 				// check if we got interrupted by period
@@ -430,9 +437,12 @@ int main(void)
 }
 
 /** Trace satisfaction and violation -- what to do when these happens depends on system, so putting here */
-void traceViolate() {
+void traceViolate(int i) {
 	STM_EVAL_LEDOff(LED4);
 	STM_EVAL_LEDOn(LED5);
+  // send Violation message
+  TxMessage.Data[0] = i;
+	CAN_Transmit(CANx, &TxMessage);
 }
 void stepSatisfy() {
 	STM_EVAL_LEDOn(LED4);

@@ -69,6 +69,6 @@ extern void build_formula(void);
 extern void build_struct(void);
 extern void incrStruct(int step);
 
-extern void traceViolate(void);
+extern void traceViolate(int i);
 extern void stepSatisfy(void);
 extern void traceFail(void);

@@ -939,7 +939,7 @@ int palwaysCheck(int step, residue* res) {
 
 // We only call this when we start a new step, so no need to check
 // that we're in a new one
-void checkConsStep(resbuf *buf) {
+void checkConsStep(resbuf *buf, int i) {
 	residue* cresp;
 	int start, end;
 	
@@ -959,7 +959,7 @@ void checkConsStep(resbuf *buf) {
 				rbSafeRemove(buf, start);
 				#endif
 			} else if (cresp->form == FORM_FALSE) {
-				traceViolate();
+				traceViolate(i);
 				#ifdef PC_MODE
 				rbSafeRemove(buf, start);
 				#endif
@@ -988,7 +988,7 @@ void checkConsStepLoop(resbuf *buf) {
 				stepSatisfy();
 				rbSafeRemove(buf, start);
 			} else if (cresp->form == FORM_FALSE) {
-				traceViolate();
+				traceViolate(0); // need to pass this policy, but we don't use it right now
 				rbSafeRemove(buf, start);
 			} else {	// not possible...
 				traceFail();
