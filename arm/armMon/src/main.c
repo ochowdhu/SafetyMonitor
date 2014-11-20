@@ -250,7 +250,7 @@ void TIM2_IRQHandler()
 
 					// reduce when we add
 					#ifdef IM_REDUCE 
-					reduce(instep, &cons_res);
+					reduce(instep, &cons_res,0);
 					#endif
 					rbInsert(&mainresbuf[i], cons_res.step, cons_res.form);
 					// this should be ok here (don't need to do all inserts before checking 
@@ -405,7 +405,7 @@ int main(void)
 				NVIC_EnableIRQ(TIM2_IRQn);
 				////////////////////////////////////
 				// now we can reduce our copied residue
-				reduce(instep, &res);
+				reduce(instep, &res, 1);
 				// check for aggressive violation
 				if (res.form == FORM_FALSE) {
 					// we're triggering this failure without ensuring it'll get into the buffer for now

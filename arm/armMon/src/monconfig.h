@@ -58,12 +58,12 @@ extern const formula impForms[NF_IMP][NF_IMP];
 //extern const formula sinceForms[NFORMULAS][NFORMULAS];
 
 // iterative reduce stack stuff
-extern formulaStack redStack;
-extern formulaStack redStackVals;
-extern formulaStack redStackDir;
-extern formula redStackBuf[STACK_DEPTH];
-extern formula redStackValsBuf[STACK_DEPTH];
-extern formula redStackDirBuf[STACK_DEPTH];
+extern formulaStack redStackC, redStackA;
+extern formulaStack redStackValsC, redStackValsA;
+extern formulaStack redStackDirC, redStackDirA;
+extern formula redStackBufC[STACK_DEPTH], redStackBufA[STACK_DEPTH];
+extern formula redStackValsBufC[STACK_DEPTH], redStackValsBufA[STACK_DEPTH];
+extern formula redStackDirBufC[STACK_DEPTH], redStackDirBufA[STACK_DEPTH];
 
 extern void build_formula(void);
 extern void build_struct(void);

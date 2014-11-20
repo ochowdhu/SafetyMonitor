@@ -67,6 +67,20 @@ double get_elapsed_time(struct timespec *before, struct timespec *after){
 unsigned long get_elapsed_ltime(struct timespec *before, struct timespec *after) {
 	return (after->tv_sec - before->tv_sec)*1000000000 + (after->tv_nsec-before->tv_nsec);
 }
+
+#ifndef MASK_FObjLnSens_LnSenseDistToLLnEdge
+#define MASK_FObjLnSens_LnSenseDistToLLnEdge 1
+#endif
+
+#ifndef MASK_FObjLnSens_LnSnsDistToRLnEdge
+#define MASK_FObjLnSens_LnSnsDistToRLnEdge 2
+#endif
+#ifndef MASK_HmiALC_HMI_e_e_ALCFeatState
+#define MASK_HmiALC_HMI_e_e_ALCFeatState 3
+#endif
+
+
+
 //stolen from 'the practice of programming'
 int csvgetline(FILE *fin)
 {	
@@ -234,7 +248,7 @@ int main(int argc, char** argv) {
 			cons_res.form = POLICIES[s];
 			//printf("before reduction, cons_res is (%d,%d)\n", cons_res.step, cons_res.form);
 			#ifdef IM_REDUCE
-			reduce(instep, &cons_res);
+			reduce(instep, &cons_res, 0);
 			#endif
 			//printf("after reduction, cons_res is (%d,%d)\n", cons_res.step, cons_res.form);
 			if (ftype[cons_res.form] == VALUE_T) {
@@ -278,7 +292,7 @@ int main(int argc, char** argv) {
 			while (start != end) {
 				resp = rbGet(&mainresbuf[s], start);
 				//printf("reducing %d\n", start);
-				reduce(instep, resp);
+				reduce(instep, resp, 1);
 				//printf("in step: %d, reduced %d to %d\n", instep, resp->step, resp->form);
 				if (resp->form == FORM_TRUE) {
 					//printf("step %d is TRUE\n", resp->step);

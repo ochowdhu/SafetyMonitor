@@ -300,9 +300,12 @@ int main(int argc, char** argv) {
 		monconfig << "// build structures" << std::endl << "void build_struct(void) {" << std::endl;
 		//@TODO should put actual delay per structure in here eventually
 		monconfig  << "int i,j;" << std::endl
-				  << "fstackInit(&redStack, STACK_DEPTH, redStackBuf);" << std::endl
-				  << "fstackInit(&redStackVals, STACK_DEPTH, redStackValsBuf);" << std::endl
-				  << "fstackInit(&redStackDir, STACK_DEPTH, redStackDirBuf);" << std::endl
+				  << "fstackInit(&redStackC, STACK_DEPTH, redStackBufC);" << std::endl
+				  << "fstackInit(&redStackValsC, STACK_DEPTH, redStackValsBufC);" << std::endl
+				  << "fstackInit(&redStackDirC, STACK_DEPTH, redStackDirBufC);" << std::endl
+				  << "fstackInit(&redStackA, STACK_DEPTH, redStackBufA);" << std::endl
+				  << "fstackInit(&redStackValsA, STACK_DEPTH, redStackValsBufA);" << std::endl
+				  << "fstackInit(&redStackDirA, STACK_DEPTH, redStackDirBufA);" << std::endl
 				  << "for (i = 0; i < NPOLICIES; i++) { " << std::endl
 				  << "resbInit(&mainresbuf[i], NBUFLEN, mainresbuffers[i]);" << std::endl
 				  << "}" << std::endl
@@ -337,12 +340,12 @@ int main(int argc, char** argv) {
 				  << "resbuf mainresbuf[NPOLICIES];" << std::endl 
 				  << "residue mainresbuffers[NPOLICIES][NBUFLEN];" << std::endl
 				  << "// iterative stack stuff" << std::endl 
-				  << "formulaStack redStack;" << std::endl
-				  << "formulaStack redStackVals;" << std::endl
-				  << "formulaStack redStackDir;" << std::endl
-				  << "formula redStackBuf[STACK_DEPTH];" << std::endl
-				  << "formula redStackValsBuf[STACK_DEPTH];" << std::endl
-				  << "formula redStackDirBuf[STACK_DEPTH];" << std::endl
+				  << "formulaStack redStackC, redStackA;" << std::endl
+				  << "formulaStack redStackValsC, redStackValsA;" << std::endl
+				  << "formulaStack redStackDirC, redStackDirA;" << std::endl
+				  << "formula redStackBufC[STACK_DEPTH], redStackBufA[STACK_DEPTH];" << std::endl
+				  << "formula redStackValsBufC[STACK_DEPTH],redStackValsBufA[STACK_DEPTH];" << std::endl
+				  << "formula redStackDirBufC[STACK_DEPTH],redStackDirBufA[STACK_DEPTH];" << std::endl
 				  << "// interval stuff" << std::endl
 				  << "intNode intnodebuf[NSTRUCT][2][NBUFLEN];" << std::endl
 				  << "intNode *intnodebufP[NSTRUCT][2][NBUFLEN];" << std::endl
@@ -371,7 +374,7 @@ int main(int argc, char** argv) {
 				  << "// loop over every residue" << std::endl
 				  << "while (cres != eres) {" << std::endl
 				  << "resp = stGetRes(cStruct, cres);" << std::endl
-				  << "reduce(step, resp);" << std::endl
+				  << "reduce(step, resp, 0);" << std::endl
 				  << "#ifdef USEINTS" << std::endl
 				  << "if (resp->form == FORM_TRUE) { RingAddStep(resp->step, cStruct->ttime); rbSafeRemove(cStruct->residues, cres);}" << std::endl
 				  << "else if (resp->form == FORM_FALSE) { RingAddStep(resp->step, cStruct->ftime); rbSafeRemove(cStruct->residues, cres);};" << std::endl

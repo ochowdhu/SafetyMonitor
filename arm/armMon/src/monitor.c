@@ -67,9 +67,9 @@ residue* stGetRes(resStructure *st, int pos) {
 #ifdef PC_MODE
 void printDS() {
 	printf("stack: [");
-	int sp = redStackDir.sp;
+	int sp = redStackDirC.sp;
 	while (sp > 0) {
-		printf("%d ", redStackDir.stack[sp--]);
+		printf("%d ", redStackDirC.stack[sp--]);
 	}
 	printf("]\n");
 }
@@ -78,7 +78,7 @@ void printDS() {
 #ifdef ITERATIVE_RED
 // Iterative Reduce, used to be itreduce -- now just using preprocessor
 //void itreduce(int step, residue *res) {
-void reduce(int step, residue *res) {
+void reduce(int step, residue *res, int aggr) {
 	//if (step < 0) { return FORM_TRUE;};
 	fNode root;
 	residue child1;
@@ -86,144 +86,154 @@ void reduce(int step, residue *res) {
 	int type;
 	int rstep; 
 	formula froot, prevNode;
+	formulaStack *redStack, *redStackVals, *redStackDir;
 	//prevNode = 0;
+	if (aggr) {
+		redStack = &redStackA;
+		redStackVals = &redStackValsA;
+		redStackDir= &redStackDirA;
+	} else {
+		redStack = &redStackC;
+		redStackVals = &redStackValsC;
+		redStackDir= &redStackDirC;
+	}
 	// clear stacks
-	stackReset(&redStack);
-	stackReset(&redStackVals);
-	stackReset(&redStackDir);
+	stackReset(redStack);
+	stackReset(redStackVals);
+	stackReset(redStackDir);
 	// set up stuff
 	rstep = res->step;
-	stackPush(&redStack, res->form);
-	stackPush(&redStackDir, DIR_DOWNLEFT);
+	stackPush(redStack, res->form);
+	stackPush(redStackDir, DIR_DOWNLEFT);
 	// Begin Loop
-	while (stackEmpty(&redStack) == 0) {
+	while (stackEmpty(redStack) == 0) {
 		#ifdef PC_MODE
 		numreduces++;
 		#endif
-		froot = stackPop(&redStack);
+		froot = stackPop(redStack);
 		type = ftype[froot];
-		//printf("reducing %d (%d) from %d in D:[%d %d]\n", froot,type, prevNode, stackPeek(&redStackDir), redStackDir.stack[redStackDir.sp-1]);
+		//printf("reducing %d (%d) from %d in D:[%d %d]\n", froot,type, prevNode, stackPeek(redStackDir), redStackDir.stack[redStackDir.sp-1]);
 		//printDS();
-		//printf("reducing %d type %d in dir %d\n", froot, type, stackPeek(&redStackDir));
+		//printf("reducing %d type %d in dir %d\n", froot, type, stackPeek(redStackDir));
 		switch (type) {
 			//////////
 			case (VALUE_T):
-				stackPush(&redStackVals, froot);
+				stackPush(redStackVals, froot);
 				// flip direction to up, keep left/right
-				stackFlipTop(&redStackDir);
+				stackFlipTop(redStackDir);
 				break;
 			case (PROP_T):
 				// get prop from formula table
 				root = formulas[froot];
 				if (getProp(root.val.propMask)) {
-					stackPush(&redStackVals,FORM_TRUE);
+					stackPush(redStackVals,FORM_TRUE);
 				} else {
-					stackPush(&redStackVals,FORM_FALSE);
+					stackPush(redStackVals,FORM_FALSE);
 				}
 				// flip direction to up, keep left/right
-				stackFlipTop(&redStackDir);
+				stackFlipTop(redStackDir);
 				break;
 			case (NOT_T):
 				root = formulas[froot];
 				// not preserves direction
-				newDir = stackPeek(&redStackDir);
+				newDir = stackPeek(redStackDir);
 				// check direction
 				if (newDir & DIR_UP) {
 					// this works for all three -- notForms gives correct True/False
-					fchild1 = stackPop(&redStackVals);
-					stackPush(&redStackVals, notForms[formulas[fchild1].notTag]);
+					fchild1 = stackPop(redStackVals);
+					stackPush(redStackVals, notForms[formulas[fchild1].notTag]);
 				} else { // going down -- just push not and child to stack
-					stackPush(&redStack, froot);
-					stackPush(&redStack, root.val.child);
+					stackPush(redStack, froot);
+					stackPush(redStack, root.val.child);
 				}
 				break;
 			case (OR_T):
 				root = formulas[froot];
 				// check direction
-				newDir = stackPop(&redStackDir);
+				newDir = stackPop(redStackDir);
 				if (newDir == DIR_UPLEFT) {
 					// check lchild and work on right if not done
-					fchild1 = stackPeek(&redStackVals);
+					fchild1 = stackPeek(redStackVals);
 					if (fchild1 == FORM_TRUE) {
 						// could do nothing, we'll pop and push for now
-						stackPop(&redStackVals);
-						stackPush(&redStackVals, FORM_TRUE);
-						stackFlipTop(&redStackDir);
+						stackPop(redStackVals);
+						stackPush(redStackVals, FORM_TRUE);
+						stackFlipTop(redStackDir);
 					} else { // need to do the right side
-						stackPush(&redStack, froot);
-						stackPush(&redStack, root.val.children.rchild);
-						stackPush(&redStackDir, DIR_DOWNRIGHT);
+						stackPush(redStack, froot);
+						stackPush(redStack, root.val.children.rchild);
+						stackPush(redStackDir, DIR_DOWNRIGHT);
 					}
 				} else if (newDir == DIR_UPRIGHT) {
-					fchild1 = stackPop(&redStackVals);
-					fchild2 = stackPop(&redStackVals);
-					//stackPush(&redStackVals, orForms[fchild2*NFORMULAS+fchild1]);
-					stackPush(&redStackVals, orForms[formulas[fchild2].orTag][formulas[fchild1].orTag]);
-					stackFlipTop(&redStackDir);
+					fchild1 = stackPop(redStackVals);
+					fchild2 = stackPop(redStackVals);
+					//stackPush(redStackVals, orForms[fchild2*NFORMULAS+fchild1]);
+					stackPush(redStackVals, orForms[formulas[fchild2].orTag][formulas[fchild1].orTag]);
+					stackFlipTop(redStackDir);
 				} else { // on the way down, push left
-					stackPush(&redStack, froot);
-					stackPush(&redStack, root.val.children.lchild);
-					stackPush(&redStackDir, newDir);
-					stackPush(&redStackDir, DIR_DOWNLEFT);
+					stackPush(redStack, froot);
+					stackPush(redStack, root.val.children.lchild);
+					stackPush(redStackDir, newDir);
+					stackPush(redStackDir, DIR_DOWNLEFT);
 				}
 				break;
 			#ifdef FULL_LOGIC
 			case (AND_T):
 				root = formulas[froot];
 				// check direction
-				newDir = stackPop(&redStackDir);
+				newDir = stackPop(redStackDir);
 				if (newDir == DIR_UPLEFT) {
 					// check lchild and work on right if not done
-					fchild1 = stackPeek(&redStackVals);
+					fchild1 = stackPeek(redStackVals);
 					if (fchild1 == FORM_FALSE) {
 						// could do nothing, we'll pop and push for now
-						stackPop(&redStackVals);
-						stackPush(&redStackVals, FORM_FALSE);
-						stackFlipTop(&redStackDir);
+						stackPop(redStackVals);
+						stackPush(redStackVals, FORM_FALSE);
+						stackFlipTop(redStackDir);
 					} else { // need to do the right side
-						stackPush(&redStack, froot);
-						stackPush(&redStack, root.val.children.rchild);
-						stackPush(&redStackDir, DIR_DOWNRIGHT);
+						stackPush(redStack, froot);
+						stackPush(redStack, root.val.children.rchild);
+						stackPush(redStackDir, DIR_DOWNRIGHT);
 					}
 				} else if (newDir == DIR_UPRIGHT) {
-					fchild1 = stackPop(&redStackVals);
-					fchild2 = stackPop(&redStackVals);
-					stackPush(&redStackVals, andForms[formulas[fchild2].andTag][formulas[fchild1].andTag]);
-					stackFlipTop(&redStackDir);
+					fchild1 = stackPop(redStackVals);
+					fchild2 = stackPop(redStackVals);
+					stackPush(redStackVals, andForms[formulas[fchild2].andTag][formulas[fchild1].andTag]);
+					stackFlipTop(redStackDir);
 				} else { // on the way down, push left
-					stackPush(&redStack, froot);
-					stackPush(&redStack, root.val.children.lchild);
-					stackPush(&redStackDir, newDir);
-					stackPush(&redStackDir, DIR_DOWNLEFT);
+					stackPush(redStack, froot);
+					stackPush(redStack, root.val.children.lchild);
+					stackPush(redStackDir, newDir);
+					stackPush(redStackDir, DIR_DOWNLEFT);
 				}
 				break;
 			case (IMPLIES_T):
 				root = formulas[froot];
 				// check direction
-				newDir = stackPop(&redStackDir);
+				newDir = stackPop(redStackDir);
 				if (newDir == DIR_UPLEFT) {
 					// check lchild and work on right if not done
-					fchild1 = stackPeek(&redStackVals);
+					fchild1 = stackPeek(redStackVals);
 					if (fchild1 == FORM_FALSE) {
 						// could do nothing, we'll pop and push for now
-						stackPop(&redStackVals);
-						stackPush(&redStackVals, FORM_TRUE);
-						stackFlipTop(&redStackDir);
+						stackPop(redStackVals);
+						stackPush(redStackVals, FORM_TRUE);
+						stackFlipTop(redStackDir);
 					} else { // need to do the right side
-						stackPush(&redStack, froot);
-						stackPush(&redStack, root.val.children.rchild);
-						stackPush(&redStackDir, DIR_DOWNRIGHT);
+						stackPush(redStack, froot);
+						stackPush(redStack, root.val.children.rchild);
+						stackPush(redStackDir, DIR_DOWNRIGHT);
 					}
 				} else if (newDir == DIR_UPRIGHT) {
-					fchild1 = stackPop(&redStackVals);
-					fchild2 = stackPop(&redStackVals);
-					stackPush(&redStackVals, impForms[formulas[fchild2].impTag][formulas[fchild1].impTag]);
-					stackFlipTop(&redStackDir);
+					fchild1 = stackPop(redStackVals);
+					fchild2 = stackPop(redStackVals);
+					stackPush(redStackVals, impForms[formulas[fchild2].impTag][formulas[fchild1].impTag]);
+					stackFlipTop(redStackDir);
 				} else { // on the way down, push left
-					stackPush(&redStack, froot);
-					stackPush(&redStack, root.val.children.lchild);
-					stackPush(&redStackDir, newDir);
-					stackPush(&redStackDir, DIR_DOWNLEFT);
+					stackPush(redStack, froot);
+					stackPush(redStack, root.val.children.lchild);
+					stackPush(redStackDir, newDir);
+					stackPush(redStackDir, DIR_DOWNLEFT);
 				}
 				break;
 			#endif
@@ -243,28 +253,28 @@ void reduce(int step, residue *res) {
 				type = tempCheck[ftype[froot]-6](step, &child1); 
 				if (type == TEMP_TRUE) {
 					//res->form = FORM_TRUE;
-					stackPush(&redStackVals, FORM_TRUE);
+					stackPush(redStackVals, FORM_TRUE);
 				} else if (type == TEMP_FALSE) {
 					//res->form = FORM_FALSE;
-					stackPush(&redStackVals, FORM_FALSE);
+					stackPush(redStackVals, FORM_FALSE);
 				} else {
-					stackPush(&redStackVals, child1.form);
+					stackPush(redStackVals, child1.form);
 				}
 				// no else, just return the residue unchanged
-				stackFlipTop(&redStackDir);
+				stackFlipTop(redStackDir);
 				break;
 			/*case (SINCE_T):
 				child1.step = rstep;
 				child1.form = froot;
 				type = sinceCheck(step, &child1);
 				if (type == TEMP_TRUE) {
-					stackPush(&redStackVals, FORM_TRUE);
+					stackPush(redStackVals, FORM_TRUE);
 					//res->form = FORM_TRUE;
 				} else if (type == TEMP_FALSE) {
-					stackPush(&redStackVals, FORM_FALSE);
+					stackPush(redStackVals, FORM_FALSE);
 					//res->form = FORM_FALSE;
 				} else {
-					stackPush(&redStackVals, child1.form);
+					stackPush(redStackVals, child1.form);
 				}
 				break;
 				*/
@@ -280,13 +290,13 @@ void reduce(int step, residue *res) {
 		prevNode = froot;
 	}
 	//printf("finished red\n");
-	res->form = stackPop(&redStackVals);
-	stackReset(&redStack);
-	stackReset(&redStackVals);
+	res->form = stackPop(redStackVals);
+	stackReset(redStack);
+	stackReset(redStackVals);
 }
 #else
 // Recursive reduce, choose with preprocessor
-void reduce(int step, residue *res) {
+void reduce(int step, residue *res, int aggr) {
 	fNode root;
 	residue child1, child2;
 
@@ -307,7 +317,7 @@ void reduce(int step, residue *res) {
 			// get child
 			child1.step = res->step;
 			child1.form = formulas[res->form].val.child;
-			reduce(step, &child1);
+			reduce(step, &child1, aggr);
 			if (ftype[child1.form] == VALUE_T) {
 				// Got a value, so our root node is [NOT VAL], so return correctly
 				if (child1.form == FORM_TRUE)
@@ -330,8 +340,8 @@ void reduce(int step, residue *res) {
 			child2.step = res->step;
 			child2.form = root.val.children.rchild;
 			//child2.form = root.val.children.rchild->theFormula;
-			reduce(step, &child1);
-			reduce(step, &child2);
+			reduce(step, &child1, aggr);
+			reduce(step, &child2, aggr);
 			// we can optimize by reducing and checking individual steps
 			// but for now let's just reduce both and call into the simplify table
 			//res->form = orForms[child1.form*NFORMULAS+child2.form];
@@ -951,7 +961,7 @@ void checkConsStep(resbuf *buf, int i) {
 	if (start != end) {		// not empty
 		cresp = rbGet(buf, start);						// get first residue in list
 		if ((cresp->step + FORM_DELAY) <= instep) {		// if it's old enough, we'll check it
-			reduce(instep, cresp);
+			reduce(instep, cresp, 0);
 			//printf("reduced <%d,%d>@%d\n", cresp->step, cresp->form, instep);
 			if (cresp->form == FORM_TRUE) {
 				stepSatisfy();
@@ -983,7 +993,7 @@ void checkConsStepLoop(resbuf *buf) {
 	while (start != end) {
 		cresp = rbGet(buf, start);
 		if ((cresp->step + FORM_DELAY) <= instep) {
-			reduce(estep, cresp);
+			reduce(estep, cresp, 0);
 			if (cresp->form == FORM_TRUE) {
 				stepSatisfy();
 				rbSafeRemove(buf, start);
