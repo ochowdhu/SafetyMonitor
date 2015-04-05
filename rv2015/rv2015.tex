@@ -844,6 +844,9 @@ This is approximately two monitoring periods (given that the time to send a high
 
 
 \section{Conclusion}
+The increase in use of third-party, black-box components in safety-critical systems increases the difficulty of verifying the safety and correctness of these systems. Runtime verification is a useful tool during testing and verification of these systems, but performing runtime monitoring of primarily black-box system's requires monitors which do not require instrumentation or source code access.
+
+We have presented a semi-formal monitoring architecture for safety-critical systems made up of potentially black-box components. These monitors check externally observable system properties on a system's broadcast bus. A real-time embedded implementation of this monitor architecture for CAN has been evaluated against a bench CAN network using replayed logs from a research autonomous vehicle. The monitor identified specification violations in the logs in real-time.
 
 %\def\IEEEbibitemsep{0pt plus .5pt}
 \bibliographystyle{../llncs/splncs03}
