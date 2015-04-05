@@ -4,7 +4,7 @@
 % Aaron Kane
 
 %\documentclass[]{Z:/Private/research/TeX/llncs/llncs}
-\documentclass[]{../llncs/llncs}
+\documentclass[]{llncs}
 %\documentclass[]{C:/Users/akane/Documents/Research/TeX/llncs/llncs}
 %% loading some packages, deleted all the info text from the ieee example page
 \usepackage[nocompress]{cite}
@@ -384,6 +384,69 @@ It is aggressive in that the algorithm attempts to check future-time temporal fo
 This is in contrast to many existing runtime monitoring algorithms which either are restricted to past time logics (in which there is no waiting) or only check properties after their available delay. % some aggressive future time algorithms exist but almost always dynamic programming so can't do windowed bounds
 The algorithm is iterative in that the history structure must be updated at each timestep in the trace in order. 
 
+\subsection{Specification Logic}
+The specification logic is built upon a set of atomic propositions which represent system properties (e.g., a proposition $speedLT40mph$ stating that the vehicle speed is less than 40mph). These propositions are created from the observable system state by the semi-formal interface.
+Let $AP$ be the set of atomic propositions. 
+%These propositions are the actual system state propositions which we will monitor (e.g., $speedLT60mph$). 
+A \emph{state} $s: AP \rightarrow \{\top,\bot\}$ is a mapping from $AP$ to the set of truth values. A \emph{trace} $\sigma = s_0s_1s_2\ldots{}s_n$ is a finite sequence of states. We use $\sigma_i$ to denote the state $s_i$ at position $i$ in $\sigma$.
+%
+A time series $\tau = t_0t_1t_2\ldots{}t_n$ is a finite series of timestamps $t\in\mathbb{T}$. The pair $\sigma, \tau$ together represent a timed trace where each timestamp $\tau_i$ is the time associated with the occurance of state $s_i$.
+%A timed trace $\rho = (\sigma, \tau)$ is a tuple containing a trace and a time series where each $\tau_i$ is the timestamp for which the new state $\sigma_i$ was obtained. 
+%
+%We use $\sigma_{\tau}(p)$ to denote the truth value of $p$ at time $\tau$, that is $\forall \tau \in [t_0, t_n]$ where $\tau \in [t_i, t_{i+1})$: $s_{\tau}(p) \equiv s_i(p)$ (for $n = |\sigma|$ and $t_{n +1}$ treated as $\infty$).
+
+\subsection{Specifications}
+\label{sec:formal:spec}
+A \emph{specification} is a set of system invariants written in our bounded MTL variant BMTL which is a past- and future-time MTL with only finite intervals.  
+We refer to the invariants as the specification \emph{rules} or \emph{policies}. The specification rules are checked at every monitored step, so each rule has an implicit unbounded \emph{always} over it (similar to safety rules in \cite{Basin2008}). The syntax of BMTL is shown below:
+%there is an implied unbounded \emph{always} operator over all rules (which is what makes them invariants). 
+
+%% syntax goes here\ldots
+%Our language syntax is
+$$\psi ::=  p \, | \,  \neg \psi \, | \,  \psi_1 \vee \psi_2 \, | \,  \psi_1 \mathcal{U}_{[l,h]} \psi_2 \, | \, \psi_1 \mathcal{S}_{[l,h]} \psi_2$$
+
+Policy formulas are denoted by $\psi$. Policy formulas can include two bounded temporal operators: the past-time operator \emph{since} ($\mathcal{S}$) and the future-time operator \emph{until} ($\mathcal{U}$). 
+%The \emph{until} operator states that $\psi_1$ must be true until (but not including) the time step when $\psi_2$ is true within the time bounds $[l,h]$.
+Both temporal operators include a time bound interval $[l,h]$ where $l,h \in \mathbb{T}$ and $0 \leq l \leq h$. 
+These intervals bound the time in which the triggering subformula $\psi_2$ is evaluated. 
+An \emph{until} formula $\alpha\, \mathcal{U}_{[l,h]}\, \beta$ states that $\alpha$ must be true from the current step $i$ until (but not including) the time step $k$ where $\tau_k \in [\tau_i+l,\tau_i+h]$ and $\beta$ is true. 
+\emph{Since} formulas are similar but in the past: $\alpha\, \mathcal{S}_{[l,h]}\, \beta$ states that $\alpha$ must have been true since (but not including) timestep $k$ where  $\tau_k \in [\tau_i-h,\tau_i-l]$ and $\beta$ was true (where $i$ is the current time step).
+
+%For example, the formula $\alpha\, \mathcal{U}_{[3,5]}\, \beta$ means that $\beta$ must occur at some point within 3 to 5 time units, and $\alpha$ must be true from the current time until that point. 
+Specification policies are interpreted over a timed system trace $\sigma,\tau$. 
+%and associated timestamp series $\tau$. 
+%Each state $s_i$ in $\sigma$ has an associated timestamp $\tau_i$ in $\tau$. 
+%which represents the time at which the state $s_i$ began. 
+We write $\sigma, \tau, j \vDash \varphi$ to represent that the policy $\varphi$ is satisfied by the timed trace $(\sigma, \tau)$ at trace position $j$. We use a common definition of $\vDash$ defined inductively as follows:
+
+%The semantics of our language are defined inductively as follows:
+
+%%@TODO Probably need to do sig,tau,j \vDash so proofs are less confusing
+\begin{align*}
+% true
+\sigma, \tau, j &\vDash \top & &\\
+% prop
+\sigma, \tau, j &\vDash p & \text{ if and only if } & \sigma_{j}(p) = \top \\
+% or
+\sigma, \tau, j &\vDash \neg \psi & \text{ if and only if } & \sigma, \tau, j, \nvDash \psi \\
+% not
+\sigma, \tau, j &\vDash \psi_1 \vee \psi_2 & \text{ if and only if } & \sigma, \tau, j \vDash \psi_1 \text{ or } \sigma, \tau, j \vDash \psi_2 \\
+%% until
+\sigma, \tau, j &\vDash \psi_1 \mathcal{U}_{[l,h]} \psi_2 & \text{ if and only if } 
+	& \exists k: (l \leq \tau_k-\tau_j \leq h), \sigma, \tau, k \vDash \psi_2  \\
+	& & & \text{ and } \forall k': (\tau_j \leq \tau_{k'} < \tau_k), \sigma, \tau, k' \vDash \psi_1 \\
+%% since
+\sigma,\tau, j &\vDash \psi_1 \mathcal{S}_{[l,h]} \psi_2 & \text{ if and only if } 
+	& \exists k:  (l \leq \tau_j - \tau_k \leq h),  \sigma, \tau, k \vDash \psi_2 \\
+	& & & \text{ and } \forall k': (\tau_k < \tau_{k'} \leq \tau_j), \sigma, \tau, k' \vDash \psi_1 \\
+\end{align*}
+
+
+%Note that we use the common definitions of \emph{until} and \emph{since} which do not require the propositions to overlap. For example, for $\alpha \mathcal{U}_{[0,3]} \beta$ at time $0$, if $\beta$ is true at time $2$, then $\alpha$ only needs to be true at times $0$ and $1$ (not also at $2$). The \emph{since} operator is similar ($\alpha$ does not need to be true at the time $\beta$ is).
+
+We use the usual notational conveniences for the other common logic operators: \emph{eventually} ($\lozenge_{[l,h]} \psi \equiv \top\, \mathcal{U}_{[l,h]} \psi$), \emph{always} ($\square_{[l,h]} \psi \equiv \neg \lozenge_{[l,h]} \neg \psi$), \emph{past eventually} ($\blacklozenge_{[l,h]} \psi \equiv \top\, \mathcal{S}_{[l,h]} \psi$), \emph{past always} ($\blacksquare_{[l,h]} \equiv \neg \blacklozenge_{[l,h]} \neg \psi$) and the boolean connectives \emph{and} and \emph{implies} ($\wedge, \rightarrow$). 
+
+
 
 \subsection{Definitions}
 \paragraph{Residues}
@@ -610,7 +673,7 @@ To evaluate the embedded monitor we need to check an actual CAN bus.  Since we d
 
 \begin{figure}
 \centering
-\includegraphics[width=5in]{img/replay_arch}
+\includegraphics[width=4.5in]{img/replay_arch}
 \caption{CAN replay setup \label{fig:eval:replaySchem}}
 \end{figure}
 %%% about SUT
@@ -728,7 +791,7 @@ The first is a late heartbeat message. In one of the robustness testing logs the
 
 \begin{figure}
 	%\begin{subfigure}
-		\includegraphics[width=6in]{img/hb1}
+		\includegraphics[width=4.5in]{img/hb1}
 		%\includegraphics[width=6in]{img/fake_hb1}
 		\caption{Heartbeat counter values over time}
 		\label{fig:eval:hb_arrival:vals}
@@ -761,7 +824,7 @@ Different counter restrictions could also be used, such as allowing unchanging a
 \begin{figure}
 %includegraphics[width=5in]{img/hb_badcounter}
 %\includegraphics[width=6in]{img/fake_hb2}
-\includegraphics[width=6in]{img/hb2}
+\includegraphics[width=4.5in]{img/hb2}
 \caption{Bad heartbeat counter values \label{fig:eval:hb_badcounter}}
 \end{figure}
 
