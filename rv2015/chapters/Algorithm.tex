@@ -1,0 +1,290 @@
+%%%%% Algorithm section
+
+\section{Monitoring Algorithm}
+The monitoring algorithm is an aggressive, iterative algorithm based on formula reduction (essentially formula-rewriting) and a stored history structure to check whether a given formula satisfies or violates the target trace. 
+It is aggressive in that the algorithm attempts to check future-time temporal formulas as soon as possible rather than wait until an answer is guaranteed to be available (by combining short-circuiting and immediate checking of temporal subformulas).
+This is in contrast to many existing runtime monitoring algorithms which either are restricted to past time logics (in which there is no waiting) or only check properties after their available delay. % some aggressive future time algorithms exist but almost always dynamic programming so can't do windowed bounds
+The algorithm is iterative in that the history structure must be updated at each timestep in the trace in order. 
+
+\subsection{Specification Logic}
+The specification logic is built upon a set of atomic propositions which represent system properties (e.g., a proposition $speedLT40mph$ stating that the vehicle speed is less than 40mph). These propositions are created from the observable system state by the semi-formal interface.
+Let $AP$ be the set of atomic propositions. 
+%These propositions are the actual system state propositions which we will monitor (e.g., $speedLT60mph$). 
+A \emph{state} $s: AP \rightarrow \{\top,\bot\}$ is a mapping from $AP$ to the set of truth values. A \emph{trace} $\sigma = s_0s_1s_2\ldots{}s_n$ is a finite sequence of states. We use $\sigma_i$ to denote the state $s_i$ at position $i$ in $\sigma$.
+%
+A time series $\tau = t_0t_1t_2\ldots{}t_n$ is a finite series of timestamps $t\in\mathbb{T}$. The pair $\sigma, \tau$ together represent a timed trace where each timestamp $\tau_i$ is the time associated with the occurance of state $s_i$.
+%A timed trace $\rho = (\sigma, \tau)$ is a tuple containing a trace and a time series where each $\tau_i$ is the timestamp for which the new state $\sigma_i$ was obtained. 
+%
+%We use $\sigma_{\tau}(p)$ to denote the truth value of $p$ at time $\tau$, that is $\forall \tau \in [t_0, t_n]$ where $\tau \in [t_i, t_{i+1})$: $s_{\tau}(p) \equiv s_i(p)$ (for $n = |\sigma|$ and $t_{n +1}$ treated as $\infty$).
+
+\subsection{Specifications}
+\label{sec:formal:spec}
+A \emph{specification} is a set of system invariants written in our bounded MTL variant BMTL which is a past- and future-time MTL with only finite intervals.  
+We refer to the invariants as the specification \emph{rules} or \emph{policies}. The specification rules are checked at every monitored step, so each rule has an implicit unbounded \emph{always} over it (similar to safety rules in \cite{Basin2008}). The syntax of BMTL is shown below:
+%there is an implied unbounded \emph{always} operator over all rules (which is what makes them invariants). 
+
+%% syntax goes here\ldots
+%Our language syntax is
+$$\psi ::=  p \, | \,  \neg \psi \, | \,  \psi_1 \vee \psi_2 \, | \,  \psi_1 \mathcal{U}_{[l,h]} \psi_2 \, | \, \psi_1 \mathcal{S}_{[l,h]} \psi_2$$
+
+Policy formulas are denoted by $\psi$. Policy formulas can include two bounded temporal operators: the past-time operator \emph{since} ($\mathcal{S}$) and the future-time operator \emph{until} ($\mathcal{U}$). 
+%The \emph{until} operator states that $\psi_1$ must be true until (but not including) the time step when $\psi_2$ is true within the time bounds $[l,h]$.
+Both temporal operators include a time bound interval $[l,h]$ where $l,h \in \mathbb{T}$ and $0 \leq l \leq h$. 
+These intervals bound the time in which the triggering subformula $\psi_2$ is evaluated. 
+An \emph{until} formula $\alpha\, \mathcal{U}_{[l,h]}\, \beta$ states that $\alpha$ must be true from the current step $i$ until (but not including) the time step $k$ where $\tau_k \in [\tau_i+l,\tau_i+h]$ and $\beta$ is true. 
+\emph{Since} formulas are similar but in the past: $\alpha\, \mathcal{S}_{[l,h]}\, \beta$ states that $\alpha$ must have been true since (but not including) timestep $k$ where  $\tau_k \in [\tau_i-h,\tau_i-l]$ and $\beta$ was true (where $i$ is the current time step).
+
+%For example, the formula $\alpha\, \mathcal{U}_{[3,5]}\, \beta$ means that $\beta$ must occur at some point within 3 to 5 time units, and $\alpha$ must be true from the current time until that point. 
+Specification policies are interpreted over a timed system trace $\sigma,\tau$. 
+%and associated timestamp series $\tau$. 
+%Each state $s_i$ in $\sigma$ has an associated timestamp $\tau_i$ in $\tau$. 
+%which represents the time at which the state $s_i$ began. 
+We write $\sigma, \tau, j \vDash \varphi$ to represent that the policy $\varphi$ is satisfied by the timed trace $(\sigma, \tau)$ at trace position $j$. We use a common definition of $\vDash$ defined inductively as follows:
+
+%The semantics of our language are defined inductively as follows:
+
+%%@TODO Probably need to do sig,tau,j \vDash so proofs are less confusing
+\begin{align*}
+% true
+\sigma, \tau, j &\vDash \top & &\\
+% prop
+\sigma, \tau, j &\vDash p & \text{ if and only if } & \sigma_{j}(p) = \top \\
+% or
+\sigma, \tau, j &\vDash \neg \psi & \text{ if and only if } & \sigma, \tau, j, \nvDash \psi \\
+% not
+\sigma, \tau, j &\vDash \psi_1 \vee \psi_2 & \text{ if and only if } & \sigma, \tau, j \vDash \psi_1 \text{ or } \sigma, \tau, j \vDash \psi_2 \\
+%% until
+\sigma, \tau, j &\vDash \psi_1 \mathcal{U}_{[l,h]} \psi_2 & \text{ if and only if } 
+	& \exists k: (l \leq \tau_k-\tau_j \leq h), \sigma, \tau, k \vDash \psi_2  \\
+	& & & \text{ and } \forall k': (\tau_j \leq \tau_{k'} < \tau_k), \sigma, \tau, k' \vDash \psi_1 \\
+%% since
+\sigma,\tau, j &\vDash \psi_1 \mathcal{S}_{[l,h]} \psi_2 & \text{ if and only if } 
+	& \exists k:  (l \leq \tau_j - \tau_k \leq h),  \sigma, \tau, k \vDash \psi_2 \\
+	& & & \text{ and } \forall k': (\tau_k < \tau_{k'} \leq \tau_j), \sigma, \tau, k' \vDash \psi_1 \\
+\end{align*}
+
+
+%Note that we use the common definitions of \emph{until} and \emph{since} which do not require the propositions to overlap. For example, for $\alpha \mathcal{U}_{[0,3]} \beta$ at time $0$, if $\beta$ is true at time $2$, then $\alpha$ only needs to be true at times $0$ and $1$ (not also at $2$). The \emph{since} operator is similar ($\alpha$ does not need to be true at the time $\beta$ is).
+
+We use the usual notational conveniences for the other common logic operators: \emph{eventually} ($\lozenge_{[l,h]} \psi \equiv \top\, \mathcal{U}_{[l,h]} \psi$), \emph{always} ($\square_{[l,h]} \psi \equiv \neg \lozenge_{[l,h]} \neg \psi$), \emph{past eventually} ($\blacklozenge_{[l,h]} \psi \equiv \top\, \mathcal{S}_{[l,h]} \psi$), \emph{past always} ($\blacksquare_{[l,h]} \equiv \neg \blacklozenge_{[l,h]} \neg \psi$) and the boolean connectives \emph{and} and \emph{implies} ($\wedge, \rightarrow$). 
+
+
+
+\subsection{Definitions}
+\paragraph{Residues}
+A residue $r^j_{\phi} = \rpt{j}{\psi}{\phi}$ is a tagged pair where $j \in \mathbb{N}$ is a position in the trace and $\psi, \phi$ are well-formed formulas. The monitoring algorithm is built on these residual formulas which are used to represent the currently unreducable fragments of a given parent formula. 
+The formula $\psi$ represents the known value of formula $\phi$ at time $j$. So $\psi$ is a shorter equivalent form (reduced formula) of $\phi$ at $j$. 
+Residues are used to hold the history information of a formula at a specific time for checking temporal formula.
+The $\mathbf{reduce}$ function performs formula rewriting by reducing a given residue based on the current state and history information. 
+
+
+\paragraph{History Structures}
+A history structure $S_{\phi}^i = \{ r_{\phi}^0, r_{\phi}^1, \ldots r_{\phi}^i \}$ is a list of residues which is used to store the history of a formula. This history is used as the state history log to check temporal formula. 
+
+We let $\mathbb{S}^i_{\phi}$ represent the set of history structures for all temporal subformula of $\phi$, i.e., $\mathbb{S}^i_{\phi} = \bigcup_{\psi \in \mathbf{tempSub}(\phi)} S^i_{\psi}$.
+
+\paragraph{Formula Delays}
+There are two important delay functions that are used for this monitor. The first is the wait delay $\Delta^{\omega}(\phi)$, which defines an upper bound on the maximum time the monitor needs to wait before $\phi$ can be evaluated.
+%
+%@EDIT storage requirements of what?
+The second delay function $\Delta^{S}(\phi)$ defines the storage requirements for the history structure $S_\phi$.
+
+
+%%% Delta^w
+\begin{align*}
+\Delta^{\omega}(\phi) = \left\lbrace
+\begin{aligned}
+0 & \quad \text{ iff } \psi \equiv \top \\
+0 & \quad \text{ iff } \psi \equiv \bot \\
+0 & \quad \text{ iff } \psi \equiv p \\
+\Delta^w(\psi) & \quad \text{ iff } \phi \equiv \neg \psi \\
+%max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \wedge \beta \\
+max(\Delta^w(\alpha),\Delta^w(\beta)) & \quad \text{ iff } \phi \equiv \alpha \vee \beta \\
+%max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \rightarrow \beta \\
+%H + \Delta(\psi) & \quad \text{ iff } \phi \equiv \square_{l,H} \psi \\
+%h + \Delta(\psi) & \quad \text{ iff } \phi \equiv \lozenge_{l,h} \psi \\
+h + max(\Delta^w(\alpha),\Delta^w(\beta)) & \quad \text{ iff } \phi \equiv \alpha\, \mathcal{U}_{[l,h]}\, \beta \\
+%\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacksquare_{l,H} \psi \\
+%\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacklozenge_{l,h} \psi \\
+max(\Delta^w(\alpha),\Delta^w(\beta)) & \quad \text{ iff } \phi \equiv \alpha\, \mathcal{S}_{[l,h]}\, \beta \\
+\end{aligned} \right. 
+\end{align*}
+
+
+%%% Delta
+\begin{align*}
+\Delta^{S}(\phi) = \left\lbrace
+\begin{aligned}
+0 & \quad \text{ iff } \psi \equiv \top \\
+0 & \quad \text{ iff } \psi \equiv \bot \\
+0 & \quad \text{ iff } \psi \equiv p \\
+\Delta(\psi) & \quad \text{ iff } \phi \equiv \neg \psi \\
+%max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \wedge \beta \\
+max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \vee \beta \\
+%max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha \rightarrow \beta \\
+%H + \Delta(\psi) & \quad \text{ iff } \phi \equiv \square_{l,H} \psi \\
+%h + \Delta(\psi) & \quad \text{ iff } \phi \equiv \lozenge_{l,h} \psi \\
+h + max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha\, \mathcal{U}_{[l,h]}\, \beta \\
+%\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacksquare_{l,H} \psi \\
+%\Delta(\psi) & \quad \text{ iff } \phi \equiv \blacklozenge_{l,h} \psi \\
+max(\Delta(\alpha),\Delta(\beta)) & \quad \text{ iff } \phi \equiv \alpha\, \mathcal{S}_{[l,h]}\, \beta \\
+\end{aligned} \right. 
+\end{align*}
+
+
+\paragraph{Simplify}
+The $\mathbf{simplify()}$ function is used to rewrite a given formula in a syntactically reduced form. For the restricted logic, simplify only rewrites two types of formulas. It removes \emph{not}s from formulas when the truth value is known and reduces \emph{or} formulas based on any known truth values. 
+
+%@EDIT- fix layout -- do T if phi = (T \vee \phi) or (\phi \vee T)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% simplify
+\begin{align*}
+\mathbf{simplify}(\phi) = \left\{
+\begin{aligned}
+&\top &\text{ if } \phi \equiv \neg \bot \\
+&\bot &\text{ if } \phi \equiv \neg \top \\
+&\top &\text {if } \phi \equiv \psi_1 \vee \psi_2 \\
+& &\text{ and } \\ & & \psi_1 \equiv \top \text{ or } \psi_2 \equiv \top \\
+&\psi_1 &\text{ if } \phi \equiv \psi_1 \vee \bot \\
+&\psi_2 &\text{ if } \phi \equiv \bot \vee \psi_2 \\
+&\phi &\text{ otherwise}
+\end{aligned} \right. \\
+\end{align*}
+
+\paragraph{Subformulas of Temporal Formulas}
+The only trace history that needs to be saved for later use when monitoring this logic is the history of the direct child formulas of temporal formula. That is, for $\alpha\, \mathcal{U}_{[l,h]}\, \beta$ we need to save the history of $\alpha$ and $\beta$ (and if either of those are also a temporal formula then we need their history as well). The function $\mathbf{tempSub}(\psi)$ returns a list of all the subformula of $\psi$ that need their history to be saved.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% temp_sub
+\begin{align*}
+\mathbf{tempSub}(\psi) = \left\lbrace
+\begin{aligned}
+\emptyset & \quad \text{ if } \psi \equiv p \\
+\{\psi_1\} \cup \{\psi_2\} \cup \mathbf{tempSub}(\psi_1) \\
+\cup \mathbf{tempSub}(\psi_2) & \quad \text{ if } \psi \equiv \psi_1 \mathcal{U}_{[l,h]} \psi_2 \text{ or } \psi \equiv \psi_1 \mathcal{S}_{[l,h]} \psi_2 \\
+\mathbf{tempSub}(\psi_1) \cup \mathbf{tempSub}(\psi_2) & \quad \text{ if } \psi \equiv \psi_1 \vee \psi_2 \\
+\mathbf{tempSub}(\psi_1) & \quad \text{ if } \psi \equiv \neg \psi_1
+\end{aligned} \right.
+\end{align*}
+
+
+%%% length
+\paragraph{Formula Length}
+The length $|\phi|$ of a formula $\phi$ is defined as the number of nodes in a formula: 
+\begin{align*}
+|\phi| = \left\lbrace
+\begin{aligned}
+1 & \quad \text{if } \phi \equiv p \\
+1 + |\phi'| & \quad \text{if } \phi \equiv \neg \phi' \\
+1 + |\alpha| + |\beta| & \quad \text{if } \phi \equiv \alpha \vee \beta \\
+1 + |\alpha| + |\beta| & \quad \text{if } \phi \equiv \alpha\, \mathcal{U}_{[l,h]}\, \beta \\
+1 + |\alpha| + |\beta| & \quad \text{if } \phi \equiv \alpha\, \mathcal{S}_{[l,h]}\, \beta \\
+\end{aligned} \right.
+\end{align*}
+
+
+
+\paragraph{Incrementing History Structures}
+History structures are used to hold the history state of a given formula during monitoring.
+When a new state is encountered, existing history structures need to be updated for this new state. This requires both reducing all the structures residues with the new state (to update them based on the new current state) as well as adding a residue for the current encountered state. The $\mathbf{incrS}(\dots)$ procedure performs this update, reducing all of a structure's residues as well as adding a reduced residue for the current state.
+
+%% incrS
+\begin{align*}
+\mathbf{incrS}(S^{i-1}_\psi, \mathbb{S}^i_{\psi}, \sigma, \tau, i) = %\left\lbrace
+%\begin{aligned}
+\left(\bigcup\limits_{r \in S^{i-1}_{\psi}} \mathbf{reduce}(\sigma, \tau, \mathbb{S}^i_{\psi}, r)\right) \cup \mathbf{reduce}(\sigma, \tau, \mathbb{S}^i_{\psi}, \rp{i}{\psi})
+%\end{aligned} \right.
+\end{align*}
+
+
+\paragraph{Monitor Algorithm}
+The high level algorithm is shown in Figure \ref{fig:ag_algorithm}. First, the history structure $\mathbb{S}_{\varphi}$ is built by identifying the required history structures needed to check the policy $\varphi$ with $\mathbf{tempSub(\varphi)}$. 
+The history of these subformula and the current state at any given step are the only history required by the algorithm. Once the structure $\mathbb{S}_{\varphi}$ is built, the monitoring loop begins. 
+In each step, first all the history structures are updated with the current step of the trace. This is done in increasing formula size since larger formula can depend on the history of smaller formula which may be their subformula.
+Each structure is updated using $\mathbf{incrS}(S^{i-1}_\phi,\mathbb{S}^i_\phi,\sigma,\tau,i)$ which reduces all residues in the structure and adds a reduced residue for the current trace step. 
+Then, the same procedure is performed for the top level policy that is being monitored -- the policy's structure is updated with $\mathbf{incrS}(S^{i-1}_\phi,\mathbb{S}^i_\phi,\sigma,\tau,i)$.
+Once updated, this structure is checked for policy violations (any false residues) before the algorithm continues to the next trace step.
+%The last structure here is the structure for the top-level policy being monitored, so this structure is then checked for policy violations before the monitor algorithm continues to the next trace step.
+
+% the top level formula is only distinctive because we treat it that way to help intuition
+% we could instead define tempSub to also return psi
+It is important to note that due to the recursive nature of the monitor algorithm, the top-level policy is treated exactly as any temporal subformula would be (which follows from the implicit \emph{always} on all policies) except that violations of the top level policy are reported. We separate incrementing the subformulas from the specification policies in the algorithm description for clarity only.
+
+\begin{figure}
+\begin{algorithmic}[1]
+%\STATE Recognize formulas for which we build structures
+\STATE For all recognized formulas $\psi \in \mathbf{tempSub}(\varphi)$: $S^{-1}_{\psi} \leftarrow \emptyset$
+\STATE $i \leftarrow 0$
+\LOOP
+\STATE Extend $\sigma$ and $\tau$ with next event $(\sigma_i,\tau_i)$
+%\STATE Obtain $(\sigma_i,\tau_i)$ from trace
+\FOR{every $\psi \in \mathbf{tempSub}(\varphi)$ in increasing size}
+	\STATE $S^i_{\psi} \leftarrow \mathbf{incrS(} S^{i-1}_{\psi}, \mathbb{S}^i_{\psi}, \sigma, \tau, i)$
+	%\STATE $S^i_{\psi} \leftarrow \bigcup\limits_{r \in S^{i-1}_{\psi}} \mathbf{reduce}(\sigma_i, \tau_i, \mathbb{S}^i_{\psi}, r) \cup \mathbf{reduce}(\sigma_i, \tau_i, \mathbb{S}^i_{\psi}, \rp{i}{\psi})$
+\ENDFOR
+\STATE $S^i_{\varphi} \leftarrow \mathbf{incrS(} S^{i-1}_{\varphi}, \mathbb{S}^i_{\varphi}, \sigma, \tau, i)$
+\FOR{all $\rp{j}{\bot} \in S^i_{\varphi}$}
+\STATE \texttt{Report violation on $\sigma$ at position $j$}
+\ENDFOR
+\STATE $i \leftarrow i + 1$
+\ENDLOOP
+\end{algorithmic}
+\caption{Aggressive Monitoring Algorithm}\label{fig:ag_algorithm}
+\end{figure}
+
+%@EDIT explain in text what parameters of reduce are
+%% could be a subsubsection? then they all should be though
+
+
+\paragraph{Reduce}
+The $\mathbf{reduce}$ function is the backbone of the monitor algorithm. It takes a residue and the current trace state and returns the residue in a reduced form.
+
+The $\mathbf{reduce}$ function takes the following parameters: the current state $\sigma_i$, the timestamp sequence $\tau$, the current step $i$, the set of history structures $\mathbb{S}^i_{\phi}$, and a residue $\rpt{j}{\psi}{\phi}$. $\mathbf{Reduce}$ returns a reduced residue $\rpt{j}{\psi'}{\phi}$. Note that for $\phi = \mathbf{reduce}(\alpha \mathcal{U}_{[l,h]} \beta)$ (and also \emph{since}) we know that $\mathbb{S}^i_\phi$ at least contains $S^i_\alpha$ and $S^i_\beta$ (and possibly other structures if there are temporal subformulaof $\alpha$ or $\beta$).
+
+Most $\mathbf{reduce}$ operations are straightforward and common formula-rewriting reductions for MTL. The $\mathbf{reduce}$ operations for \emph{Until} and \emph{Since} are more complex since they utilize our history structures. We show the definition for \emph{Until} here, \emph{Since} is similar except looking backwards (time bounds and min/max flipped). See Appendix \ref{app:reduce} for the full $\mathbf{reduce}$ definition.
+
+%%% TAU UNTIL
+\begin{align*}
+\mathbf{reduce}(\sigma_i,\tau, i,\mathbb{S}^i_{\alpha\, \mathcal{U}_{[l,h]}\, \beta} ,\rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}) = \left\{
+\begin{aligned}
+&\text{let } a_a \leftarrow min(\{k | \tau_j \leq \tau_k \leq \tau_j+h  \wedge \rp{k}{\bot} \in S^i_\alpha \},i) \\ 
+% a_u
+%& a_u \leftarrow max({k| \tau_j \leq \tau_k \leq \tau_j+h \wedge \rp{k}{\alpha'} \in S^i_\alpha \wedge \alpha' \not\equiv \top},i) \\
+& a_u \leftarrow max(\{k| \tau_k \in [\tau_j,\tau_j+h] \\
+& \quad \quad \quad \wedge \forall k' \in [j,k-1].(\rp{k'}{\alpha'} \in S^i_\alpha \wedge \alpha' \equiv \top\},i) \\
+% b_a
+& b_a \leftarrow min(\{k | \tau_j+l \leq \tau_k \leq \tau_j+h \wedge \rp{k}{\beta'} \in S^i_\beta \wedge \beta' \neq \bot\}) \\ 
+% b_t
+&b_t \leftarrow min(\{k | \tau_j+l \leq \tau_k \leq \tau_j+h \wedge \rp{k}{\top} \in S^i_{\beta} \}) \\
+% b_n
+&b_n \leftarrow \top \text{ if } (\tau_i - \tau_j \geq \Delta^w(\psi)) \\
+& \quad \quad \quad \wedge \forall k.(\tau_j+l \leq \tau_k \leq \tau_j+h). \rp{k}{\bot} \in S^i_{\beta} \\
+&\text{if } b_t \neq \emptyset \wedge a_u \geq b_t \\
+& \quad\mathbf{return} \rp{j}{\top} \\
+&\text{else if } (b_a \neq \emptyset \wedge a_a < b_a) \text{ or } b_n = \top\\ & \quad\mathbf{return} \rp{j}{\bot} \\
+&\text{else} \\
+& \quad\mathbf{return} \rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}
+\end{aligned} \right. \\
+\end{align*}
+
+For residues whose formula is an \emph{until} formula $\alpha \mathcal{U}_{[l,h]} \beta$, the history structures $S^i_\alpha$ and $S^i_\beta$ are used to reduce the formula. 
+If the formula can be evaluated conclusively then the truth value is returned, otherwise the residue is returned unchanged. 
+We utilize five marker variables to evaluate the formula over the current trace: 
+\begin{itemize}
+\item $a_a$ is the earliest in-bounds ($[\tau_j,\tau_j+h]$) step at which $\alpha$ is false. This represents the latest time step at which $\beta$ can be true for $\alpha \mathcal{U}_{[l,h]} \beta$ to be true. 
+\item $a_u$ is the latest in-bounds ($[\tau_j,\tau_j+h]$) step at which $\alpha$ has been true since the residue time step.  This represents the latest time step that the \emph{until} formula would be conclusively true if $\beta$ was true at that step. 
+\item $b_a$ is the earliest in-bounds ($[\tau_j+l,\tau_j+h]$) step at which $\beta$ is not conclusively false. This is used to check whether the formula is still satisfiable or not.
+\item $b_t$ is the earliest in-bounds ($[\tau_j+l,\tau_j+h]$) step at which $\beta$ is conclusively true.
+\item $b_n$ is true if the current step is later than the wait delay $\Delta^w(\psi)$ of the residue and all residues in bounds are false (that is, $\beta$ is conclusively false at all steps in bounds).
+\end{itemize}
+
+Using these marker variables, we can evaluate the semantics of \emph{until}. If $a_u \geq b_t$ (and $b_t$ exists) then we know that $\alpha$ is true from the residue step $j$ until the step $b_t$ where $\beta$ is true, which satisfies the semantics of \emph{until} (so we return $\top$).
+%
+Otherwise, if $a_a < b_a$ then $\alpha$ is not true until the first possible step that $\beta$ could be true (since $b_a$ is the earliest non-false step). $\alpha \mathcal{U}_{[l,h]} \beta$ cannot be true in this case, so we return $\bot$. Similarly, if $b_n$ is true, then there is no $\beta$ in bounds and the formula is false.
+%
+If none of these cases exist then the trace is inconclusive, so the residue is returned unchanged.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+

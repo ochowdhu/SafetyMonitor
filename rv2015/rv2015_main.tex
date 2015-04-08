@@ -1,0 +1,107 @@
+% Thesis paper
+% submitting to RV 2015
+% spring 2015
+% Aaron Kane
+
+%\documentclass[]{Z:/Private/research/TeX/llncs/llncs}
+\documentclass[]{llncs}
+%\documentclass[]{C:/Users/akane/Documents/Research/TeX/llncs/llncs}
+%% loading some packages, deleted all the info text from the ieee example page
+\usepackage[nocompress]{cite}
+\usepackage[cmex10]{amsmath}
+\usepackage{amssymb}
+\usepackage{url}
+\usepackage{multirow}
+% restore ieee style page breaks over multiline equations
+%\interdisplaylinepenalty=2500
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage[font=footnotesize,caption=false]{subfig}	% subfigures
+%\usepackage{fixltx2e} 		% fixes ordering of single/double column figures
+%% a couple packages we might want, but don't want to load yet
+%\usepackage{algorithmic}
+%\usepackage{eqparbox}
+%\usepackage{syntax-mdw}
+\usepackage{listings}
+\usepackage[pdftex]{graphicx}
+\graphicspath{{../pdf/}{../jpeg/}}
+\DeclareGraphicsExtensions{.pdf,.jpeg,.png}
+
+
+%\addtolength{\textfloatsep}{-3.5cm}
+%\addtolength{\floatsep}{-5cm}
+\addtolength{\intextsep}{-5pt}
+\addtolength{\belowcaptionskip}{-21pt}
+%\usepackage{setspace}
+%\doublespace
+\usepackage{algorithmic}
+
+
+% proof/theorem stuff
+%\newtheorem{thm}{Theorem}
+%\newtheorem{tdef}{Definition}
+%\newtheorem{lemma}{Lemma}
+%\newtheorem{case}{Case}
+
+% defines
+\newcommand{\rp}[2]{\ensuremath{\langle #1, #2 \rangle}}
+\newcommand{\res}[2]{\ensuremath{r_{#1}^{#2}}}
+\newcommand{\agmon}{\ensuremath{\mathbf{agmon}}}
+\newcommand{\precis}{\textit{pr\`ecis}}
+\newcommand{\pst}{\ensuremath{S^i_\psi}}
+\newcommand{\rpt}[3]{\ensuremath{\langle #1, #2 \rangle}_{#3}}
+\newcommand{\greduce}{\textit{reduce}}
+
+%%%%%%%%%%%%%% end preamble, begin doc %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+% paper title
+% can use linebreaks \\ within to get better formatting as desired
+\title{Runtime Monitoring for Safety-Critical Embedded Systems}
+
+
+\author{Aaron Kane \and Omar Chowdhury \and Philip Koopman}
+\institute{Carnegie Mellon University, Pittsburgh, PA\\ \email{akane@cmu.edu, koopman@cmu.edu}}
+
+
+
+% make the title area
+\maketitle
+
+
+\begin{abstract}
+The trend towards increasing commercial-off-the-shelf (COTS) components in complex safety-critical systems is increasing the difficulty of verifying system correctness. 
+Runtime verification (RV) is a lightweight technique to verify that certain properties hold over execution traces.
+%
+RV is usually implemented as runtime monitors that can be used as runtime fault detectors or test oracles to analyze a system under test for bad behaviors.
+%
+Most existing RV methods utilize some form of system or code instrumentation and thus are not designed to monitor potentially black-box COTS components.
+
+%% major points to push
+%
+% dynamic programming algorithm
+% 	also rewriting-based to a point
+% embedded runtime monitor 
+%	handles black-box systems
+% 	reasonable overhead
+%	aggressive monitoring, future/past (some specifications get checked faster in future then past)
+% semi-formal mapping!!
+%	remember, others do it, but noone is explicit
+%
+\end{abstract}
+
+
+\input{chapters/Intro}
+\input{chapters/Background}
+\input{chapters/Architecture}
+\input{chapters/Algorithm}
+\input{chapters/Implementation}
+\input{chapters/Conclusion}
+
+
+%\def\IEEEbibitemsep{0pt plus .5pt}
+\bibliographystyle{../llncs/splncs03}
+% argument is your BibTeX string definitions and bibliography database(s)
+\bibliography{../My_Collection}
+
+\end{document}
