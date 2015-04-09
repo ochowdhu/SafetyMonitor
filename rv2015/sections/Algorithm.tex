@@ -1,6 +1,6 @@
-%%%%% Algoritheorem section
+%%%%% Algorithm section
 
-\section{Monitoring Algoritheorem}
+\section{Monitoring Algorithm}
 The monitoring algorithm is an aggressive, iterative algorithm based on formula reduction (essentially formula-rewriting) and a stored history structure to check whether a given formula satisfies or violates the target trace. 
 It is aggressive in that the algorithm attempts to check future-time temporal formulas as soon as possible rather than wait until an answer is guaranteed to be available (by combining short-circuiting and immediate checking of temporal subformulas).
 This is in contrast to many existing runtime monitoring algorithms which either are restricted to past time logics (in which there is no waiting) or only check properties after their available delay. % some aggressive future time algorithms exist but almost always dynamic programming so can't do windowed bounds
@@ -197,7 +197,7 @@ When a new state is encountered, existing history structures need to be updated 
 \end{align*}
 
 
-\paragraph{Monitor Algoritheorem}
+\paragraph{Monitor Algorithm}
 The high level algorithm is shown in Figure \ref{fig:ag_algorithm}. First, the history structure $\mathbb{S}_{\varphi}$ is built by identifying the required history structures needed to check the policy $\varphi$ with $\mathbf{tempSub(\varphi)}$. 
 The history of these subformula and the current state at any given step are the only history required by the algorithm. Once the structure $\mathbb{S}_{\varphi}$ is built, the monitoring loop begins. 
 In each step, first all the history structures are updated with the current step of the trace. This is done in increasing formula size since larger formula can depend on the history of smaller formula which may be their subformula.
@@ -229,7 +229,7 @@ It is important to note that due to the recursive nature of the monitor algorith
 \STATE $i \leftarrow i + 1$
 \ENDLOOP
 \end{algorithmic}
-\caption{Aggressive Monitoring Algoritheorem}\label{fig:ag_algorithm}
+\caption{Aggressive Monitoring Algorithm}\label{fig:ag_algorithm}
 \end{figure}
 
 %@EDIT explain in text what parameters of reduce are
