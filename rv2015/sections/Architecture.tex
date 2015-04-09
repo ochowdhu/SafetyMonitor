@@ -8,10 +8,6 @@ Most current proposed monitors rely on automatic generation of instrumentation c
 This is unusable in black box or external supplier scenarios due to the lack of source code access and has a greater chance of affecting the non-faulty system behavior, especially timing in real-time systems.
 Instead, we proposes a passive external monitor which only checks system properties that are observable by watching a broadcast network.
 %These include not only direct constraints including cost sensitivity and real-time computation but also development constraints such as system certification and source code access for black-box components.
-
-This section describes our runtime monitoring architecture which is focused primarily on ground vehicles including automobiles and other industrial vehicles. Specifically, our monitor is an external passive bus-monitor which checks bus-observable system properties on a broadcast-bus (e.g., CAN). 
-% treats system components as black boxes which allows monitoring systems that include third party components...
-This type of monitor treats all system components as black-boxes, although more specific system information can be useful to help create more accurate specifications. This is important for commercial systems where some system components will inevitably be supplied by third parties who may or may not provide detailed information about their components. 
 Although we focus on ground vehicles and CAN in this work, other similar systems can also be monitored with this approach due to the flexible interface and system model.
 For example, Systems without broadcast buses may be monitored by exposing the desired system state to the monitor (either through instrumentation or intelligent monitor placement such as network gateways/routers).
 
@@ -72,7 +68,7 @@ The interface provides the ability to extract the relevant data out of network m
 Besides simple transformations (e.g., storing boolean values into propositions, arithmatic comparisons, etc.), we can also do more complex compututations and conversions in the interface such as building state machines whose state can be used to fill propositions.
 %Besides relatively obvious transformations (status booleans into propositions, arithmatic comparisons) we can also do some slightly more complex computing in the interface such as building state machines and providing their value as a proposition.
 
-\subsection{Semi-Formal Interface Design}
+%\subsection{Semi-Formal Interface Design}
 The semi-formal interface is used provide the monitoring algorithm with the state trace.
 There are no inherent limitations on the semi-formal interface besides that it must create a viable trace for the monitor.
 %As long as it provides the monitoring algorithm a viable state, the monitor will work. 
@@ -88,11 +84,11 @@ We do not currently have a formal definition of the semi-formal syntax, instead 
 
 %Knowing this we can define a restricted semi-formal syntax based on the semantics of the C programming language, shown in Figure \ref{fig:arch:sfm_syntax}.
 %
-Our monitor implementation's semi-formal mapping configuration is integrated into the monitor's code directly by a specification compiler. 
-This is essentially an internal domain specific language (DSL) \cite{Barringer2012}. 
-Using a DSL to specify the semi-formal mappings allows us to restrict the specification of the interface to keep verification (of the interface) reasonable while still providing the ease of use and power of a programming language. 
-Other prototype monitors we designed have used more traditional interface DSLs where the specifications have been used to insert and generate the code used by the monitor for the interface. 
-More discussion about using domain specific languages for the semi-formal interface is included in Section \ref{sec:discussion:dsl}.
+%Our monitor implementation's semi-formal mapping configuration is integrated into the monitor's code directly by a specification compiler. 
+%This is essentially an internal domain specific language (DSL) \cite{Barringer2012}. 
+%Using a DSL to specify the semi-formal mappings allows us to restrict the specification of the interface to keep verification (of the interface) reasonable while still providing the ease of use and power of a programming language. 
+%Other prototype monitors we designed have used more traditional interface DSLs where the specifications have been used to insert and generate the code used by the monitor for the interface. 
+%More discussion about using domain specific languages for the semi-formal interface is included in Section \ref{sec:discussion:dsl}.
 
 %%%% sfm_syntax\ldots
 %\begin{figure}
@@ -104,25 +100,27 @@ More discussion about using domain specific languages for the semi-formal interf
 % describe the syntax\ldots
 The motivation behind the restricted interface syntax is to provide enough power to define the system propositions necessary to monitor any reasonable desired property while incentivizing the monitor designers to work within the formal specification as much as possible.
 %
-Given a desired set of system properties, it is easy to imagine the pathological case where the monitor is configured to check the proposition \texttt{SystemOK} and the interface is built to compute this value directly. While this technically would work, it is obviously an abuse of the interface and a bad (non?) use of the monitor framework. Doing this essentially creates a completely informal monitor inside the interface, wasting the proven correctness of the formal monitoring algorithm.
-
-A more interesting case is when we have a system message which includes a value and a validity bit (signifying whether the message value is valid). 
-We can imagine that most rules utilizing this value will want to check both some property of the value and whether it is valid at the same time (e.g., \texttt{valuePositive} and \texttt{valueValid}). 
-This could be done on the formal side in the logic by using $\texttt{valuePositive} \wedge \texttt{valueValid}$ or by combining them in interface into one proposition $\texttt{valuePositiveValid}$ which is calculated from both incoming values. 
-
-In this case it is less clear which method is superior, but we can suggest a few heuristics to help decide. Perhaps the most straightforward way to choose is to attempt to mirror the design documentation and requirements in the monitor specification. 
-If the system requirements mention the validity either explicitly (as a message value) or implicitly (by mentioning a ``valid positive value'') then the monitor specification should also directly mention validity and use the validity message value directly. 
-If the requirements do not mention validity, then we can treat validity as an implementation detail and hide it away in the interface's proposition transformation. 
-This follows the idea that the high-level requirements are abstracted away from the implementation. So if the validity bit is an artifact of the implementation then it is intuitive to deal with it in the interface, but if the validity bit is a part of the higher level system design then it should also be a part of the monitor specification.
-
-Other factors can also affect the decision, such as monitoring complexity (moving transformations to the interface can reduce the amount of work the monitoring algorithm has to do) or the desire to maximize the amount of monitoring that is formally performed. 
-These decisions should be kept consistent across specification rules to avoid confusion or misunderstanding.
-
-%@PHIL -- need a paragraph about best way to use layered approach
+%%%%@RV Hiding all this from now, probably need to rewrite the entire section to make sense in a shorter way
+%Given a desired set of system properties, it is easy to imagine the pathological case where the monitor is configured to check the proposition \texttt{SystemOK} and the interface is built to compute this value directly. While this technically would work, it is obviously an abuse of the interface and a bad (non?) use of the monitor framework. Doing this essentially creates a completely informal monitor inside the interface, wasting the proven correctness of the formal monitoring algorithm.
+%
+%A more interesting case is when we have a system message which includes a value and a validity bit (signifying whether the message value is valid). 
+%We can imagine that most rules utilizing this value will want to check both some property of the value and whether it is valid at the same time (e.g., \texttt{valuePositive} and \texttt{valueValid}). 
+%This could be done on the formal side in the logic by using $\texttt{valuePositive} \wedge \texttt{valueValid}$ or by combining them in interface into one proposition $\texttt{valuePositiveValid}$ which is calculated from both incoming values. 
+%
+%In this case it is less clear which method is superior, but we can suggest a few heuristics to help decide. Perhaps the most straightforward way to choose is to attempt to mirror the design documentation and requirements in the monitor specification. 
+%If the system requirements mention the validity either explicitly (as a message value) or implicitly (by mentioning a ``valid positive value'') then the monitor specification should also directly mention validity and use the validity message value directly. 
+%If the requirements do not mention validity, then we can treat validity as an implementation detail and hide it away in the interface's proposition transformation. 
+%This follows the idea that the high-level requirements are abstracted away from the implementation. So if the validity bit is an artifact of the implementation then it is intuitive to deal with it in the interface, but if the validity bit is a part of the higher level system design then it should also be a part of the monitor specification.
+%
+%Other factors can also affect the decision, such as monitoring complexity (moving transformations to the interface can reduce the amount of work the monitoring algorithm has to do) or the desire to maximize the amount of monitoring that is formally performed. 
+%These decisions should be kept consistent across specification rules to avoid confusion or misunderstanding.
 In an ideal situation, the formal specification would contain all the relevant safety specification parts, leaving only the actual translation of system values to the semi-formal interface. 
-More complex translations than simple threshold comparisons or copying booleans may require some semi-formal transformation if the desired properties cannot be expressed in propositional logic. 
+There is an inherent trade-off between the complexity of the logic/model and the complexity of the semi-formal mapping. 
+We use a stronger mapping with a less complex formal language to provide specification flexibility at the risk of mapping-caused problems. 
+This provides the power to monitor essentially any observable system property, losing some formalisms as the properties become more complex.
+%More complex translations than simple threshold comparisons or copying booleans may require some semi-formal transformation if the desired properties cannot be expressed in propositional logic. 
 %The bare minimum transformations needed to build the necessary propositions should be used, keeping as much of the verification in the formal side as possible. 
-Moving parts of the transformation to the interface side is useful when necessary, but as the interface configuration complexity increases it becomes more important to validate and verify the interface itself.
+%Moving parts of the transformation to the interface side is useful when necessary, but as the interface configuration complexity increases it becomes more important to validate and verify the interface itself.
 
 %%@TODO mapping problems -- sampling periods and discrete value jumps
 %% 	not sure if they go here or elsewhere, leaving note for now

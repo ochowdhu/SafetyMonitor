@@ -4,7 +4,7 @@
 % Aaron Kane
 
 %\documentclass[]{Z:/Private/research/TeX/llncs/llncs}
-\documentclass[]{llncs}
+\documentclass[]{./llncs}
 %\documentclass[]{C:/Users/akane/Documents/Research/TeX/llncs/llncs}
 %% loading some packages, deleted all the info text from the ieee example page
 \usepackage[nocompress]{cite}
@@ -23,9 +23,10 @@
 %\usepackage{eqparbox}
 %\usepackage{syntax-mdw}
 \usepackage{listings}
-\usepackage[pdftex]{graphicx}
-\graphicspath{{../pdf/}{../jpeg/}}
-\DeclareGraphicsExtensions{.pdf,.jpeg,.png}
+%\usepackage[pdftex]{graphicx}
+\usepackage{graphicx}
+%\graphicspath{{../pdf/}{../jpeg/}}
+%\DeclareGraphicsExtensions{.pdf,.jpeg,.png}
 
 
 %\addtolength{\textfloatsep}{-3.5cm}
@@ -91,17 +92,17 @@ Most existing RV methods utilize some form of system or code instrumentation and
 \end{abstract}
 
 
-\input{chapters/Intro}
-\input{chapters/Background}
-\input{chapters/Architecture}
-\input{chapters/Algorithm}
-\input{chapters/Implementation}
-\input{chapters/Conclusion}
+\input{sections/Intro}
+\input{sections/Background}
+\input{sections/Architecture}
+\input{sections/Algorithm}
+\input{sections/Implementation}
+\input{sections/Conclusion}
 
 
 %\def\IEEEbibitemsep{0pt plus .5pt}
-\bibliographystyle{../llncs/splncs03}
+\bibliographystyle{splncs03}
 % argument is your BibTeX string definitions and bibliography database(s)
-\bibliography{../My_Collection}
+\bibliography{./MergedBib}
 
 \end{document}

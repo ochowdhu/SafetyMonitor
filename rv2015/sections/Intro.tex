@@ -1,0 +1,26 @@
+%%%% Intro section
+
+\section{Introduction}
+Embedded systems, from home appliances to automobiles, are becoming increasingly complex due to the addition of new advanced features. 
+Even traditionally non-critical systems are becoming safety- or mission-critical due to the addition of connectivity, complex autonomy and software reliant control (e.g., X-by-wire \cite{Leen2002}).
+As more embedded systems become safety-critical, it is imperative that developers have methods to ensure that these systems are correct. 
+
+Runtime verification (RV) is a more lightweight method aimed at verifying that a specific execution of a system satisfies or violates a given critical property \cite{Leucker2009}. 
+%
+Runtime verification can provide a formal analysis while avoiding many of the pitfalls that traditional model-based methods have such as state space explosion and model abstractions. 
+
+The current trend in safety-critical embedded system is towards faster design cycles and more commercial-off-the-shelf (COTS) components. Being able to verify that a system made up of diverse components from multiple suppliers is safe and works correctly is difficult, even without the lack of design information that is inherent of COTS black-box components.
+%
+Runtime verification is a useful tool to help the verification of these systems. Runtime monitors can detect not only software faults but also hardware and design faults. 
+
+%%% Address challenge, contributions, and case study information
+
+%%% Challenge
+Though there is an increasing focus on runtime monitors for safety-critical real-time systems, there is still little work aimed at monitoring systems with black-box components. Most existing runtime verification techniques require instrumentating the target system in some way, either with the monitor itself or to expose the monitored system state. Black-box components cannot easily be instrumented in this way because users do not have source code access to instrument. Although access to system state is limited in black-box systems, there are classes of systems which have a useful amount of externally observable state which can be monitored without instrumentation. Common bus-based distributed system architectures used in automobiles and other ground vehicles tend to have a reasonable amount of system state externally observable as the state is being sent between system nodes to enable control. Although some properties detailing individual components internal state and action choices may be unobservable in these situations, there are safety-relevant system-level properties which are observable at this level.
+
+%%% Contributions
+This paper presents an end-to-end framework for monitoring safety-critical systems made of potentially black-box components. 
+We present an external, broadcast bus monitor which primarily targets Controller Area Network (CAN), a common broadcast bus network used in modern automobiles and other ground vehicles. We monitor system specifications comprised of bounded propositional metric temporal logic (MTL) invariants which utilize propositions generated from the observed network state by a semi-formal interface.
+
+%%% Case Study
+We have implemented an embedded, real-time CAN monitor utilizing our monitoring algorithm. The monitor has been evaluated on a bench CAN bus with replayed logs obtained from system testing of an autonomous research vehicle on which violations of system safety requirements were identified.

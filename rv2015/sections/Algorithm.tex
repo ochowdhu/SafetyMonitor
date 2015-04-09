@@ -1,6 +1,6 @@
-%%%%% Algorithm section
+%%%%% Algoritheorem section
 
-\section{Monitoring Algorithm}
+\section{Monitoring Algoritheorem}
 The monitoring algorithm is an aggressive, iterative algorithm based on formula reduction (essentially formula-rewriting) and a stored history structure to check whether a given formula satisfies or violates the target trace. 
 It is aggressive in that the algorithm attempts to check future-time temporal formulas as soon as possible rather than wait until an answer is guaranteed to be available (by combining short-circuiting and immediate checking of temporal subformulas).
 This is in contrast to many existing runtime monitoring algorithms which either are restricted to past time logics (in which there is no waiting) or only check properties after their available delay. % some aggressive future time algorithms exist but almost always dynamic programming so can't do windowed bounds
@@ -197,7 +197,7 @@ When a new state is encountered, existing history structures need to be updated 
 \end{align*}
 
 
-\paragraph{Monitor Algorithm}
+\paragraph{Monitor Algoritheorem}
 The high level algorithm is shown in Figure \ref{fig:ag_algorithm}. First, the history structure $\mathbb{S}_{\varphi}$ is built by identifying the required history structures needed to check the policy $\varphi$ with $\mathbf{tempSub(\varphi)}$. 
 The history of these subformula and the current state at any given step are the only history required by the algorithm. Once the structure $\mathbb{S}_{\varphi}$ is built, the monitoring loop begins. 
 In each step, first all the history structures are updated with the current step of the trace. This is done in increasing formula size since larger formula can depend on the history of smaller formula which may be their subformula.
@@ -229,7 +229,7 @@ It is important to note that due to the recursive nature of the monitor algorith
 \STATE $i \leftarrow i + 1$
 \ENDLOOP
 \end{algorithmic}
-\caption{Aggressive Monitoring Algorithm}\label{fig:ag_algorithm}
+\caption{Aggressive Monitoring Algoritheorem}\label{fig:ag_algorithm}
 \end{figure}
 
 %@EDIT explain in text what parameters of reduce are
@@ -287,4 +287,70 @@ If none of these cases exist then the trace is inconclusive, so the residue is r
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+
+\subsection{Algorithm Correctness}
+
+\subsubsection{Definitions}
+
+A \emph{correct} residue is one whose residual formula has an equivalent truth value with the parent formula at the residue's step. In other words, for a residue $\rpt{j}{\phi}{\psi}$, the truth of $\phi$ must be equivalent to the truth of $\psi$ at step $j$.
+%So for a residue to be correct, the truth of the residue's formula $\psi$ at the residue's timestep $j$ must be equivalent to the truth of the residue's parent formula $\phi$.
+\begin{definition}[Residue correctness] The residue $r^j_{\psi} = \rpt{j}{\phi}{\psi}$ is correct if for all traces $\sigma$, timestamp series $\tau$, timestep $j$, and formulas $\psi, \phi$ that $\sigma, \tau, j \vDash \psi$ iff $\sigma, \tau, j \vDash \phi$.
+\end{definition}
+
+A \emph{prompt} residue is one which is fully reduced to a truth value if the formula is guaranteed to be reducable. That is, if at least the parent formula's delay has passed since the residue's time step, ($\tau_j+\Delta^{w}(\phi) \leq \tau_i$) then the residue value must be a truth value.
+\begin{definition}[Residue promptness] The residue $r = \rpt{j}{\phi}{\psi}$ is prompt at $i$ iff for all traces $\sigma$, timestamp series $\tau$, timesteps $j,i$ where $j \leq i$, and formulas $\psi, \phi$ that $\tau_i-\tau_j \geq \Delta(\psi)$ implies $\phi \in \{\top,\bot\}$
+\end{definition}
+
+A \emph{reducible} residue is one which has already been initialized by its starting state (replacing all free propositions with truth values) or which is a residue of the current state (which can be initialized). If a residue is not reducible at $i$ then there is state unavailable at step $i$ which is necessary to reduce the residue.
+\begin{definition}[Reducible residues]
+A residue $\rpt{j}{\psi}{\phi}$ is \emph{reducible} at $i$ if $j=i$ or there are no free propositions in $\psi$ (i.e., $\mathbf{freep}(\psi) = \emptyset$). 
+\end{definition}
+
+A history structure is correct if all the residues it contains are correct.
+\begin{definition}[Correctness of history structures] A history structure $S^i_{\psi}$ is correct iff for all timesteps $i$, formulas $\psi$, traces $\sigma$, and timestamp series $\tau$: 
+ $\forall k \in [0,i], r^k \in S^i_{\psi}$ and $r^k$ is correct. % do I need all <k,p> in S, k in [0,i]???
+\end{definition}
+
+A history structure is prompt if all the residues is contains are prompt.
+\begin{definition}[Promptness of history structures] A history structure $S^i_{\psi}$ is prompt if for all timesteps $i$, formulas $\psi$, traes $\sigma$, and timestamp series $\tau$: 
+$\forall r^k \in S^i_{\psi}$, $r^k$ is prompt at $i$.
+\end{definition}
+
+A history structure is reducible if all the residues is contains are reducible.
+\begin{definition}[Reducibility of history structures] A history structure $S^i_{\psi}$ is reducible if for all timesteps $i$, formulas $\psi$, traes $\sigma$, and timestamp series $\tau$: 
+$\forall r^k \in S^i_{\psi}$, $r^k$ is reducible at $i$.
+\end{definition}
+
+With these properties defined, we can prove the correctness of the top-level algorithm \agmon.
+There are two separate properties we want for \agmon\ to be correct. First, we want it to provide \emph{correct} answers, i.e., it should only say a policy is violated if it is conclusively violated and only report a policy is satisfied if it is conclusively satisfied. 
+This means that if \agmon\ reports a violation of policy $\phi$ at step $j$, then $\sigma, \tau, j \nvDash \phi$.
+We also want to guarantee that we will get answers when they are available, so we want \emph{Prompt} answers: \agmon\ should report violations/satisfaction for any timesteps older than the policy delay. Thus, if $\sigma,\tau,j \nvDash \phi$ then \agmon\ must report the violation by time $\tau_j+\Delta^w(\phi)$.
+%
+\begin{theorem}[Correctness and Promptness of \agmon]
+For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\rp{j}{\bot} \in S^i_{\varphi}$ then $\sigma, \tau, j \nvDash \varphi$ and if $\rp{j}{\top} \in S^i_{\varphi}$ then $\sigma, \tau, j \vDash \varphi$ (Correctness) and (2) if $\tau_i - \tau_j \geq \Delta^{w}(\varphi)$ then if $\sigma, \tau, j \nvDash \varphi$ then $\rp{j}{\bot} \in S^i_{\varphi}$ and if $\sigma, \tau, j \vDash \varphi$ then $\rp{j}{\top} \in S^i_{\varphi}$ (Promptness)
+.
+\end{theorem}
+%\begin{theorem}[Promptness of \agmon]
+%For all $i,j \in \mathbb{N}$, $j\leq i$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that if $\tau_i - \tau_j \geq \Delta^{\omega}(\varphi)$ and $\sigma, \tau, j \nvDash \varphi$ then $\rp{j}{\bot} \in S^i_{\varphi}$
+%\end{theorem}
+
+\textit{Proof.} By mutual induction over $i$ and $\varphi$. \\
+To show the correctness and promptness of \agmon\ we just need $S^i_{\varphi}$ to be correct and prompt.
+
+We can show that each history structure $S^i_{\psi}$ (where $\psi \in \{\varphi, \mathbf{tempsub}(\varphi)\}$) is correct, prompt, and reducible at every step by showing $\mathbb{S}^i_{\phi}$ and $S^{i-1}_{\phi}$ to be correct, prompt, and reducible at every step. 
+
+First, we show that $\mathbb{S}^i_{\phi}$ is correct, prompt, and reducible by construction due to the order the history structures are incremented.
+%
+For all $\phi \in \mathbf{tempSub}(\varphi)$ in increasing order, $S^i_\phi \leftarrow \mathbf{incrS}(S^{i-1}_\phi, \mathbb{S}^i_\phi, \sigma, \tau, i)$. 
+Because for all $S^i_{\psi} \in \mathbb{S}^i_\phi$, $|\psi| < |\phi|$ (by Lemma \ref{lemma:sbb}) and the iteration over $\psi$ is done in increasing size, we know that $\mathbb{S}^i_{\phi}$ will be correct, prompt, and reducible for each subformula because all the history structures in $\mathbb{S}^i_{\phi}$ are smaller than $\phi$ and thus were already incremented (and correct/prompt/reducible due to $\mathbf{incrS}$ by Lemma \ref{lemma:incrs}). 
+
+Next, we show that $S^{i-1}_{\phi}$ is correct, prompt, and reducible at every step.
+At step $i=0$, for all $\phi \in \mathbf{tempSub}(\varphi)$, $S^{-1}_{\phi}$ is trivially correct, prompt, and reducible because $S^{-1}$ is empty. 
+%
+Together this means that $S^i_\phi$ is reducible, prompt and correct for all $\phi \in \mathbf{tempSub}(\varphi)$ at step $i=0$.
+%
+With all $S^i_\phi$ prompt, correct, and reducible for $\phi \in \mathbf{tempSub(\varphi)}$, $\mathbb{S}^i_{\varphi}$ is also prompt, correct, and reducible. Along with $S^{-1}_\varphi$ being trivially reducible, prompt, and correct and $\mathbf{incrS()}$ being correct, $S^0_\varphi$ is also prompt, correct, and reducible.
+
+This proof step follows for $i>0$. $S^{i-1}_\psi$ is correct and prompt from the previous step. Since we increment the structures in order and $\mathbf{incrS()}$ is correct, $\mathbb{S}^i_{\psi}$ is also prompt and correct for every $\phi \in \mathbf{tempSub(\varphi)}$. This means that $\mathbb{S}^i_{\varphi}$ is correct and prompt and from this it follows that $S^i_\varphi$ is correct and prompt.
 
