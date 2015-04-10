@@ -3,7 +3,8 @@
 \section{Monitor Implementation}
 \subsection{Evaluation}
 \label{sec:eval:embedded}
-To evaluate the embedded monitor we need to check an actual CAN bus.  Since we did not have access to a real system with CAN and a data dictionary to monitor, we instead performed real-time replay of timestamped CAN logs captured during testing of a real system onto a bench CAN bus which the monitor was connected to, as shown in Figure \ref{fig:eval:replaySchem}. 
+To evaluate the embedded monitor we need to check an actual CAN bus.  
+Since we did not have current access to a real system with CAN and a data dictionary to monitor, we instead performed real-time replay of timestamped CAN logs captured during testing of a real system onto a bench CAN bus which the monitor was connected to, as shown in Figure \ref{fig:eval:replaySchem}. 
 
 \begin{figure}
 \centering
@@ -12,15 +13,18 @@ To evaluate the embedded monitor we need to check an actual CAN bus.  Since we d
 \end{figure}
 %%% about SUT
 The system under test that provided the logs is an autonomous heavy truck which is being designed for use in vehicle platoons. % cite/discuss AMAS/ASTAA?
-The system has multiple internal buses, some CAN and some Ethernet, connecting different system components. The logs we monitor are from robustness testing of the interface controller, so we focus on its CAN bus which contains communication between the interface controller and the primary vehicle controller.
-The logs contain both normal operation as well as some operation under injected robustness testing. During robustness testing, the testing framework can hijack targeted network messages on the bus to inject testing values. % could cite astaa here
+The system has multiple internal buses, some CAN and some Ethernet, connecting different system components. We utilize logs from the CAN bus connecting the primary vehicle controller and the user interface controller because it provides a reasonable amount of observable state which maps to actual system requirements which we can monitor.
+%
+%The logs we monitor are from robustness testing of the interface controller, so we focus on its CAN bus which contains communication between the interface controller and the primary vehicle controller.
+The logs contain both normal operation as well as some operation under network-based robustness testing. During robustness testing, the testing framework can hijack targeted network messages on the bus to inject testing values. % could cite astaa here
 
 A PC was connected to a PCAN-USB Pro \cite{PCAN-USBPro} device which provides a USB interface to two CAN connections. One CAN channel was used as the log replayer, while the other was used as a bus logger for analysis purposes.
+%%%@RV cutting for space, RV people probably don't care about these specifics too much
 %%% replay
-We performed log replay with a PC-based script which would take a test log and replay it on the CAN bus based on the log's timestamps. A separate script used the second CAN connection to log the CAN network traffic.
-The replay timing is based on a busy-wait using the log timestamps. 
-We compared the replayed log timings to the original test logs to ensure this replay was accurate. 
-The percent error in message timestamps relative to the start of the message in our longest logs had an average of less than 0.01\% error. The absolute error was generally sub-millisecond, which is accurate enough for our 25ms monitor with its greater than 50ms minimum time step resolution.
+%We performed log replay with a PC-based script which would take a test log and replay it on the CAN bus based on the log's timestamps. A separate script used the second CAN connection to log the CAN network traffic.
+%The replay timing is based on a busy-wait using the log timestamps. 
+%We compared the replayed log timings to the original test logs to ensure this replay was accurate. 
+%The percent error in message timestamps relative to the start of the message in our longest logs had an average of less than 0.01\% error. The absolute error was generally sub-millisecond, which is accurate enough for our 25ms monitor with its greater than 50ms minimum time step resolution.
 
 %Figure \ref{fig:eval:replay_timing} compares the replayed log timings to the actual test logs.
 %D%\begin{table}
@@ -38,15 +42,19 @@ The percent error in message timestamps relative to the start of the message in 
 
 %%%%%%%%%
 %% rule elicitation
-\subsection{Rule Elicitation}
-For this system we did have requirements documentation which could more directly lead to a monitoring specification. 
+\subsection{Monitor Specification}
+\label{sec:monspec}
+Requirements documentation for this system was available, so we were able to build a monitoring specification based on actual system requirements.
+%For this system we did have requirements documentation which could more directly lead to a monitoring specification. 
 %Due to the test focus for the logs we have, we mainly created specifications checking the user interface feature. 
-Since we wanted to monitor the interface bus, we identified requirements which we could monitor or partially monitor based on the state available on this bus.
-The specifications we used on the embedded monitor are shown in Table \ref{tab:eval:nrecrules} and the propositions used in these rules are described in Table \ref{tab:eval:nrecprops}.
+The specification evaluated in the embedded monitor on the test logs are shown in Table \ref{tab:monspec}. This specification was derived from the system requirements based on the observable system state available in the testing logs.
+%Based on the given requirements, the coverage of available test logs, and the observability of the 
+%Since we wanted to monitor the interface bus, we identified requirements which we could monitor or partially monitor based on the state available on this bus.
+%The specifications we used on the embedded monitor are shown in Table \ref{tab:eval:nrecrules} and the propositions used in these rules are described in Table \ref{tab:eval:nrecprops}.
 
 \begin{table}
 %\begin{tabular}{|p{3in}|l|}
-\begin{tabular}{|l|p{5in}|}
+\begin{tabular}{|l|p{4.5in}|}
 \hline \multirow{2}{*}{Rule \#} & Informal Rule \\ & BMTL \\
 %\hline Informal Rule & BMTL \\
 %\hline \multirow{2}{*}{0} & A feature heartbeat shall be received every 500ms \\
@@ -68,7 +76,7 @@ The specifications we used on the embedded monitor are shown in Table \ref{tab:e
 % warn was at 200ms
 \hline
 \end{tabular}
-\caption{CAN replay monitoring specification \label{tab:eval:nrecrules}}
+\caption{CAN replay monitoring specification \label{tab:monspec}}
 \end{table}
 
 The rules were derived from the vehicle safety requirements documentation. 
@@ -86,37 +94,38 @@ Initialization issues are discussed in more detail in Section \ref{sec:eval:mon_
 We also watched the system state for illegal state transitions. Although the actual mode decisions and commands are on a different bus, we can still monitor the system state through the user interface LEDs which show the mode state. 
 We created rules for two of the illegal transitions, from manual mode to autonomous driving and from system off to autonomous driving. We independently checked both the vehicle controller's LED command messages and the interface's LED status message for these transitions.
 
-% prop mappings
-The proposition mappings here were straightforward. The LED command and status messages were single bit fields and we checked the heartbeat's single bit status message. We checked the rolling heartbeat counter for  consistency (i.e., that it counted up and wrapped correctly) by comparing it against the previously seen value in the semi-formal interface. We also created the guard $HeartbeatOn$ which is false until the first heartbeat message is seen, and true from then on. 
-% This was necessary to handle initialization issues
-Using a guard proposition is our primary method to implement unbounded since/until type rules within our bounded logic. If we had unbounded operators we could use the formula $(\lozenge_{[0,500]} Heartbeat)\; \mathcal{S}\; (Heartbeat)$ instead of a mode-based guard proposition, but without unbounded operators using guard propositions to enable or disable a formula is a reasonable replacement.
+% RV prop mappings
+The proposition mappings in this system were straightforward. Most of the specification propositions are boolean values taken directly from the network messages. The heartbeat counter is checked with a more complicated mapping that ensures the rolling counter is consistent (i.e., counts up and wraps correctly).
 
-\begin{table}
-\centering
-\caption{CAN replay propositions}
-\label{tab:eval:nrecprops}
-\begin{tabular}{lp{2in}l}
-\textbf{Proposition Name} & \textbf{System Variables} & \textbf{Mapping} \\
-\hline $HeartBeat$ & Feature Status Message Heartbeat field & Fresh direct boolean \\
-$HeartbeatOn$ & Interface HB message & System Mode \\
-$HeartbeatCounterOk$ & Interface HB message & Comparison with Past Value \\
-$VehManualModeCmd$ & Vehicle command message & Direct Boolean \\
-$VehAutoModeCmd$ & Vehicle command message & Direct Boolean \\
-$VehicleSDModeCmd$ & Vehicle command message & Direct Boolean \\
-$IntManualStat$ & Interface status message & Direct Boolean \\
-$IntAutoStat$ & Interface status message & Direct Boolean \\
-$IntSDStat$ & Interface status message & Direct Boolean \\
-\end{tabular}
-\end{table}
+%%@RV cutting for space
+%% prop mappings
+%The proposition mappings here were straightforward. The LED command and status messages were single bit fields and we checked the heartbeat's single bit status message. We checked the rolling heartbeat counter for  consistency (i.e., that it counted up and wrapped correctly) by comparing it against the previously seen value in the semi-formal interface. We also created the guard $HeartbeatOn$ which is false until the first heartbeat message is seen, and true from then on. 
+%% This was necessary to handle initialization issues
+%Using a guard proposition is our primary method to implement unbounded since/until type rules within our bounded logic. If we had unbounded operators we could use the formula $(\lozenge_{[0,500]} Heartbeat)\; \mathcal{S}\; (Heartbeat)$ instead of a mode-based guard proposition, but without unbounded operators using guard propositions to enable or disable a formula is a reasonable replacement.
+%
+%\begin{table}
+%\centering
+%\caption{CAN replay propositions}
+%\label{tab:eval:nrecprops}
+%\begin{tabular}{lp{2in}l}
+%\textbf{Proposition Name} & \textbf{System Variables} & \textbf{Mapping} \\
+%\hline $HeartBeat$ & Feature Status Message Heartbeat field & Fresh direct boolean \\
+%$HeartbeatOn$ & Interface HB message & System Mode \\
+%$HeartbeatCounterOk$ & Interface HB message & Comparison with Past Value \\
+%$VehManualModeCmd$ & Vehicle command message & Direct Boolean \\
+%$VehAutoModeCmd$ & Vehicle command message & Direct Boolean \\
+%$VehicleSDModeCmd$ & Vehicle command message & Direct Boolean \\
+%$IntManualStat$ & Interface status message & Direct Boolean \\
+%$IntAutoStat$ & Interface status message & Direct Boolean \\
+%$IntSDStat$ & Interface status message & Direct Boolean \\
+%\end{tabular}
+%\end{table}
 
 
 %% replay
 \subsection{Monitoring results}
-We monitored the CAN log replays on our test CAN network with the specification discussed above.
+We monitored the CAN log replays on our test CAN network with the specification discussed above and found heartbeat violations in the robustness testing logs.
 %
-To capture violations for analysis we configured the monitor to send a CAN message denoting the violated policy when violations were detected. These violation messages were rate limited to one message per second to allow the violation message to have a high CAN priority without letting it take over the network. 
-
-The monitor found heartbeat violations in the logs captured during robustness testing. 
 % covering all three possible violation types. One was a false positive
 Three different types of heartbeat violations were identified after inspecting the monitor results.
 % missing hb message
@@ -163,17 +172,18 @@ Different counter restrictions could also be used, such as allowing unchanging a
 \end{figure}
 
 %This was expected as these violations had been found with an offline monitoring tool previously.
-There were also violations of the transition rules, but these, similar to the heartbeat counter violation, also turned out to be false positives triggered by message injections by the robustness testing harness. Since the monitor checks network state, if we perform testing that directly affects the values seen on the network (such as injection/interception of network messages) we may detect violations which are created by the testing framework rather than the system. 
+The monitor also reported violations of the legal transition rules, but these, similar to the heartbeat counter violation, also turned out to be false positives triggered by message injections by the robustness testing harness. Since the monitor checks network state, if we perform testing that directly affects the values seen on the network (such as injection/interception of network messages) we may detect violations which are created by the testing framework rather than the system. 
 %
-This is a common issue when using monitors as a test oracle with some sort of fault or behavior injection -- the monitor needs to know which state is from the test and which is from the system. 
+%This is a common issue when using monitors as a test oracle with some sort of fault or behavior injection -- the monitor needs to know which state is from the test and which is from the system. 
 Information about the test configurations can be used to filter out these types of false positives which arise from test-controlled state.
 %These types of false positives can be filtered out by using the test configurations to keep track of what system properties are being affected by the testing. 
 This type of filtering can be automated if the test information can be input to the monitor, either directly on the network (e.g., adding a message value to injected messages) or through a side-channel (i.e., building a testing-aware monitor).
 
+%%@RV cutting
 % detection time
-Comparing the violation messages from the monitor with the actual network state we can see the monitor's detection speed. 
-The deteection time for the monitor should approximately be the monitor's period plus the time to perform the monitoring and the time to send the detection message once the violation is detectable. 
-This is approximately two monitoring periods (given that the time to send a high priority message is negligable). This bears out in the replay testing, where the violation messages come approximately 555ms after the last good heartbeat message, which is a 55ms response time and close to double the monitor's 25ms period.
+%Comparing the violation messages from the monitor with the actual network state we can see the monitor's detection speed. 
+%The deteection time for the monitor should approximately be the monitor's period plus the time to perform the monitoring and the time to send the detection message once the violation is detectable. 
+%This is approximately two monitoring periods (given that the time to send a high priority message is negligable). This bears out in the replay testing, where the violation messages come approximately 555ms after the last good heartbeat message, which is a 55ms response time and close to double the monitor's 25ms period.
 
 
 
