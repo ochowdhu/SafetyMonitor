@@ -1,0 +1,163 @@
+\documentclass{article}
+
+\title{LTLFonts}
+\author{Matteo Slanina}
+\date{January 2007}
+
+\usepackage{ltlfonts,booktabs,url}
+
+\begin{document}
+
+\maketitle
+
+
+\section{License}
+
+LTLFonts is released under the \emph{SIL Open Font License}; please
+read it carefully and do not use the fonts unless you agree to the
+terms of the license:
+
+This Font Software is Copyright (c) 2006--2007, Matteo Slanina
+(\url{http://theory.stanford.edu/~matteo/ltlfonts/}). All Rights
+Reserved.
+
+``LTLFonts'' is a Reserved Font Name for this Font Software.
+
+This Font Software is licensed under the SIL Open Font License,
+Version 1.0. No modification of the license is permitted, only
+verbatim copy is allowed. This license is included in the LTLFonts
+distribution, and is also available with a FAQ at:
+\url{http://scripts.sil.org/OFL}
+
+
+\section{Usage}
+
+It's as easy as
+\begin{verbatim}
+\usepackage{ltlfonts}
+\end{verbatim}
+
+Then run your source through \LaTeX{} as usually, and call
+\verb|dvips| with the option \verb|-u +ltlfonts.map|, or add the line
+\begin{verbatim}
+p +ltlfonts.map
+\end{verbatim}
+to your \verb|.dvipsrc|.
+
+If you use a different back-end than \verb|dvips|, you must probably
+create a similar map file.
+
+
+\section{Glyph Complement}
+
+All commands are math-mode only. They are long and inconvenient on
+purpose: you are supposed to define semantically-oriented commands
+according to your own preferences.
+
+\subsection*{``Regular'' Symbols}
+
+The following symbols are the ones you are most likely to use. They
+match well with lower-case math letters:
+\begin{center}
+  \begin{tabular}{@{}cll@{}}
+    \toprule
+    glyph & command \\
+    \midrule
+    $\mathstrut\LTLsquare         $ & \verb|\LTLsquare         | \\
+    $\mathstrut\LTLdiamond        $ & \verb|\LTLdiamond        | \\
+    $\mathstrut\LTLcircle         $ & \verb|\LTLcircle         | \\
+    $\mathstrut\LTLsquareminus    $ & \verb|\LTLsquareminus    | \\
+    $\mathstrut\LTLdiamondminus   $ & \verb|\LTLdiamondminus   | \\
+    $\mathstrut\LTLcircleminus    $ & \verb|\LTLcircleminus    | \\
+    $\mathstrut\LTLcircletilde    $ & \verb|\LTLcircletilde    | \\
+    $\mathstrut\LTLsquarehat      $ & \verb|\LTLsquarehat      | \\
+    $\mathstrut\LTLdiamondhat     $ & \verb|\LTLdiamondhat     | \\
+    $\mathstrut\LTLsquareminushat $ & \verb|\LTLsquareminushat | \\
+    $\mathstrut\LTLdiamondminushat$ & \verb|\LTLdiamondminushat| \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+For example, \verb|\LTLsquare \phi| produces
+\[ \LTLsquare \phi \]
+and \verb|\LTLdiamondminus \LTLsquareminus (x = 0)| produces
+\[ \LTLdiamondminus \LTLsquareminus (x = 0) \]
+
+\subsection*{``Uppercase'' Symbols}
+
+The following symbols are identical to the previous ones, but raised
+slightly to make them align better with uppercase math letters. You
+can use them in specific places to improve the presentation, if you
+are really picky.
+
+Please notice that LTLFonts are not designed to be used in an
+``upper-case'' prevalent notation, since neither case will align well
+with operators on the math line such as ``$\rightarrow$.''
+\begin{center}
+  \begin{tabular}{@{}cl@{}}
+    \toprule
+    glyph & command \\
+    \midrule
+    $\mathstrut\LTLsquareuc         $ & \verb|\LTLsquareuc         | \\
+    $\mathstrut\LTLdiamonduc        $ & \verb|\LTLdiamonduc        | \\
+    $\mathstrut\LTLcircleuc         $ & \verb|\LTLcircleuc         | \\
+    $\mathstrut\LTLsquareminusuc    $ & \verb|\LTLsquareminusuc    | \\
+    $\mathstrut\LTLdiamondminusuc   $ & \verb|\LTLdiamondminusuc   | \\
+    $\mathstrut\LTLcircleminusuc    $ & \verb|\LTLcircleminusuc    | \\
+    $\mathstrut\LTLcircletildeuc    $ & \verb|\LTLcircletildeuc    | \\
+    $\mathstrut\LTLsquarehatuc      $ & \verb|\LTLsquarehatuc      | \\
+    $\mathstrut\LTLdiamondhatuc     $ & \verb|\LTLdiamondhatuc     | \\
+    $\mathstrut\LTLsquareminushatuc $ & \verb|\LTLsquareminushatuc | \\
+    $\mathstrut\LTLdiamondminushatuc$ & \verb|\LTLdiamondminushatuc| \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+For example, \verb|\LTLsquareuc \Phi| produces
+\[ \LTLsquareuc \Phi \]
+(compare with \verb|\LTLsquare \Phi| = $\LTLsquare \Phi$).
+
+\subsection*{Hat Accent}
+
+\verb|\LTLhat| provides a math accent identical to the one on top of
+\verb|\LTLsquarehat| and company, so you can build matching binary LTL
+symbols. It comes in one width only, and will look good on top of
+cursive ``U,'' ``W,'' ``S,'' and ``B,'' but may be off-center on top
+of other letters, as it wasn't really designed as a generic math
+accent:
+\begin{center}
+  \begin{tabular}{@{}cl@{}}
+    \toprule
+    glyph & command \\
+    \midrule
+    $\mathstrut\LTLhat{\mathcal{U}}$ & \verb|\LTLhat{\mathcal{U}}| \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+For example, \verb|p \mathbin{\LTLhat{\mathcal{B}}} q| produces
+\[ p \mathbin{\LTLhat{\mathcal{B}}} q \]
+
+
+\section{Kerning}
+
+The unary operators are declared in \verb|ltlfonts.sty| to be of math
+class 0 (``Ordinary'', \verb|\mathord|). This allows \TeX{} to use
+kerning information: a few pairs, such as $\LTLdiamond\LTLcircle$, are
+kerned to make the spacing look more uniform. Be aware that, if you
+redeclare the symbols to be of another type, \TeX{} will not be able
+to use the kerning tables (if you have to, don't worry, the
+differences are minimal). The suggested command definition in your
+document is thus something like
+\begin{verbatim}
+\newcommand\Henceforth{\LTLsquare}
+\end{verbatim}
+
+
+\section{Notes}
+
+\begin{itemize}
+\item Characters with hats extend above the font's declared ascender
+  length. You should thus not set them solid (with
+  \verb|\baselineskip| equal to the type size) or smaller in text
+  longer than a single line.
+\end{itemize}
+
+\end{document}

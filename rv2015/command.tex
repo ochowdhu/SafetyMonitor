@@ -1,0 +1,166 @@
+%% comments
+%\newcommand{\notes}[1]{}
+\newcommand{\notes}[1]{\textcolor{red}{#1}}
+\newcommand{\dg}[1]{\notes{Deepak says: #1}}
+\newcommand{\limin}[1]{\notes{Limin says: #1}}
+\newcommand{\anupam}[1]{\notes{Anupam says: #1}}
+\newcommand{\omar}[1]{\notes{Omar says: #1}}
+
+\newcommand{\eat}[1]{}
+% \newcommand{\Paragraph}[1]{\vspace{5pt}\noindent\textbf{#1}}
+\newcommand{\Paragraph}[1]{\vspace{2pt}\noindent\textbf{\textit{#1}}}
+\newcommand{\evalPoint}{\ensuremath{\mathit{evalPtr}}\xspace}
+\newcommand{\curPoint}{\ensuremath{\mathit{curPtr}}\xspace}
+
+\newcommand{\cP}{\ensuremath{\mathcal{P}}\xspace}
+
+
+\newcommand{\etal}{\textit{et al.}\xspace}
+\newcommand{\ie}{\textit{i.e.}\xspace}
+\newcommand{\eg}{\textit{e.g.}\xspace}
+\newcommand{\viz}{\textit{viz.}\xspace}
+\newcommand{\etc}{\textit{etc.}\xspace}
+
+\newcommand{\state}{\ensuremath{\pi}\xspace}
+\newcommand{\statedown}[1]{\ensuremath{\pi_{#1}}\xspace}
+\newcommand{\stateup}[1]{\ensuremath{\pi^{#1}}\xspace}
+\newcommand{\structure}[1]{\ensuremath{\mathbb{S}_{#1}}\xspace}
+\newcommand{\structureud}[2]{\ensuremath{\mathbb{S}_{#1}^{#2}}\xspace}
+\newcommand{\idx}{\ensuremath{idx}\xspace}
+\newcommand{\map}{\ensuremath{\mathcal{A}}\xspace}
+\newcommand{\result}{\ensuremath{\mathbb{R}}\xspace}
+
+
+\newcommand{\yesterday}{\ensuremath{\LTLcircleminus}\xspace}
+\newcommand{\tomorrow}{\ensuremath{\LTLcircle}\xspace}
+\newcommand{\henceforth}{\ensuremath{\LTLsquare}\xspace}
+\newcommand{\eventually}{\ensuremath{\LTLdiamond}\xspace}
+\newcommand{\historically}{\ensuremath{\LTLsquareminus}\xspace}
+\newcommand{\once}{\ensuremath{\LTLdiamondminus}\xspace}
+\newcommand{\since}{\ensuremath{\,\mathrm{\cal S}\,}\xspace}
+\newcommand{\until}{\ensuremath{\,\mathrm{\cal U}\,}\xspace}
+\newcommand{\weaksince}{\ensuremath{\,\mathrm{\cal B}\,}\xspace}
+\newcommand{\weakuntil}{\ensuremath{\,\mathrm{\cal W}\,}\xspace}
+\newcommand{\weakyesterday}{\ensuremath{\LTLcircletilde}}
+
+
+\newcommand{\TIME}{\ensuremath{\tau}\xspace}
+\newcommand{\LOG}{\ensuremath{\mathcal{L}}\xspace}
+\newcommand{\PF}{\ensuremath{\psi}\xspace}
+\newcommand{\FS}{FSOV}
+\newcommand{\BS}{BuildTemporalStructure}
+\newcommand{\FSWV}{FSWV}
+%%% new judgement commands
+
+\newcommand{\cur}{\ensuremath{\chi_C}\xspace}
+\newcommand{\fut}{\ensuremath{\chi_F}\xspace}
+\newcommand{\bld}{\textbf{B}\xspace}
+\newcommand{\nbld}{\textbf{NB}\xspace}
+\newcommand{\chk}{\textbf{C}\xspace}
+\newcommand{\tl}{\textbf{TL}\xspace}
+\newcommand{\ut}{\textbf{IT}\xspace}
+\newcommand{\tc}{\textbf{tc}\xspace}
+\newcommand{\tb}{\textbf{tb}\xspace}
+\newcommand{\na}{\textbf{na}\xspace}
+\newcommand{\ms}[1]{\ensuremath{\{#1\}}\xspace}
+% \newcommand{\note}[1]{\color{red}#1\color{black}}
+
+\newcommand{\bsat}{\ensuremath{\vdash_{\textbf{\color{blue}B}}}\xspace}
+\newcommand{\nsat}{\ensuremath{\vdash}\xspace}
+
+% \newcommand{\blabel}[1]{\color{blue}[\textit{\scriptsize#1}]}
+% \newcommand{\nlabel}[1]{\color{red}[\textit{\scriptsize#1}]}
+
+\newcommand{\blabel}[1]{\color{blue}[\textit{\textbf{#1}}]}
+\newcommand{\nlabel}[1]{\color{black}[\textit{\textbf{#1}}]}
+
+
+% \newcommand{\cL}{\ensuremath{\mathcal{L}}\xspace}
+
+% \newcommand{\bformula}{\texttt{B-formula}\xspace}
+% \newcommand{\bformulas}{\texttt{B-formulas}\xspace}
+
+\newcommand{\bformula}{\texttt{B-formula}\xspace}
+\newcommand{\bformulas}{\texttt{B-formulas}\xspace}
+
+
+\newcommand{\funcname}[1]{\textbf{\texttt{#1}}}
+
+\newcommand{\cc}{\funcname{checkCompliance}\xspace} % checkCompliance 
+\newcommand{\bts}{\funcname{uSS}\xspace} %buildTemporalStructure 
+\newcommand{\ips}{\funcname{ips}\xspace} % isPolicySatisfied
+\newcommand{\sat}{\funcname{sat}\xspace} % sat predicate axiom
+% \newcommand{\dom}{\funcname{domain}\xspace} %domain
+\newcommand{\dom}{\funcname{dom}\xspace} %domain
+% \newcommand{\monitor}{\funcname{Policy-Monitor}\xspace}
+%\newcommand{\monitor}{\funcname{pr\'ecis}\xspace}
+\newcommand{\monitor}{\funcname{agmon}\xspace}
+
+\newcommand{\statesize}{\ensuremath{\Upsilon}\xspace}
+
+\newcommand{\tsub}{\ensuremath{\mathsf{b\mbox{-}tsub}}\xspace}
+\newcommand{\stsub}{\ensuremath{\mathsf{b\mbox{-}s\mbox{-}tsub}}\xspace}
+
+\newcommand{\ins}{\ensuremath{\sigma_{\mathrm{in}}}\xspace}
+\newcommand{\DELAY}{\ensuremath{\Delta}\xspace}
+\newcommand{\DELAYi}{\ensuremath{\Delta^{-1}}\xspace}
+\newcommand{\delay}{\ensuremath{\delta}\xspace}
+\newcommand{\invalid}{\ensuremath{\sigma_\bot}\xspace}
+
+\newcommand{\lsat}{\ensuremath{\vdash_{\textbf{\color{magenta}tl}}}\xspace}
+
+\newcommand{\inp}{\ensuremath{\chi_I}\xspace}
+\newcommand{\outp}{\ensuremath{\chi_O}\xspace}
+
+% Some shortcuts
+\newcommand{\sigin}{\ensuremath{\sigma_{\textit{in}}}\xspace}
+\newcommand{\Sigout}{\ensuremath{\Sigma_{\textit{out}}}\xspace}
+\newcommand{\JJoin}{\hbox{{\Large$\bowtie$}}\xspace}
+
+\newcommand{\planguage}{\ensuremath{\mathbf{\alpha\mathcal{VSL}}}\xspace}
+
+\newcommand{\interval}{\ensuremath{\mathbb{I}}\xspace}
+
+\newcommand{\cL}{\ensuremath{\mathcal{L}}\xspace}
+\newcommand{\cD}{\ensuremath{\mathcal{D}}\xspace}
+
+% \newcommand{\policy}{\ensuremath{\mathbf{\wp}}\xspace}
+% \newcommand{\policy}{\ensuremath{\mathbf{\varphi}}\xspace}
+\newcommand{\policy}{\ensuremath{\varphi}\xspace}
+%\newcommand{\policy1}{\ensuremath{\varphi_1}\xspace}
+%\newcommand{\policy2}{\ensuremath{\varphi_2}\xspace}
+
+\newcommand{\identity}{\ensuremath{\mathbf{\bullet}}\xspace}
+
+\newcommand{\true}{\ensuremath{\mathrm{\texttt{t}}}\xspace}
+\newcommand{\false}{\ensuremath{\mathrm{\texttt{f}}}\xspace}
+
+
+
+\newcommand{\send}{\ensuremath{\mathrm{send}}\xspace}
+\newcommand{\inrole}{\ensuremath{\mathrm{inrole}}\xspace}
+\newcommand{\contains}{\ensuremath{\mathrm{contains}}\xspace}
+\newcommand{\psychotherapynotes}{\ensuremath{\mathit{psych\mbox{-}notes}}\xspace}
+\newcommand{\PHI}{\ensuremath{\mathit{PHI}}\xspace}
+\newcommand{\coveredentity}{\ensuremath{\mathit{covered\mbox{-}entity}}\xspace}
+\newcommand{\individual}{\ensuremath{\mathit{individual}}\xspace}
+
+\spnewtheorem{RAxiom}{Axiom}[lemma]{\bfseries}{\rmfamily}
+
+\newcommand{\pred}[1]{\ensuremath{\mathsf{#1}}\xspace}
+
+
+\newcommand{\snew}{\ensuremath{S_{\mbox{new}}}\xspace}
+\newcommand{\supdate}{\ensuremath{S_{\mbox{update}}}\xspace}
+\newcommand{\scarry}{\ensuremath{S_{\mbox{carry-over}}}\xspace}
+\newcommand{\sremove}{\ensuremath{S_{\mbox{remove}}}\xspace}
+
+%\newcommand{\mid}{\ensuremath{\;|\;}}
+%%% adding some new ones
+\newcommand{\wdelay}{\ensuremath{\Delta^w}}
+\newcommand{\tempSub}{\funcname{tempSub}\xspace}
+\newcommand{\reduce}{\funcname{reduce}\xspace}
+\newcommand{\histSt}[2][\policy]{\ensuremath{\mathbb{S}^{#1}_{\policy}}}
+\newcommand{\histst}[2][\policy]{\ensuremath{{S}^{#1}_{\policy}}}
+\newcommand{\incrS}{\funcname{incrS}\xspace}
+\newcommand{\policyv}{\ensuremath{\phi}\xspace}
