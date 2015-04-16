@@ -25,11 +25,11 @@ We refer to the invariants as the specification \emph{rules} or \emph{policies}.
 
 %% syntax goes here\ldots
 %Our language syntax is
-$$\psi ::=  p \, | \,  \neg \psi \, | \,  \psi_1 \vee \psi_2 \, | \,  \psi_1 \mathcal{U}_{[l,h]} \psi_2 \, | \, \psi_1 \mathcal{S}_{[l,h]} \psi_2$$
+$$\psi ::=  p \, | \,  \neg \psi \, | \,  \psi_1 \vee \psi_2 \, | \,  \psi_1 \mathcal{U}_{[l,h]} \psi_2 \, | \, \psi_1 \mathcal{S}_{[l,h]} \psi_2 \, | \, \nextmtl \psi \, | \, \lastmtl \psi$$
 
-Policy formulas are denoted by $\psi$. Policy formulas can include two bounded temporal operators: the past-time operator \emph{since} ($\mathcal{S}$) and the future-time operator \emph{until} ($\mathcal{U}$). 
+Policy formulas are denoted by $\psi$. Policy formulas can include two bounded temporal operators: the past-time operator \emph{since} ($\mathcal{S}$) and the future-time operator \emph{until} ($\mathcal{U}$). The \emph{next} and \emph{last} step operators ($\nextmtl$ and $\lastmtl$, respectively) can also be used.
 %The \emph{until} operator states that $\psi_1$ must be true until (but not including) the time step when $\psi_2$ is true within the time bounds $[l,h]$.
-Both temporal operators include a time bound interval $[l,h]$ where $l,h \in \mathbb{T}$ and $0 \leq l \leq h$. 
+The bounded temporal operators include a time bound interval $[l,h]$ where $l,h \in \mathbb{T}$ and $0 \leq l \leq h$. 
 These intervals bound the time in which the triggering subformula $\psi_2$ is evaluated. 
 An \emph{until} formula $\alpha\, \mathcal{U}_{[l,h]}\, \beta$ states that $\alpha$ must be true from the current step $i$ until (but not including) the time step $k$ where $\tau_k \in [\tau_i+l,\tau_i+h]$ and $\beta$ is true. 
 \emph{Since} formulas are similar but in the past: $\alpha\, \mathcal{S}_{[l,h]}\, \beta$ states that $\alpha$ must have been true since (but not including) timestep $k$ where  $\tau_k \in [\tau_i-h,\tau_i-l]$ and $\beta$ was true (where $i$ is the current time step).
@@ -53,6 +53,10 @@ We write $\sigma, \tau, j \vDash \varphi$ to represent that the policy $\varphi$
 \sigma, \tau, j &\vDash \neg \psi & \text{ if and only if } & \sigma, \tau, j, \nvDash \psi \\
 % not
 \sigma, \tau, j &\vDash \psi_1 \vee \psi_2 & \text{ if and only if } & \sigma, \tau, j \vDash \psi_1 \text{ or } \sigma, \tau, j \vDash \psi_2 \\
+% next
+\sigma, \tau, j &\vDash \nextmtl \psi & \text{ if and only if } & \sigma, \tau, j+1 \vDash \psi \\
+% last
+\sigma, \tau, j &\vDash \lastmtl \psi & \text{ if and only if } & \sigma, \tau, j-1 \vDash \psi \\
 %% until
 \sigma, \tau, j &\vDash \psi_1 \mathcal{U}_{[l,h]} \psi_2 & \text{ if and only if } 
 	& \exists k: (l \leq \tau_k-\tau_j \leq h), \sigma, \tau, k \vDash \psi_2  \\

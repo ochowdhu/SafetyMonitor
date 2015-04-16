@@ -52,6 +52,8 @@
 \newcommand{\pst}{\ensuremath{S^i_\psi}}
 \newcommand{\rpt}[3]{\ensuremath{\langle #1, #2 \rangle}_{#3}}
 \newcommand{\greduce}{\textit{reduce}}
+\newcommand{\nextmtl}{\bigcirc}
+\newcommand{\lastmtl}{\dot\circ}
 
 %%%%%%%%%%%%%% end preamble, begin doc %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
@@ -72,11 +74,13 @@
 
 \begin{abstract}
 The trend towards increasing commercial-off-the-shelf (COTS) components in complex safety-critical systems is increasing the difficulty of verifying system correctness. 
-Runtime verification (RV) is a lightweight technique to verify that certain properties hold over execution traces.
+Runtime verification (RV) is a promising technique to check executions of these systems, 
+but most existing RV methods utilize some form of system or code instrumentation and thus are not designed to monitor potentially black-box COTS components.
 %
-RV is usually implemented as runtime monitors that can be used as runtime fault detectors or test oracles to analyze a system under test for bad behaviors.
-%
-Most existing RV methods utilize some form of system or code instrumentation and thus are not designed to monitor potentially black-box COTS components.
+Instead of accessing state through instrumentation, we explore monitoring a system's externally observable state, which can be obtained without affecting the target system.
+This paper presents a framework for monitoring safety-critical systems comprised of black-box components. We present a broadcast-bus based monitor which checks bounded metric temporal logic specifications.
+We have implemented an embedded, real-time CAN monitor utilizing our monitoring algorithm. The monitor has been evaluated on a bench CAN bus with replayed logs obtained from system testing of an autonomous research vehicle on which violations of system safety requirements were identified.
+
 
 %% major points to push
 %
