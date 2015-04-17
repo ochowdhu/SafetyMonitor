@@ -70,7 +70,7 @@ We denote the sequence of time stamps with $\tau$. For all $i, j\in\mathbb{N}$ s
 \end{itemize}
 
 
-Our monitoring algorithm utilizes \emph{residues}, which are partially reduced (\ie, rewritten) policy formulas representing the remaining portion of a formula which could not be fully evaluated given the current trace. A residue $r^j_{\policy}$ is a tagged pair $\rpt{j}{\policyv}{\policy}$ where $j$ is a position in the trace. We use these residues to efficiently hold policy history for future time formulas which cannot be evaluated due to incomplete information.
+Our monitoring algorithm utilizes \emph{residues}, which are partially reduced (\ie, rewritten) policy formulas representing the remaining portion of a formula which could not be fully evaluated given the current trace. A residue $r^j_{\policy}$ is a tagged pair $\rpt{j}{\policyv}{\policy}$ where $j$ is a position in the trace, $\policy$ is the original residue formula and $\policyv$ is the residue formula. We use these residues to efficiently hold policy history for future time formulas which cannot be evaluated due to incomplete information.
 
 Policy formulas have a wait delay $\wdelay(\policy)$ which defines an upper bound on the time duration necessary to guarantee complete information to evaluate the formula. Past and present-time formulas have no wait delay, since all trace steps necessary to evaluate them have already been seen by the monitor. Future time formulas have a delay based on their duration. The length $|\policy|$ of a policy $\policy$ is defined as the total number of subformula, (\ie, the number of nodes in the policy AST).
 
@@ -87,7 +87,7 @@ The operation $\tempSub$ identifies all the children of temporal subformula of a
 Our runtime monitoring algorithm \monitor takes as input a specification $\policy$ and monitors a growing trace, building history structures and reporting the specification violations as soon as they are detected. We summarize the relevant algorithm functions below:
 
 \begin{description}
-\item[$\monitor{}(\policy)$] is the top-level function. \\
+\item[$\monitor{}(\policy)$] is the top-level function. 
 \item[$\reduce(\sigma_i, \tau_i, \histSt{i}, \rpt{i}{\policy}{\policy})$] reduces the given residue based on the current state $(\sigma_i,\tau_i)$ and the history $\histSt{i}$.
 \item[$\tempSub(\policy)$] identifies the sub-formulas which require a history structure to evaluate the policy $\policy$.
 \item[$\incrS(\histst{i-1}, \histSt{i}, \sigma_i, \tau_i, i)$] updates the history structure $\histst{i-1}$ to step $i$ given the current trace and history state.
@@ -141,7 +141,12 @@ The only difference between the top-level policy and temporal subformula is that
 \monitor works primarily by reducing policy residues down to truth values. Residues are reduced by the $\reduce(\sigma_i, \tau_i, \histSt{i}, \rpt{j}{\policyv}{\policy})$ function, which uses the current state $\sigma_i,\tau_i$ and the stored history in $\histSt{i}$ to rewrite the policy $\policyv$ to a reduced form, either a truth value or a new policy which will evaluate to the same truth value as the original. For past or present-time formulas, $\reduce()$ is able to return a truth value residue since all the necessary information to decide the policy is available in the history and current state. Future-time policies may be fully-reducable if enough state information is available. If a future-time policy cannot be reduced to a truth value, it is returned as a residue unchanged.
 
 \subsubsection{Incrementing History Structures}
-To evaluate past and future-time policies, we must correctly store trace history which can be looked up during a residue reduction. We store the trace history of a policy $\policyv$ in a history structure $\histst[\policyv]{}$. This history structure contains a list of residues for the number of steps required to evaluate the top-level policy. History structures are incremented by the $\incrS(\histst[\policyv]{i-1}, \histSt[\policyv]{i}, \sigma_i, \tau_i, i)$ function. This function takes the previous step's history structure $\histst[\policyv]{i-1}$ and the current state ($\sigma_i,\tau_i$, and the updated smaller history structures $\histSt[policyv]{i}$) and performs two actions:
+To evaluate past and future-time policies, we must correctly store trace history which can be looked up during a residue reduction. 
+We store the trace history of a policy $\policyv$ in a history structure $\histst[\policyv]{}$. 
+This history structure contains a list of residues for the number of steps required to evaluate the top-level policy. History structures are incremented by the function 
+$\incrS(\histst[\policyv]{i-1}, \histSt[\policyv]{i}, \sigma_i, \tau_i, i) = (\bigcup_{r \in \histst[\policyv]{i-1}} \reduce(\sigma_i, \tau_i, \histst[\policyv]{i}, r)) \cup \reduce(\sigma_i, \tau_i, \histst[\policyv]{i}, \rp{i}{\policyv})$
+%
+This function takes the previous step's history structure $\histst[\policyv]{i-1}$ and the current state ($\sigma_i,\tau_i$, and the updated smaller history structures $\histSt[policyv]{i}$) and performs two actions:
 %\begin{enumerate}
 	1) Adds a residue for the current step $i$ to $\histst[policyv]{i-1}$ and
 	2) Reduces all residues contained in $\histst[policyv]{i-1}$ with the current state.
@@ -149,8 +154,11 @@ To evaluate past and future-time policies, we must correctly store trace history
 Together, these two actions leave an updated history structure $\histst[policyv]{i}$ which has updated history information for all the required steps.
 
 \subsection{Algorithm Properties}
+There are two important correctness properties of our monitoring algorithm which need to be shown. \emph{Correctness} states that the algorithm's results are correct with respect to the syntax. That is, that if \monitor reports a policy violation, the trace really did violate the policy. Related is \emph{promptness}, which requires that the algorithm provide a decision for the given policy at any given time $t$ within a finite bound, $\wdelay(\policy)$. Promptness requires that the algorithm decide satisfaction as soon as it is guaranteed to be possible to decide. 
+%
+Besides correctness guarantees, our algorithm is also \emph{eager}. An eager algorithm reports satisfaction as soon as the trace is an informative prefix \cite{Kupferman2001} for the policy. Many temporal policies will be decidable before the promptness delay, providing early detection and extra time for recovery actions compared to monitoring algorithms which wait until the promptness delay to ensure they can check the policy. 
 
-The following theorem states that \monitor is correct and prompt (returns answers within a bounded delay). The theorem requires that the history structures $\histSt{i}$ be consistent at $i$ with respect to the trace $\sigma,\tau$. This means that the history structures contain the actual history of the trace up to step $i$. The algorithm provides this consistency itself if run iteratively from step $0$.
+The following theorem states that \monitor is correct and prompt. The theorem requires that the history structures $\histSt{i}$ be consistent at $i$ with respect to the trace $\sigma,\tau$. This means that the history structures contain the actual history of the trace up to step $i$. The algorithm provides this consistency itself if run iteratively from step $0$.
 
 \begin{theorem}[Correctness and Promptness of \monitor]
 For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\rp{j}{\false} \in \histst{i}$ then $\sigma, \tau, j \nvDash \policy$ and if $\rp{j}{\true} \in \histst{i}$ then $\sigma, \tau, j \vDash \policy$ (Correctness) and (2) if $\tau_i - \tau_j \geq \wdelay(\policy)$ then if $\sigma, \tau, j \nvDash \policy$ then $\rp{j}{\false} \in \histst{i}$ and if $\sigma, \tau, j \vDash \policy$ then $\rp{j}{\true} \in \histst{i}$ (Promptness)
@@ -158,5 +166,11 @@ For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\ta
 \end{theorem}
 \textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{TechPaper}
 
+Theorem \ref{thm:eagerness} states that \monitor is eager. 
+
+\begin{theorem}[Eagerness of \monitor]
+For all $i \in mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\sigma_0,\ldots,\sigma_i$ is an informative prefix then if $\sigma,\tau, i \vDash \policy$ then $\rpt{i}{\true}{\policy} \in \histst{i}$ and if $\sigma, \tau, i \nvDash \policy$ then $\rpt{i}{\false}{\policy} \in \histst{i}$. 
+\end{theorem}
+\textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{TechPaper}
 %%%%%%%%%%%%%%%%%%%%%%%%%%% REWRITE LINE %%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% REWRITE LINE %%%%%%%%%%%%%%%%%%%%%
