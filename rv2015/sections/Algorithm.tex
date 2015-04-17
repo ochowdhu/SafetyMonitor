@@ -7,9 +7,15 @@
 
 In order to monitor distributed embedded systems we need an algorithm which can continuously check explicit time specifications over finite traces. This has led to our algorithm \monitor which is an iterative monitoring algorithm based on formula reduction (essentially formula-rewriting). 
 %
-\monitor checks specifications written in a future-bounded metric temporal logic. A large portion of safety specification rules for safety-critical embedded systems require explicit time bounds to ensure timely behavior, so a specification language with explicit time bounds is important. 
-
 To constantly check that the target system is adhering to its specification, we must constantly check the specification against the current system trace. To constantly check the system efficiently, \monitor is an iterative algorithm, performing additional checking as each new trace step arrives.
+%
+\monitor checks specifications written in a future-bounded metric temporal logic. A large portion of safety specification rules for safety-critical embedded systems require explicit time bounds to ensure timely behavior, so a specification language with explicit time bounds is important. 
+%
+Examples of rules that utilize explicit time bounds include: %
+Cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed ($\pred{brakeDepressed} \rightarrow \eventually_{[0, 500]} \henceforth_{[0,250]} \neg \pred{CruiseEngaged}$), 
+the cruise control mode cannot transition directly from Off to Engaged within 250ms ($\neg (\pred{CruiseEngaged} \wedge \yesterday_{[0,250]} \pred{CruiseOff})$), 
+and the vehicle should not be within 1m of the current lane edge for 1s while lane centering is enabled ($\neg \historically_{[0, 1000]}(\pred{LaneCentering} \wedge \pred{distToLaneEdgeLT1m})$).
+
 
 %The monitoring algorithm is an aggressive, iterative algorithm based on formula reduction (essentially formula-rewriting) and a stored history structure to check whether a given formula satisfies or violates the target trace. 
 %It is aggressive in that the algorithm attempts to check future-time temporal formulas as soon as possible rather than wait until an answer is guaranteed to be available (by combining short-circuiting and immediate checking of temporal subformulas).
@@ -74,7 +80,7 @@ Our monitoring algorithm utilizes \emph{residues}, which are partially reduced (
 
 Policy formulas have a wait delay $\wdelay(\policy)$ which defines an upper bound on the time duration necessary to guarantee complete information to evaluate the formula. Past and present-time formulas have no wait delay, since all trace steps necessary to evaluate them have already been seen by the monitor. Future time formulas have a delay based on their duration. The length $|\policy|$ of a policy $\policy$ is defined as the total number of subformula, (\ie, the number of nodes in the policy AST).
 
-To evaluate \planguage policies, we need to save a limited amount of history state of child policies of temporal subformula within a policy. For example, given the policy $ACCCancelReq \rightarrow \eventually_{\interval} ACCOff \vee (ACCOn \since_{\interval} ACCCancelReq)$, $ACCOff$ is a child policy of the temporal formula $\eventually_{\interval}$ and $ACCOn$ and $ACCCancelReq$ are children of the temporal formula $ACCOn \since_{\interval} ACCCancelReq$. The monitor must store some history of these child policies in order to evaluate the parent policy.
+To evaluate \planguage policies, we need to save a limited amount of history state of child policies of temporal subformula within a policy. For example, given the policy $\pred{ACCCancelReq} \rightarrow \eventually_{\interval} \pred{ACCOff} \vee (\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq})$, $\pred{ACCOff}$ is a child policy of the temporal formula $\eventually_{\interval}$ and $\pred{ACCOn}$ and $\pred{ACCCancelReq}$ are children of the temporal formula $\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq}$. The monitor must store some history of these child policies in order to evaluate the parent policy.
 The operation $\tempSub$ identifies all the children of temporal subformula of a policy.
 %% might want to do a more abstract example to show recursiveness
 %That is, for $\alpha\, \mathcal{U}_{[l,h]}\, \beta$ we need to save the history of $\alpha$ and $\beta$ (and if either of those are also a temporal formula then we need their history as well). 
@@ -97,9 +103,13 @@ Our runtime monitoring algorithm \monitor takes as input a specification $\polic
 
 
 \subsubsection{Top-level monitoring algorithm}
-The top-level monitoring algorithm \monitor is a sampling-based periodic monitor which uses history structures to store trace state for evaluating temporal subformulas. \emph{History structures} are lists of residues along with past-time markers for evaluating infinite past-time formulas. 
+The top-level monitoring algorithm \monitor is a sampling-based periodic monitor which uses history structures to store trace state for evaluating temporal subformulas. 
+\emph{History structures} are lists of residues along with past-time markers for evaluating infinite past-time formulas. 
 The algorithm checks the given policy $\policy$ periodically at every trace sample step. 
-When the policy cannot be decided at a given step (\eg, it requires future state to evaluate), the remaining policy residue is saved in a history structure for evaluation in future steps when the state will be available.
+When the policy cannot be decided at a given step (\eg, it requires future state to evaluate), the remaining policy residue is saved in a history structure for evaluation in future steps when the state will be available. 
+The history structure for formula $\policyv$ at trace step $i$ is denoted $\histst[\policyv]{i}$. 
+We use $\histSt[\policy]{i}$ to denote the set of history structures for all temporal subformula of $\policy$, \ie, 
+$\histSt[\policy]{i} = \bigcup_{\policyv \in \tempSub(\policy)} \histst[\policyv]{i}$.
 The high level algorithm \monitor is shown in Figure \ref{fig:algorithm}. 
 
 First, all the necessary history structures $\histst[\policyv]{ }$ are identified using $\tempSub(\policy)$ and initialized. 
@@ -164,11 +174,12 @@ The following theorem states that \monitor is correct and prompt. The theorem re
 For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\rp{j}{\false} \in \histst{i}$ then $\sigma, \tau, j \nvDash \policy$ and if $\rp{j}{\true} \in \histst{i}$ then $\sigma, \tau, j \vDash \policy$ (Correctness) and (2) if $\tau_i - \tau_j \geq \wdelay(\policy)$ then if $\sigma, \tau, j \nvDash \policy$ then $\rp{j}{\false} \in \histst{i}$ and if $\sigma, \tau, j \vDash \policy$ then $\rp{j}{\true} \in \histst{i}$ (Promptness)
 .
 \end{theorem}
-\textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{TechPaper}
+\textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{TechPaper} \\
 
 Theorem \ref{thm:eagerness} states that \monitor is eager. 
 
 \begin{theorem}[Eagerness of \monitor]
+\label{thm:eagerness}
 For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\sigma_0,\ldots,\sigma_i$ is an informative prefix then if $\sigma,\tau, i \vDash \policy$ then $\rpt{i}{\true}{\policy} \in \histst{i}$ and if $\sigma, \tau, i \nvDash \policy$ then $\rpt{i}{\false}{\policy} \in \histst{i}$. 
 \end{theorem}
 \textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{TechPaper}
