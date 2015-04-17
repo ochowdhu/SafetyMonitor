@@ -169,7 +169,7 @@ For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\ta
 Theorem \ref{thm:eagerness} states that \monitor is eager. 
 
 \begin{theorem}[Eagerness of \monitor]
-For all $i \in mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\sigma_0,\ldots,\sigma_i$ is an informative prefix then if $\sigma,\tau, i \vDash \policy$ then $\rpt{i}{\true}{\policy} \in \histst{i}$ and if $\sigma, \tau, i \nvDash \policy$ then $\rpt{i}{\false}{\policy} \in \histst{i}$. 
+For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\sigma_0,\ldots,\sigma_i$ is an informative prefix then if $\sigma,\tau, i \vDash \policy$ then $\rpt{i}{\true}{\policy} \in \histst{i}$ and if $\sigma, \tau, i \nvDash \policy$ then $\rpt{i}{\false}{\policy} \in \histst{i}$. 
 \end{theorem}
 \textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{TechPaper}
 %%%%%%%%%%%%%%%%%%%%%%%%%%% REWRITE LINE %%%%%%%%%%%%%%%%%%%%%
