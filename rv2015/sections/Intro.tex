@@ -1,26 +1,27 @@
 %%%% Intro section
 
 \section{Introduction}
+%% first paragraph -- paper motivation
 Embedded systems, from home appliances to automobiles, are becoming increasingly complex due to the addition of new advanced features. 
-Even traditionally non-critical systems are becoming safety- or mission-critical due to the addition of connectivity, complex autonomy and software reliant control (e.g., X-by-wire \cite{Leen2002}).
-As more embedded systems become safety-critical, it is imperative that developers have methods to ensure that these systems are correct. 
-
-Runtime verification (RV) is a more lightweight method aimed at verifying that a specific execution of a system satisfies or violates a given critical property \cite{Leucker2009}. 
+Runtime verification techniques are a promising way to help verify system safety and correctness in the face of increasing design complexity.
+Many existing systems such as modern automobiles are built by system integrators utilizing multiple vendors and commercial-off-the-shelf (COTS) components, some of which are black box components for the integrator. Besides being distributed architectures of black-box components, these systems are often hard real-time which leads to more constraints on the monitor itself \cite{Goodloe2010}.
 %
-Runtime verification can provide a formal analysis while avoiding many of the pitfalls that traditional model-based methods have such as state space explosion and model abstractions. 
+This type of architecture is incompatible with many existing runtime monitoring techniques, which often require program instrumentation \cite{}. Monitoring distributed systems of black-box components requires a different technique for obtaining system state, such as external \emph{bus-monitoring} \cite{Goodloe2010}.
 
-The current trend in safety-critical embedded system is towards faster design cycles and more commercial-off-the-shelf (COTS) components. Being able to verify that a system made up of diverse components from multiple suppliers is safe and works correctly is difficult, even without the lack of design information that is inherent of COTS black-box components.
-%
-Runtime verification is a useful tool to help the verification of these systems. Runtime monitors can detect not only software faults but also hardware and design faults. 
+%% second paragraph -- purpose
+Given that we cannot utilize instrumentation to obtain system state, both due to lack of source access making it difficult and the risks of affecting the timing and correctness of the target system, we aim to obtain a system trace through passive observation. These distributed architectures tend to contain broadcast buses (\eg, controller area network (CAN) in ground vehicles) which contain a large amount of useful system state within the messages being sent between system components. 
+% a little more? What's the split of information
+Many desired system properties of these reactive real-time systems are timing related, so using an explicit-time based specification language for the system policies is helpful. 
+System requirements such as ``{the system must perform action $a$ within $t$ seconds of event $e$}'' are common.
+Metric temporal logic (MTL) is a commonly used logic for specifying these types of properties, and a bounded-future fragment of MTL can be used to ensure efficient monitoring of useful system properties.
+% talk about explicit time? real time? something in that vein
 
-%%% Address challenge, contributions, and case study information
+%% third paragraph -- contributions
+In this paper we present a real-time embedded monitor for safety-critical embedded systems with black-box COTS components (such as automobiles). Our monitoring algorithm \monitor is an dynamic programming based iterative algorithm which utilizes formula reduction (essentially rewriting) and history structures to system traces obtained from a target broadcast bus against a given safety policy. We have implemented this algorithm on an inexpensive embedded platform and present a case study using the monitor to perform real-time checking of replayed CAN logs from the robustness testing of an autonomous vehicle.
 
-%%% Challenge
-Though there is an increasing focus on runtime monitors for safety-critical real-time systems, there is still little work aimed at monitoring systems with black-box components. Most existing runtime verification techniques require instrumentating the target system in some way, either with the monitor itself or to expose the monitored system state. Black-box components cannot easily be instrumented in this way because users do not have source code access to instrument. Although access to system state is limited in black-box systems, there are classes of systems which have a useful amount of externally observable state which can be monitored without instrumentation. Common bus-based distributed system architectures used in automobiles and other ground vehicles tend to have a reasonable amount of system state externally observable as the state is being sent between system nodes to enable control. Although some properties detailing individual components internal state and action choices may be unobservable in these situations, there are safety-relevant system-level properties which are observable at this level.
+% 15 pages in this format is so short...
+Due to space restrictions, we defer the correctness proof of \monitor and other details to a technical report \cite{TechReport}.
 
-%%% Contributions
-This paper presents an end-to-end framework for monitoring safety-critical systems made of potentially black-box components. 
-We present an external, broadcast bus monitor which primarily targets Controller Area Network (CAN), a common broadcast bus network used in modern automobiles and other ground vehicles. We monitor system specifications comprised of bounded propositional metric temporal logic (MTL) invariants which utilize propositions generated from the observed network state by a semi-formal interface.
 
-%%% Case Study
-We have implemented an embedded, real-time CAN monitor utilizing our monitoring algorithm. The monitor has been evaluated on a bench CAN bus with replayed logs obtained from system testing of an autonomous research vehicle on which violations of system safety requirements were identified.
+%%% REWRITE LINE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
