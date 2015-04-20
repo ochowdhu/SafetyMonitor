@@ -1,0 +1,89 @@
+This is really two papers:
+	a monitoring algorithm paper
+		eager checking, future+past mtl, 
+	an implementation/case study paper
+		hybrid, periodic, semi-formal interface, static memory, etc
+both can't fit, so we need to decide (or do both? ugh...)
+
+
+Omar notes:
+	Intro:
+		why is this necessary?
+		what is different from existing work?
+	Section 4:
+		formal description
+			check properties for finite traces
+			why MTL -- explicit time restrictions
+		mash 4.1/4.2 together 
+			provide examples of real-time properties
+
+		definitions:
+			high level definition of residuals
+				partial evaluation of stuff
+				shorten definitions, make things inline, remove specifics
+			don't put incrS in defintions
+				
+
+		4.3 -- auxilary stuff 
+			structures, define functions (e.g., like precis)
+
+			DO:
+				formal def of algorithm
+				incrS after algorithm description
+		4.4 -- discuss desired properties (eager, complete, prompt)
+			proofs in tech report
+	Section 5:
+		experience report -- refocus as goals, challenges, etc
+			discuss any cool real-world stuff (i.e., optimizations)
+			explain the results
+
+		subsection -- remarks
+			future work, etc
+
+============================
+INTRO NOTES
+
+First paragraph — motivation
+		 the more advanced features on an embedded system, the more important RV is as a tool to ensure correctness
+		existing systems are multi-vendor COTS black box
+			so no instrumentation. How should we monitor them then?
+
+second paragraph — purpose of paper
+		Given no instrumentation we need an external bus monitor
+			iteratively check traces at runtime
+		needs to be efficient enough, handle the necessary properties, etc
+			fast enough for runtime
+			implementable on cheap embedded system
+			MTL for explicit time properties
+
+Third paragraph — Key technical contributions
+	We present an online monitor blah blah…
+	This monitoring algorithm is proven correct and prompt, 
+
+Fourth paragraph — case study
+	We also describe a case study utilizing an embedded implementation of the monitor to check a selection of safety policies over a CAN bus. …
+
+Due to space restrictions, we defer the correctness proof and other details to a technical report…
+
+Then, need to do a quick background section
+
+=======================
+Implementation section
+
+%% paragraph 1 -- experimental environment
+	we perform a case study using embedded monitor implementation on bench CAN bus
+	replay logs from vehicle testing
+	
+
+%% paragraph 2 -- experiment goal
+	show feasibility of real-time embedded monitoring of realistic safety properties
+
+%% paragraph 3 -- description of experiment
+	built bench CAN network
+	obtained logs from robustness testing of autonomous vehicle
+	picked safety policy -- based on safety reqs
+	replayed logs on bench network
+
+%% paragraph 4 -- results summary
+	caught stuff
+	some false positives -- important to have testing
