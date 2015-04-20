@@ -8,7 +8,7 @@ This section reports our case study performing real-time monitoring of a CAN net
 
 \begin{figure}
 \centering
-\includegraphics[width=4.5in]{img/replay_arch}
+\includegraphics[width=3in]{img/replay_arch}
 \caption{CAN replay network setup \label{fig:replaySchem}}
 \end{figure}
 
@@ -49,6 +49,8 @@ We also checked for illegal state transitions. Rules \#2 through \#5 check both 
 \end{tabular}
 \caption{Case study monitoring specification \label{tab:monspec}}
 \end{table}
+
+%% move hybrid algorithm explanation here maybe?
 
 \subsection{Monitoring Results}
 Monitoring the test logs with the above specification resulted in identifying two real violations as well as some false positive violation detections caused by the testing infrastructure.

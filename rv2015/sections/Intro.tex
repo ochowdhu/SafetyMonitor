@@ -4,12 +4,19 @@
 %% first paragraph -- paper motivation
 Embedded systems, from home appliances to automobiles, are becoming increasingly complex due to the addition of new advanced features. 
 Runtime verification techniques are a promising way to help verify system safety and correctness in the face of increasing design complexity.
-Many existing systems such as modern automobiles are built by system integrators utilizing multiple vendors and commercial-off-the-shelf (COTS) components, some of which are black box components for the integrator. Besides being distributed architectures of black-box components, these systems are often hard real-time which leads to more constraints on the monitor itself \cite{Goodloe2010}.
+Many existing systems such as modern automobiles are built by system integrators utilizing multiple vendors and commercial-off-the-shelf (COTS) components, some of which are black box components for the integrator. 
+These systems are often also hard real-time systems which lead to more constraints on system monitoring \cite{Goodloe2010}.
+%Besides being distributed architectures of black-box components, these systems are often hard real-time which leads to more constraints on the monitor itself \cite{Goodloe2010}.
 %
-This type of architecture is incompatible with many existing runtime monitoring techniques, which often require program instrumentation \cite{}. Monitoring distributed systems of black-box components requires a different technique for obtaining system state, such as external \emph{bus-monitoring} \cite{Goodloe2010}.
+This type of architecture is incompatible with many existing runtime monitoring techniques, which often require program instrumentation \cite{}. 
+Instrumenting systems without source code access is more difficult, and even when source access is available there are risks of affecting the timing and correctness of the target system when adding instrumentation.
+Monitoring distributed systems of black-box components requires a different technique for obtaining system state, such as external \emph{bus-monitoring} \cite{Goodloe2010}.
 
 %% second paragraph -- purpose
-Given that we cannot utilize instrumentation to obtain system state, both due to lack of source access making it difficult and the risks of affecting the timing and correctness of the target system, we aim to obtain a system trace through passive observation. These distributed architectures tend to contain broadcast buses (\eg, controller area network (CAN) in ground vehicles) which contain a large amount of useful system state within the messages being sent between system components. 
+Given that we cannot utilize instrumentation to obtain system state, 
+%both due to lack of source access making it difficult and the risks of affecting the timing and correctness of the target system, 
+we aim to obtain a system trace through passive observation. 
+These distributed architectures tend to contain broadcast buses (\eg, controller area network (CAN) in ground vehicles) which contain a large amount of useful system state within the messages being sent between system components. 
 % a little more? What's the split of information
 Many desired system properties of these reactive real-time systems are timing related, so using an explicit-time based specification language for the system policies is helpful. 
 System requirements such as ``{the system must perform action $a$ within $t$ seconds of event $e$}'' are common.
@@ -22,6 +29,3 @@ In this paper we present a real-time embedded monitor for safety-critical embedd
 % 15 pages in this format is so short...
 Due to space restrictions, we defer the correctness proof of \monitor and other details to a technical report \cite{TechReport}.
 
-
-%%% REWRITE LINE
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

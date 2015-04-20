@@ -68,7 +68,7 @@ Due to space restrictions, we defer the correctness proof and other details to a
 Then, need to do a quick background section
 
 =======================
-Implementation section
+Case Study section
 
 %% paragraph 1 -- experimental environment
 	we perform a case study using embedded monitor implementation on bench CAN bus
@@ -87,3 +87,19 @@ Implementation section
 %% paragraph 4 -- results summary
 	caught stuff
 	some false positives -- important to have testing
+
+================
+What if we made an implementation section?
+
+%% paragraph 1 -- goals
+	inexpensive hardware
+	capable of checking real rules
+	
+%% paragraph 2 -- what we built
+	ARM Cortex M4 dev board
+	static memory, 	
+
+%% paragraph 3 (or subsection) -- hybrid algorithm
+	conservative correctness
+	eagerness is computationally expensive
+	hybrid let's us mix them
