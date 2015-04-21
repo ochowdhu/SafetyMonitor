@@ -1,0 +1,19 @@
+%%% Discussion section
+
+\section{Discussion}
+
+%% section soft intro
+The design and implementation choices for our monitor were heavily influenced by the autonomous ground vehicle use case. This lead us to give primary consideration to common commercial embedded constraints such as black-box multi-vendor components and high monitoring cost sensitivity (both in design and implementation overhead).
+%
+Focusing on ground vehicles also led us towards the bus-monitor architecture, and CAN networks in particular. Since CAN networks are often scheduled and implemented as periodic broadcast networks, a periodic sampling-based monitor also was straightforward.
+
+%% future work
+Once you have a monitor that is capable of correctly identifying when a system is violating its safety specification, the next obvious step is to enable it to attempt system recoveries.
+%
+Emergency stops/shutdowns are a common and straightforward recovery mechanism, but many systems cannot simply be safely stopped (\eg, aerial vehicles) or prefer a controlled shutdown to avoid damage to the system or environment (\eg, trains, chemical/industrial plants, \etc.).
+%% need to cut down a bit
+More advanced recovery techniques including graduated shutdowns or switchover to backup controllers are known \cite{}. 
+A difficult aspect of performing these more complex recoveries is that they are initiated only when a system is faulty, and so the recovery controller must be robust to different fault scenarios.
+%
+It’s possible that the fault which necessitates a recovery also blocks the preferred recovery tactic. 
+It may be possible to perform partial fault diagnosis at runtime within the monitor (based on the specification), allowing the monitor to choose a viable recovery mechanism. 
