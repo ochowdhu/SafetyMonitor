@@ -68,7 +68,7 @@
 
 
 \author{Aaron Kane \and Omar Chowdhury \and Anupam Datta \and Philip Koopman}
-\institute{Carnegie Mellon University, Pittsburgh, PA\\ \email{akane@cmu.edu, omarc@cmu.edu, danupam@cmu.edu, koopman@cmu.edu.}}
+\institute{Carnegie Mellon University, Pittsburgh, PA\\ \email{akane@cmu.edu, omarc@cmu.edu, danupam@cmu.edu, koopman@cmu.edu}}
 
 
 
@@ -79,11 +79,16 @@
 
 \begin{abstract}
 
-Although runtime monitoring (RM) is a promising technique to improve the verification of complex safety-critical systems, the general design trend towards utilizing black-box commercial-off-the-shelf (COTS) components means that these systems are not always amenable to instrumentation which is commonly used to produce the relevant events necessary for checking the desired properties.
-In this paper, we develop an online, real-time monitoring approach that targets an autonomous research vehicle (ARV) and recount our experience with it. 
-To avoid instrumentation we passively monitor the target system by generating high-level system properties from the observed network state. 
-We then develop an efficient runtime monitoring algorithm, \monitor, that \emph{eagerly} checks for violations of desired properties written in a bounded metric temporal logic. 
-We show the efficacy of \monitor by implementing it and empirically evaluating it against logs obtained from the testing of an ARV system. \monitor was able to detect violations of several safety requirements.
+Although runtime monitoring (RM) is a promising technique to improve the verification of complex safety-critical systems, 
+the general design trend towards utilizing black-box commercial-off-the-shelf (COTS) components means that these systems 
+are not always amenable to instrumentation which is commonly used to produce the relevant events necessary for checking 
+the desired properties. In this paper, we develop an online, real-time monitoring approach that targets an autonomous research 
+vehicle (ARV) system and recount our experience with it. To avoid instrumentation we passively monitor the target system by 
+generating high-level property constructs (\ie, propositions) from the observed network state. 
+We then develop an efficient runtime monitoring algorithm, \monitor, that \emph{eagerly} checks for violations of desired properties 
+written in a future-bounded, propositional metric temporal logic. 
+We show the efficacy of \monitor by implementing it and empirically evaluating it against logs obtained from 
+the testing of an ARV system. \monitor was able to detect violations of several safety requirements.
 
 
 

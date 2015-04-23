@@ -1,31 +1,48 @@
-%%%% Intro section
-
 \section{Introduction}
-%% first paragraph -- paper motivation
 Embedded systems, from home appliances to automobiles, are becoming increasingly complex due to the addition of new advanced features. 
-Runtime verification techniques are a promising way to help verify system safety and correctness in the face of increasing design complexity.
-Many existing systems such as modern automobiles are built by system integrators utilizing multiple vendors and commercial-off-the-shelf (COTS) components, some of which are black box components for the integrator. 
-These systems are often also hard real-time systems which lead to more constraints on system monitoring \cite{Goodloe2010}.
-%Besides being distributed architectures of black-box components, these systems are often hard real-time which leads to more constraints on the monitor itself \cite{Goodloe2010}.
-%
-This type of architecture is incompatible with many existing runtime monitoring techniques, which often require program instrumentation \cite{}. 
-Instrumenting systems without source code access is more difficult, and even when source access is available there are risks of affecting the timing and correctness of the target system when adding instrumentation.
-Monitoring distributed systems of black-box components requires a different technique for obtaining system state, such as external \emph{bus-monitoring} \cite{Goodloe2010}.
+It is paramount for these embedded systems, specifically the safety-critical (SC) systems (\eg, autonomous vehicles, aircraft flight control),  
+to be formally verified to avoid catastrophic consequences  of malfunctioning (\eg, loss of life, loss of properties) due to implementation errors or 
+design flaws. Static verification techniques like model checking and theorem provers are applicable to obtain provable guarantees about the SC systems' 
+correctness. However, model checking suffers from the state-space explosion problem whereas theorem provers require significant manual intervention.  
+Runtime verification (RV) technique is a promising alternative to its static counterpart for checking system safety and correctness in the face of 
+increasing design complexity. 
+In RV,  a runtime monitor (RM) observes the execution of the system in question and checks for violation of some well-defined properties. 
+When the RM detects a violation, it can notify a command module which then attempts to recover from the violation. \emph{In this paper, we develop a 
+RM system that monitors an autonomous research vehicle (ARV) system and describe our experience with it}.
 
-%% second paragraph -- purpose
-Given that we cannot utilize instrumentation to obtain system state, 
-%both due to lack of source access making it difficult and the risks of affecting the timing and correctness of the target system, 
-we aim to obtain a system trace through passive observation. 
-These distributed architectures tend to contain broadcast buses (\eg, controller area network (CAN) in ground vehicles) which contain a large amount of useful system state within the messages being sent between system components. 
-% a little more? What's the split of information
-Many desired system properties of these reactive real-time systems are timing related, so using an explicit-time based specification language for the system policies is helpful. 
-System requirements such as ``{the system must perform action $a$ within $t$ seconds of event $e$}'' are common.
-Metric temporal logic (MTL) is a commonly used logic for specifying these types of properties, and a bounded-future fragment of MTL can be used to ensure efficient monitoring of useful system properties.
+The ARV system we consider are built by system integrators 
+utilizing multiple vendors and commercial-off-the-shelf (COTS) components, some of which can be 
+viewed as black box components for the integrator. 
+These systems are often  hard real-time systems which lead to more constraints on 
+system monitoring \cite{Goodloe2010}. This type of architecture is incompatible with many 
+existing runtime monitoring techniques, which often require program or system instrumentation \cite{} to obtain 
+the relevant events or policy-constructs (\eg, propositions) to check for violation. 
+Instrumenting systems without the access of source code  is more difficult, 
+and even when the source  is available there are risks of affecting the timing and 
+correctness of the target system when instrumented.
+
+Instead of instrumentation, we obtain the relevant information for monitoring the ARV system through passive observation 
+of the broadcast buses. The broadcast buses in the ARV system (\eg, controller area network (\textit{CAN}) in ground vehicles) 
+ contain a large amount of useful system information relevant to monitoring 
+within the messages sent between different system components. However, before we can start 
+monitoring the ARV system, we need a component, which we call the \textsf{SF Map}, that 
+observes messages going through the bus, decodes them to obtain policy-constructs 
+relevant to monitoring, and feed them to the RM. We want to emphasize that depending on the granularity 
+of the information available in the messages and the atomic policy-constructs, developing the \textsf{SF Map} 
+poses a significant challenge. 
+
+To obtain the relevant safety requirements and invariants for monitoring the ARV system, we consulted the safety 
+manual of the ARV system. We observed that many desired system properties are timing related, so using an explicit-time 
+based specification language for expressing these properties is helpful. System requirements such as ``\emph{the system must 
+perform action $a$ within $t$ seconds of event $e$}'' are common. For efficient monitoring, we use a fragment of propositional 
+metric temporal logic (MTL)\cite{MTL} in which the bound associated with the future temporal operators can only be finite. 
+
+%is a commonly used logic for specifying these types of properties, and a bounded-future fragment of MTL can be used to ensure efficient monitoring of useful system properties.
 % talk about explicit time? real time? something in that vein
 
 %% third paragraph -- contributions
 In this paper we present a real-time embedded monitor for safety-critical embedded systems with black-box COTS components (such as automobiles). Our monitoring algorithm \monitor is an dynamic programming based iterative algorithm which utilizes formula reduction (essentially rewriting) and history structures to system traces obtained from a target broadcast bus against a given safety policy. We have implemented this algorithm on an inexpensive embedded platform and present a case study using the monitor to perform real-time checking of replayed CAN logs from the robustness testing of an autonomous vehicle.
 
-% 15 pages in this format is so short...
-Due to space restrictions, we defer the correctness proof of \monitor and other details to a technical report \cite{TechReport}.
+%% 15 pages in this format is so short...
+%Due to space restrictions, we defer the correctness proof of \monitor and other details to a technical report \cite{TechReport}.
 
