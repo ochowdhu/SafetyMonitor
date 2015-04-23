@@ -21,7 +21,7 @@ Instrumenting systems without the access of source code  is more difficult,
 and even when the source  is available there are risks of affecting the timing and 
 correctness of the target system when instrumented.
 
-Instead of instrumentation, we obtain the relevant information for monitoring the ARV system through passive observation 
+\emph{Obtaining relevant policy constructs. }Instead of instrumentation, we obtain the relevant information for monitoring the ARV system through passive observation 
 of the broadcast buses. The broadcast buses in the ARV system (\eg, controller area network (\textit{CAN}) in ground vehicles) 
  contain a large amount of useful system information relevant to monitoring 
 within the messages sent between different system components. However, before we can start 
@@ -31,17 +31,32 @@ relevant to monitoring, and feed them to the RM. We want to emphasize that depen
 of the information available in the messages and the atomic policy-constructs, developing the \textsf{SF Map} 
 poses a significant challenge. 
 
+\emph{Specification logic. }
 To obtain the relevant safety requirements and invariants for monitoring the ARV system, we consulted the safety 
 manual of the ARV system. We observed that many desired system properties are timing related, so using an explicit-time 
 based specification language for expressing these properties is helpful. System requirements such as ``\emph{the system must 
 perform action $a$ within $t$ seconds of event $e$}'' are common. For efficient monitoring, we use a fragment of propositional 
 metric temporal logic (MTL)\cite{MTL} in which the bound associated with the future temporal operators can only be finite. 
 
+\emph{Monitoring algorithm. }
+We then develop a runtime monitoring algorithm, which we call \monitor, that incrementally takes as input a system state (\ie, a 
+state maps relevant propositions to either true or false) and a MTL formula and eagerly checks for violation. Some of the existing 
+monitoring algorithms that handles bounded future formulas, wait for the full-time of the bound before evaluating the formula. 
+\monitor uses a dynamic programming-based iterative algorithm that tries to reduce the input formula using  structures, summarizing the history, 
+and using short-circuiting simplifications when possible. This eager nature of the algorithm is necessary because detecting a violation earlier 
+gives the command module more time to recover from the violation. We have also proved the correctness of our algorithm. 
+
+\emph{Empirical evaluation. } 
+We have  implemented \monitor on an inexpensive embedded platform. We then empirically evaluate it against logs obtained from 
+the testing of an ARV system and with some properties obtained from the safety manual of the ARV system. \monitor has moderate  
+monitoring overhead and detected several safety violations in our experimental evaluation.  
+
+
 %is a commonly used logic for specifying these types of properties, and a bounded-future fragment of MTL can be used to ensure efficient monitoring of useful system properties.
 % talk about explicit time? real time? something in that vein
 
 %% third paragraph -- contributions
-In this paper we present a real-time embedded monitor for safety-critical embedded systems with black-box COTS components (such as automobiles). Our monitoring algorithm \monitor is an dynamic programming based iterative algorithm which utilizes formula reduction (essentially rewriting) and history structures to system traces obtained from a target broadcast bus against a given safety policy. We have implemented this algorithm on an inexpensive embedded platform and present a case study using the monitor to perform real-time checking of replayed CAN logs from the robustness testing of an autonomous vehicle.
+%In this paper we present a real-time embedded monitor for safety-critical embedded systems with black-box COTS components (such as automobiles). Our monitoring algorithm \monitor is an dynamic programming based iterative algorithm which utilizes formula reduction (essentially rewriting) and history structures to system traces obtained from a target broadcast bus against a given safety policy. We have implemented this algorithm on an inexpensive embedded platform and present a case study using the monitor to perform real-time checking of replayed CAN logs from the robustness testing of an autonomous vehicle.
 
 %% 15 pages in this format is so short...
 %Due to space restrictions, we defer the correctness proof of \monitor and other details to a technical report \cite{TechReport}.
