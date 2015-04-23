@@ -35,15 +35,15 @@ poses a significant challenge.
 To obtain the relevant safety requirements and invariants for monitoring the ARV system, we consulted the safety 
 manual of the ARV system. We observed that many desired system properties are timing related, so using an explicit-time 
 based specification language for expressing these properties is helpful. System requirements such as ``\emph{the system must 
-perform action $a$ within $t$ seconds of event $e$}'' are common. For efficient monitoring, we use a fragment of propositional 
+perform action $a$ within $t$ seconds of event $e$}'' are common. For efficient monitoring, we use a fragment of propositional, discrete time  
 metric temporal logic (MTL)\cite{MTL} in which the bound associated with the future temporal operators can only be finite. 
 
 \emph{Monitoring algorithm. }
 We then develop a runtime monitoring algorithm, which we call \monitor, that incrementally takes as input a system state (\ie, a 
 state maps relevant propositions to either true or false) and a MTL formula and eagerly checks for violation. Some of the existing 
-monitoring algorithms that handles bounded future formulas, wait for the full-time of the bound before evaluating the formula. 
+monitoring algorithms that support bounded future formulas, wait for the full-time of the bound before evaluating the formula. 
 \monitor uses a dynamic programming-based iterative algorithm that tries to reduce the input formula using  structures, summarizing the history, 
-and using short-circuiting simplifications when possible. This eager nature of the algorithm is necessary because detecting a violation earlier 
+and using short-circuit simplifications when possible. This eager nature of the algorithm is necessary because detecting a violation earlier 
 gives the command module more time to recover from the violation. We have also proved the correctness of our algorithm. 
 
 \emph{Empirical evaluation. } 
