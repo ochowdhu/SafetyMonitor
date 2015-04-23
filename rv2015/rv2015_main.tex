@@ -64,11 +64,11 @@
 
 % paper title
 % can use linebreaks \\ within to get better formatting as desired
-\title{Runtime Monitoring for Safety-Critical Embedded Systems}
+\title{Runtime Monitoring for Safety-Critical Embedded Systems: A Case Study}
 
 
 \author{Aaron Kane \and Omar Chowdhury \and Anupam Datta \and Philip Koopman}
-\institute{Carnegie Mellon University, Pittsburgh, PA\\ \email{akane@cmu.edu, koopman@cmu.edu, danupam@cmu.edu, }}
+\institute{Carnegie Mellon University, Pittsburgh, PA\\ \email{akane@cmu.edu, omarc@cmu.edu, danupam@cmu.edu, koopman@cmu.edu.}}
 
 
 
@@ -78,26 +78,40 @@
 \input{command}
 
 \begin{abstract}
-The trend towards increasing commercial-off-the-shelf (COTS) components in complex safety-critical systems is increasing the difficulty of verifying system correctness. 
-Runtime verification (RV) is a promising technique to check executions of these systems, 
-but most existing RV methods utilize some form of system or code instrumentation and thus are not designed to monitor potentially black-box COTS components.
-%
-Instead of accessing state through instrumentation, we explore monitoring a system's externally observable state, which can be obtained without affecting the target system.
-This paper presents a framework for monitoring safety-critical systems comprised of black-box components. We present a broadcast-bus based monitor which checks bounded metric temporal logic specifications.
-We have implemented an embedded, real-time CAN monitor utilizing our monitoring algorithm. The monitor has been evaluated on a bench CAN bus with replayed logs obtained from system testing of an autonomous research vehicle on which violations of system safety requirements were identified.
-
-
-%% major points to push
-%
-% dynamic programming algorithm
-% 	also rewriting-based to a point
-% embedded runtime monitor 
-%	handles black-box systems
-% 	reasonable overhead
-%	aggressive monitoring, future/past (some specifications get checked faster in future then past)
-% semi-formal mapping!!
-%	remember, others do it, but noone is explicit
-%
+It is paramount for safety-critical (SC) systems to be formally verified to avoid 
+catastrophic consequences  of malfunctioning (\eg, loss of life) due to bugs. 
+However, static verification techniques like model checking might not be a feasible option in this context due to the state-space 
+explosion problem. Runtime monitoring (RM) is a promising alternative 
+%to its static counterpart 
+that can check the execution of SC systems for violations of some desired properties in runtime. One possibility of using RM in this context is to instrument 
+the system 
+%under-monitoring 
+%to 
+in such a way so that it 
+produces the relevant events for checking the desired 
+properties. However, there is a general trend of using commercial-off-the-shelf (COTS) components 
+while designing SC systems and these components are like blackboxes and hence might not be amenable to  
+intrumentation. In this paper, we develop a RM approach that monitors an autonomous research vehicle (ARV) system and recount our experience with it. 
+The ARV system uses several COTS components hence our monitor passively and periodically samples the ARV system bus 
+%(\ie, the  channel 
+%with which different components of the ARV system communicate among each other) 
+and converts the low level signals to high level 
+property-constructs (\ie, propositions). For specifying the desired properties, we use a propositional discrete-time temporal logic, Metric Temporal Logic (MTL). 
+We then develop an efficient runtime monitoring algorithm, \monitor, that takes as input a MTL property \policy and a finite trace $\sigma$, and \emph{eagerly} 
+checks for violation of \policy in $\sigma$. We show the efficacy of \monitor by implementing it and empirically evaluating it  
+with some well-defined desired safety properties and against logs obtained from the testing of an ARV system. 
+\monitor were able to detect violations of several safety requirements. 
+%%% major points to push
+%%
+%% dynamic programming algorithm
+%% 	also rewriting-based to a point
+%% embedded runtime monitor 
+%%	handles black-box systems
+%% 	reasonable overhead
+%%	aggressive monitoring, future/past (some specifications get checked faster in future then past)
+%% semi-formal mapping!!
+%%	remember, others do it, but noone is explicit
+%%
 \end{abstract}
 
 
