@@ -32,18 +32,18 @@ We also checked for illegal state transitions. Rules \#2 through \#5 check both 
 %\begin{tabular}{|p{3in}|l|}
 \begin{tabular}{|l|p{4.5in}|}
 \hline \multirow{2}{*}{Rule \#} & Informal Rule \\ & BMTL \\
-\hline \multirow{2}{*}{0} & A feature heartbeat shall be received every 500ms \\
-& $\pred{HeartbeatOn} \rightarrow \lozenge_{[0,500ms]} \pred{HeartBeat}$ \\
+\hline \multirow{2}{*}{0} & A feature heartbeat will be sent within every 500ms \\
+& $\pred{HeartbeatOn} \rightarrow \LTLdiamond_{[0,500ms]} \pred{HeartBeat}$ \\
 \hline \multirow{2}{*}{1} & The interface component heartbeat counter is correct \\
 & $\pred{HeartbeatOn} \rightarrow \pred{HeartbeatCounterOk}$ \\
 \hline \multirow{2}{*}{2} & The vehicle shall not transition from manual mode to autonomous mode \\
-&  $\neg ((\blacksquare_{[1,1]} \pred{IntManualState}) \wedge \pred{IntAutoStat})$\\
+&  $\neg ((\LTLcircleminus_{[0,25ms]} \pred{IntManualState}) \wedge \pred{IntAutoStat})$\\
 \hline \multirow{2}{*}{3} & The vehicle controller shall not command a transition from manual mode to autonomous mode \\
-& $\neg ((\blacksquare_{[1,1]} \pred{VehManualModeCmd}) \wedge \pred{VehAutoModeCmd})$\\
+& $\neg ((\LTLcircleminus_{[0,25ms]} \pred{VehManualModeCmd}) \wedge \pred{VehAutoModeCmd})$\\
 \hline \multirow{2}{*}{4} & The vehicle shall not transition from system off mode to autonomous mode \\ 
-&  $\neg ((\blacksquare_{[1,1]} \pred{IntSDState}) \wedge \pred{IntAutoStat})$\\
+&  $\neg ((\LTLcircleminus_{[0,25ms]} \pred{IntSDState}) \wedge \pred{IntAutoStat})$\\
 \hline \multirow{2}{*}{5} & The vehicle controller shall not command a transition from system off mode to autonomous mode \\
-& $\neg ((\blacksquare_{[1,1]} \pred{VehSDModeCmd}) \wedge \pred{VehAutoModeCmd})$\\
+& $\neg ((\LTLcircleminus_{[0,25ms]} \pred{VehSDModeCmd}) \wedge \pred{VehAutoModeCmd})$\\
 % warn was at 200ms
 \hline
 \end{tabular}

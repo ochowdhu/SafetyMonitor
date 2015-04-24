@@ -8,80 +8,30 @@
 In order to monitor distributed embedded systems we need an algorithm which can continuously check explicit time specifications over finite traces. This has led to our algorithm \monitor which is an iterative monitoring algorithm based on formula reduction (essentially formula-rewriting). 
 %
 To constantly check that the target system is adhering to its specification, we must constantly check the specification against the current system trace. To constantly check the system efficiently, \monitor is an iterative algorithm, performing additional checking as each new trace step arrives.
-%
-\monitor checks specifications written in a future-bounded metric temporal logic. A large portion of safety specification rules for safety-critical embedded systems require explicit time bounds to ensure timely behavior, so a specification language with explicit time bounds is important. 
-%
+
+\subsection{Specifications}
+\monitor checks specifications written in a future-bounded metric temporal logic. Many safety specification rules for safety-critical embedded systems require explicit time bounds to ensure timely behavior, so a specification language with explicit time bounds is important. 
 Examples of rules that utilize explicit time bounds include: %
-Cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed ($\pred{brakeDepressed} \rightarrow \eventually_{[0, 500]} \henceforth_{[0,250]} \neg \pred{CruiseEngaged}$), 
-the cruise control mode cannot transition directly from Off to Engaged within 250ms ($\neg (\pred{CruiseEngaged} \wedge \yesterday_{[0,250]} \pred{CruiseOff})$), 
-and the vehicle should not be within 1m of the current lane edge for 1s while lane centering is enabled ($\neg \historically_{[0, 1000]}(\pred{LaneCentering} \wedge \pred{distToLaneEdgeLT1m})$).
+\natlangrule{cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed} ($\pred{brakeDepressed} \rightarrow \eventually_{[0, 500]} \henceforth_{[0,250]} \neg \pred{CruiseEngaged}$), 
+\natlangrule{the cruise control mode cannot transition directly from Off to Engaged within 250ms} ($\neg (\pred{CruiseEngaged} \wedge \yesterday_{[0,250]} \pred{CruiseOff})$), 
+and \natlangrule{the vehicle should not be within 1m of the current lane edge for 1s while lane centering is enabled} ($\neg \historically_{[0, 1000]}(\pred{LaneCentering} \wedge \pred{distToLaneEdgeLT1m})$).
 
+Our safety specification language for embedded systems, which we call \planguage, is a future bounded, propositional fragment of metric temporal logic (MTL \cite{Koymans1990}) where past temporal operators may have infinite bounds but future temporal operators must have finite bounds. 
+Specification propositions come from a finite set of atomic propositions provided in the system trace by the \sfmap. 
+These propositions are derived from the observable system state and represent system properties, for example, a proposition $speedLT40mph$ could state whether the vehicle speed is less than 40mph.
+%
+The semantics of \planguage are common and standard, \eg, \cite{Basin2008}.
 
-%The monitoring algorithm is an aggressive, iterative algorithm based on formula reduction (essentially formula-rewriting) and a stored history structure to check whether a given formula satisfies or violates the target trace. 
-%It is aggressive in that the algorithm attempts to check future-time temporal formulas as soon as possible rather than wait until an answer is guaranteed to be available (by combining short-circuiting and immediate checking of temporal subformulas).
-%This is in contrast to many existing runtime monitoring algorithms which either are restricted to past time logics (in which there is no waiting) or only check properties after their available delay. % some aggressive future time algorithms exist but almost always dynamic programming so can't do windowed bounds
-%The algorithm is iterative in that the history structure must be updated at each timestep in the trace in order. 
-
-\subsection{Specification Logic}
-In this section, we introduce our safety specification language for embedded systems, which we call \planguage. \planguage is based on \emph{propositional metric temporal logic} (MTL) \cite{}. 
-The syntax of our bounded MTL variant \planguage is given below:
-
-%The specification logic is a bounded, propositional metric temporal logic where the target propositions are from a set of atomic propositions provided by the system interface. These propositions are derived from the observable system state and represent system properties, for example, a proposition $speedLT40mph$ could state whether the vehicle speed is less than 40mph.
-
-
-\(
-\begin{array}{ccc}
-\policy & ::=  & \true \mid p \mid \neg \policy \mid \policy_1\vee \policy_2\mid
-\policy_1\since_{\interval}\policy_2 \mid \policy_1\until_{\interval}\policy_2\mid\yesterday_{\interval}\policy\mid \tomorrow_{\interval}\policy
-\end{array}
-\)
-
-%Policy formulas are represented by $\psi$. Formulas can include both past time operators ($\since$, $\lastmtl$) and future time operators ($\Until$,$\nextmtl$). Each temporal operator has an associated time interval $\interval$ of the form $[lo,hi]$ where $lo,hi \in \mathbb{N}$ and $lo \leq hi$
-
-We assume we are given a finite set of propositions, denoted by \cP, which can be used to specify safety policies. 
-These propositions are generated by the system interface from observable system state.
-Each proposition $p\in\cP$ is a formula of \planguage. 
-We have logical connectives ($\neg, \vee$) and also have past ($\since, \yesterday$) and future ($\until, \tomorrow$) temporal operators. 
-Each temporal operator has an interval (denoted by \interval) associated with it in which the formula is evaluated. 
-The interval has the form $[lo, hi]$ where $lo, hi\in\mathbb{N}$ and $lo\leq hi$. 
-The interval imposes an additional time interval constraint in which the immediate sub-formula must be true. 
-For example, $\policy_1\since_{[lo, hi]}\policy_2$ is true at current time $t$ represents that $\policy_2$ was true in the past within times $t-hi$ to $t-lo$  and from that point on, $\policy_1$ has been true. 
-For past temporal operators, we allow the high end point of \interval to be $\infty$. 
-However, we require our \policy to be \emph{future bounded}, \ie, the high end-point of \interval associated with all future temporal operators must be finite and bounded. 
-This restriction is necessary for the termination of our safety monitoring algorithm, as will be discussed later. 
-
-\Paragraph{Derived Operators. }In our syntax, we present a minimal set of logical connectives and temporal operators. 
-Other logical connectives and temporal operators can be derived using the following equivalences. (Logical false) $\false\equiv \neg \true$ . 
-(Conjunction) $\policy_1\wedge\policy_2\equiv\neg(\neg\policy_1\vee\neg\policy_2)$. 
-(Logical implication) $\policy_1\rightarrow\policy_2\equiv \neg\policy_1\vee\policy_2$. 
-(Logical equivalence) $\policy_1\leftrightarrow\policy_2\equiv (\policy_1\rightarrow\policy_2)\wedge(\policy_2\rightarrow\policy_1)$. 
-(Past temporal operator ``once'') $\once_{\interval}\policy\equiv (\true\since_{\interval}\policy)$. 
-(Past temporal operator ``historically'') $\historically_{\interval}\policy\equiv \neg\once_{\interval}\neg\policy$. 
-(Future temporal operator ``eventually'') $\eventually_{\interval}\policy\equiv (\true\until_{\interval}\policy)$. 
-(Future temporal operator ``henceforth'') $\henceforth_{\interval}\policy\equiv \neg\eventually_{\interval}\neg\policy$. 
-
-
-\Paragraph{Semantics. }\planguage formulas are interpreted over time-stamped \emph{traces}. A trace $\sigma$ is a sequence of states, each of which maps all propositions in \cP, to either \true or \false. We denote the $i^{th}$ position of the trace with $\sigma_i$ where $i\in\mathbb{N}$. Moreover, each $\sigma_i$ has an associated time stamp denoted by $\tau_i$ where $\tau_i\in\mathbb{N}$. 
-We denote the sequence of time stamps with $\tau$. For all $i, j\in\mathbb{N}$ such that $i < j$, we require $\tau_i < \tau_j$. For a given trace $\sigma$ and time stamp sequence $\tau$, we write $\sigma, \tau, i\models\policy$ to denote that the formula \policy is true with respect to the $i^{th}$ position of $\sigma$ and $\tau$. We define $\sigma, \tau, i\models\policy$  inductively in the following way. 
-\begin{itemize}
- \item $\sigma, \tau, i\models\true$
- \item $\sigma, \tau, i\models p$ $\Longleftrightarrow$ $\sigma_i(p) = \true$. 
- \item $\sigma, \tau, i\models\neg\policy$ $\Longleftrightarrow$ $\sigma, \tau, i \not\models\policy$. 
- \item $\sigma, \tau, i\models\policy_1\vee\policy_2$ $\Longleftrightarrow$ $\sigma, \tau, i\models\policy_1$ or $\sigma, \tau, i\models\policy_2$. 
- \item $\sigma, \tau, i\models\policy_1\since_{[lo, hi]}\policy_2$ $\Longleftrightarrow$ there exists a $k\leq i$ such that $lo\leq\tau_i-\tau_k\leq hi$ and $\sigma, \tau, k\models\policy_2$, and for all $j$ such that $k< j\leq i$, $\sigma, \tau, j\models\policy_1$ holds. 
- \item $\sigma, \tau, i\models\policy_1\until_{[lo, hi]}\policy_2$ $\Longleftrightarrow$ there exists a $k\geq i$ such that $lo\leq\tau_k-\tau_i\leq hi$ and $\sigma, \tau, k\models\policy_2$, and for all $j$ such that $i\leq j< k$, $\sigma, \tau, j\models\policy_1$ holds.
- z
- \item $\sigma, \tau, i\models\yesterday_{[lo, hi]}\policy$ $\Longleftrightarrow$ $i > 0$, $lo \leq (\tau_i-\tau_{i-1})\leq hi$, and $\sigma, \tau, i-1\models\policy$.
- \item $\sigma, \tau, i\models\tomorrow_{[lo, hi]}\policy$ $\Longleftrightarrow$ $lo \leq (\tau_{i+1}-\tau_{i})\leq hi$, and $\sigma, \tau, i+1\models\policy$. 
-\end{itemize}
-
+%\paragraph{Semantics. }
+%\planguage formulas are interpreted over time-stamped \emph{traces}. A trace $\sigma$ is a sequence of states, each of which maps all propositions in \cP, to either \true or \false. We denote the $i^{th}$ position of the trace with $\sigma_i$ where $i\in\mathbb{N}$. Moreover, each $\sigma_i$ has an associated time stamp denoted by $\tau_i$ where $\tau_i\in\mathbb{N}$. 
+%We denote the sequence of time stamps with $\tau$. For all $i, j\in\mathbb{N}$ such that $i < j$, we require $\tau_i < \tau_j$. For a given trace $\sigma$ and time stamp sequence $\tau$, we write $\sigma, \tau, i\models\policy$ to denote that the formula \policy is true with respect to the $i^{th}$ position of $\sigma$ and $\tau$. 
 
 Our monitoring algorithm utilizes \emph{residues}, which are partially reduced (\ie, rewritten) policy formulas representing the remaining portion of a formula which could not be fully evaluated given the current trace. A residue $r^j_{\policy}$ is a tagged pair $\rpt{j}{\policyv}{\policy}$ where $j$ is a position in the trace, $\policy$ is the original residue formula and $\policyv$ is the residue formula. We use these residues to efficiently hold policy history for future time formulas which cannot be evaluated due to incomplete information.
 
 Policy formulas have a wait delay $\wdelay(\policy)$ which defines an upper bound on the time duration necessary to guarantee complete information to evaluate the formula. Past and present-time formulas have no wait delay, since all trace steps necessary to evaluate them have already been seen by the monitor. Future time formulas have a delay based on their duration. The length $|\policy|$ of a policy $\policy$ is defined as the total number of subformula, (\ie, the number of nodes in the policy AST).
 
 To evaluate \planguage policies, we need to save a limited amount of history state of child policies of temporal subformula within a policy. For example, given the policy $\pred{ACCCancelReq} \rightarrow \eventually_{\interval} \pred{ACCOff} \vee (\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq})$, $\pred{ACCOff}$ is a child policy of the temporal formula $\eventually_{\interval}$ and $\pred{ACCOn}$ and $\pred{ACCCancelReq}$ are children of the temporal formula $\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq}$. The monitor must store some history of these child policies in order to evaluate the parent policy.
-The operation $\tempSub$ identifies all the children of temporal subformula of a policy.
+The operation $\tempSub(\varphi)$ identifies all the children of temporal subformula of a policy $\varphi$.
 %% might want to do a more abstract example to show recursiveness
 %That is, for $\alpha\, \mathcal{U}_{[l,h]}\, \beta$ we need to save the history of $\alpha$ and $\beta$ (and if either of those are also a temporal formula then we need their history as well). 
 
