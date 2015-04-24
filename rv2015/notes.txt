@@ -103,3 +103,8 @@ What if we made an implementation section?
 	conservative correctness
 	eagerness is computationally expensive
 	hybrid let's us mix them
+
+=================
+NEW TODO
+	update intro section
+	work on section 4
