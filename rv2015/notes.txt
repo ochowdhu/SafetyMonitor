@@ -108,3 +108,4 @@ What if we made an implementation section?
 NEW TODO
 	update intro section
 	work on section 4
+	update CAN background (could go in background or architecture -- prob arch)

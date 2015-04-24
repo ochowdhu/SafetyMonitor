@@ -4,10 +4,17 @@
 There are many proposed architectures for use in runtime monitoring. Fundamental questions such as where the monitor executes (\eg, external hardware or on-system), what the monitor watches (\eg, memory values, executed instructions, etc.) and how the monitor obtains input (\eg, system instrumentation, external sensors) are dependent on both the properties of the system being monitored and the desired effects of monitoring (\ie, observation or enforcement/control).  
 
 %% what are existing system architectures
-Most modern safety-critical embedded systems are designed as distributed systems to provide the ability to meet the necessary reliability, fault-tolerance, and redundancy. The individual system components are connected via a network bus, of which there are many different types \cite{Rushby2001}. Controller Area Network (CAN) is a common bus for ground vehicles, being standard on automobiles and widely used in other systems. % add CAN citation?
+Most modern safety-critical embedded systems are designed as distributed systems to provide the ability to meet the necessary reliability, fault-tolerance, and redundancy. The individual system components are typically connected via a network bus, of which there are many different types \cite{Rushby2001}. %Controller Area Network (CAN) is a common bus for ground vehicles, being standard on automobiles and widely used in other systems.
 %
-%\paragraph{Controller Area Network}
-CAN is an event-triggered multi-master broadcast bus originally designed for automotive applications. Message arbitration utilizes a message-id based priority scheme and physical layer bit dominance to control bus access. CAN nodes take turns transmitting their messages onto the bus using the individual message identifiers as network priorities. In this way, the highest priority message that is ready to be sent at any given time is the message that gets sent.
+\paragraph{Controller Area Network} % add CAN citation?
+Controller Area Network is a widely used automotive network developed by Bosch in the 1980s. 
+In this work we focus primarily on monitoring CAN because it is a common automotive bus which typically conveys much of the state we wish to observe without instrumentation.
+%
+CAN is an event-based broadcast network with data rates up to 1Mb/s (although usually used at 125-500kbps). Messages on CAN are broadcast with an identifier which is used to denote both the message and the intended recipients. The message identifiers are also used as the message priorities for access control.
+
+Although CAN is an event-based bus it is often used with periodic scheduling schemes so the network usage can be statically analyzed. Because of this our monitoring scheme is based on a time-triggered network sampling model, which allows it to monitor time-triggered networks as well.
+%% old CAN paragraph, stealing above from background instead
+%CAN is an event-triggered multi-master broadcast bus originally designed for automotive applications. Message arbitration utilizes a message-id based priority scheme and physical layer bit dominance to control bus access. CAN nodes take turns transmitting their messages onto the bus using the individual message identifiers as network priorities. In this way, the highest priority message that is ready to be sent at any given time is the message that gets sent.
 
 Existing runtime monitoring techniques tend to clash with the constraints imposed by safety-critical embedded systems. 
 Many existing monitors rely on automatic generation of instrumentation code or automated generation of the monitor itself (\eg, \cite{Havelund2004, Pike2011}).

@@ -39,6 +39,7 @@ This is a simple architecture which requires few (essentially no) changes to the
 %%% Precis
 \subsection{Monitors}
 Our monitoring algorithm is similar to existing dynamic programming and formula-rewriting based algorithms. 
+\paragraph{Dynamic programming monitors}
 %% garg/precis
 Our monitoring algorithm is inspired by the algorithms \greduce\ \cite{Garg2011} and \precis\ \cite{Chowdhury2014}, adjusted for our aggressive monitoring and propositional logic use case. The structure of our algorithm is based on \greduce\, utilizing an iterative, formula-rewriting based algorithm, also named $\mathbf{reduce}$, but targeted at both offline log analysis as well as online real-time monitoring. Both algorithms can return residual (i.e., incompletely reduced) formulas, but incompleteness in \greduce\ is due to incomplete logs which lead to unknown predicate substitutions, whereas our algorithm works on complete logs but must deal with temporal (i.e., future-time) incompleteness. 
 
@@ -51,14 +52,5 @@ The actual implementation they describe does however presume system memory acces
 The NASA PathExplorer project has led to both a set of dynamic programming-based monitoring algorithms as well as some formula-rewriting based algorithms \cite{Havelund2004} for past-time LTL. These dynamic programming algorithms require checking the trace in reverse (from the end to the beginning) which makes them somewhat unsuitable for online monitoring \cite{Havelund2002}. The formula rewriting algorithms utilize the Maude term rewriting engine to efficiently monitor specifications through formula rewriting \cite{Rosu2005}. 
 %
 Thati and Ro\c{s}u \cite{Thati2005} describe an dynamic programming algorithm for monitoring MTL which is based on resolving the past and deriving the future. They perform formula rewriting which resolves past-time formulas into equivalent formulas without unguarded past-time operators and derive new future-time formulas which separate the current state from future state. 
-
-
-\subsection{Controller Area Network}
-Controller Area Network (CAN) is a widely used automotive network developed by Bosch in the 1980s. 
-In this work we focus primarily on monitoring CAN because it is a common automotive bus which typically conveys a lot of the state we wish to observe without instrumentation.
-%
-CAN is an event-based broadcast network with data rates up to 1Mb/s (although usually used at 125-500kbps). Messages on CAN are broadcast with an identifier which is used to denote both the message and the intended recipients. The message identifiers are also used as the message priorities for access control.
-
-Although CAN is an event-based bus it is often used in a somewhat periodic, time triggered way so the network usage can be statically analyzed. Because of this our monitoring scheme is based on a time-triggered network sampling model, so it can monitor time-triggered networks as well.
 
 %%%%%%%%%%%%%%
