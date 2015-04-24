@@ -26,6 +26,13 @@ We focus on ground vehicles and CAN buses specifically in this work, but other s
 For example, safety-critical buses in star configurations \cite{Rushby2001}, which don't have a single bus line that can observe all traffic, can be monitored by placing the monitor in the network's hub or by connecting multiple buses lines directly to the monitor. 
 %For example, systems without a broadcast bus may be monitored by exposing the desired system state to the monitor (either through instrumentation or intelligent monitor placement such as network gateways/routers).
 
+\begin{figure}[!h]
+%\includegraphics[width=4.5in]{img/newArch}
+\includegraphics[scale=0.5]{img/ARV-main.pdf}
+\caption{External monitor architecture outline \label{fig:architecture}}
+\end{figure}
+
+
 \subsection{Architecture Outline}
 An outline of our monitor architecture is shown in Figure \ref{fig:architecture}. 
 The monitor is connected to the target system as an additional passive node on its broadcast bus. 
@@ -39,10 +46,11 @@ This generated trace is provided to the monitoring algorithm which checks it aga
 %% took action controller out of arch picture so let's not mention it, could add it back in if we want...
 %The algorithm's output is sent to an action controller which can perform the desired response to any specification violations, such as logging the violations or triggering a recovery action.
 
-\begin{figure}
-\includegraphics[width=4.5in]{img/newArch}
-\caption{External monitor architecture outline \label{fig:architecture}}
-\end{figure}
+%\begin{figure}[!t]
+%%\includegraphics[width=4.5in]{img/newArch}
+%\includegraphics[scale=0.5]{img/ARV-main.pdf}
+%\caption{External monitor architecture outline \label{fig:architecture}}
+%\end{figure}
 
 This architecture separates the lower-level system dependent configuration from the high-level system specification in a way similar to the architecture used in MaC \cite{Kim2004}.
 %This architecture separates the system-independent formal aspects of the monitor from the system-dependent components including the system interface and action controller. 
