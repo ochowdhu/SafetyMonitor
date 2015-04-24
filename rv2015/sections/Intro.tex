@@ -20,7 +20,7 @@ This type of system architecture is incompatible with many existing runtime moni
 Instrumenting systems without access to component source code is more difficult, and even when the source is available there are risks of affecting the timing and correctness of the target system when instrumented.
 
 \paragraph{Obtaining relevant policy constructs.}
-Instead of instrumentation, we obtain the relevant information for monitoring the ARV system through passive observation of the system's broadcast buses. 
+Instead of instrumentation, we obtain the relevant information for monitoring the ARV system through passive observation of the system's broadcast buses \cite{Rushby2001}. 
 Controller area network (CAN) is a common and standard broadcast bus for ground vehicles which is the primary system bus in the ARV. We can obtain useful amount of system state relevant to monitoring the system safety specification by observing the data within the CAN messages being broadcast between system components.
 However, before we can start monitoring the ARV system, we need a component, which we call the \textsf{SF Map}, that observes messages transmitted on the bus, decoding them into policy-constructs relevant to monitoring which are fed into the RM. 
 This acts similarly to the low-level specification and filter/event recognizers from MaC \cite{Kim2004}.
