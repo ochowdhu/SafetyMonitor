@@ -1,14 +1,14 @@
 	input=rv2015_main
 
 all:
-	latex $(input)
-	-bibtex $(input)
-	latex $(input)
-	latex $(input)
-	dvips -u +ltlfonts.map -Ppdf -G0  -o $(input).ps $(input).dvi
-	ps2pdf  $(input).ps
+#	latex $(input)
+#	-bibtex $(input)
+#	latex $(input)
+#	latex $(input)
+#	dvips -u +ltlfonts.map -Ppdf -G0  -o $(input).ps $(input).dvi
+#	ps2pdf  $(input).ps
 
-win:
+#win:
 	pdflatex $(input)
 	-bibtex $(input)
 	pdflatex $(input)
