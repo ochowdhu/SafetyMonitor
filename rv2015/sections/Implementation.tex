@@ -16,7 +16,7 @@ Because our specification language is bounded, we can avoid dynamic allocation i
 Recursion is also usually prohibited because it can be difficult to guarantee a maximum stack depth when using recursion. Although \monitor utilizes recursion extensively, we can implement \monitor using a traditional iterative traversal of the specification formulas instead.
 
 \subsection{Hybrid Algorithm}
-Our eager monitoring algorithm attempts to evaluate specification rules as soon as possible, but this requires checking trace properties which may not be evaluated given the current trace. These unevaluated checks require extra computation time, and in general the majority of the policy evaluations performed by \monitor will be these eager checks which may not fully evaluate.
+Our eager monitoring algorithm attempts to evaluate specification rules as soon as possible, but this requires checking trace properties which may not be fully reducable given the current trace. These unfinished formula reductions require extra computation time, and in practice the majority of the policy reductions performed by \monitor will be these eager reductions which may not fully reduce.
 
 While early detection of violations can be useful, there are situations where eagerly checking an entire target specification may require more computation than is available from the monitor in a given period.
 
@@ -27,19 +27,21 @@ Conservative \monitor monitoring is performed by only checking residues which ar
 %
 Under our periodic sampling design, each step of conservative monitor only requires updating the history structures and checking a single residue (the oldest remaining one) for each specification policy.
 %
-This conservative check can be done quickly at each period, leaving any extra time until the next check for eager checking. This provides a conservative monitoring guarantee (\ie, the specification is checked within a known promptness delay) while also allowing the monitor to eagerly check as much of the specification as possible.
+This conservative check can be done quickly at each period, leaving any extra time until the next period for eager checking. This provides a conservative monitoring guarantee (\ie, the specification is checked within a known promptness delay) while also allowing the monitor to eagerly check as much of the specification as possible.
 
 %As long as we know that the worst case execution time for message handing, incrementing the structures, and a single residue check is short enough to finish within a monitor period then we are guaranteed at least a conservatively correct and prompt output.
+
+\begin{figure}
+\includegraphics[width=4.5in]{img/scope_annotated_crop}
+\caption{Oscilloscope capture of embedded monitor task execution \label{fig:arch:oscope}}
+\end{figure}
 
 We have implemented the hybrid monitoring algorithm in our embedded monitor. The monitor updates the history structures (shared between the conservative and eager checking) and performs a conservative check once every monitoring period. It then uses the idle time between periods to perform eager checking of any remaining unchecked specification properties.
 %
 Figure \ref{fig:arch:oscope} shows the execution of the embedded monitor instrumented to output the currently executing task to an oscilloscope. 
-This task output was captured using the specification used in the case study (see Section \ref{sec:case_study} plus another 200 time-step \emph{eventually} rule which was never satisfied. 
-This means that at every step the monitor performed all 200 eager checks and could not reduce any remaining formulas. 
-Even with this excess computation there was still a large portion of extra idle time -- 23ms of the 25ms loop was spent idle. 
+This task output was captured while monitoring the specification used in the case study (see Section \ref{sec:case_study} plus another 200 time-step \emph{eventually} rule which was never satisfied. 
+%(guaranteeing an extra 200 eager residue checks every period). 
+The rule never being satisfied means that at every step the monitor performed an eager check of all 200 residues for this rule at every step (i.e., since they were never satisfied, they could never be reduced early). 
+Even with this excess computation there was still a large portion of extra idle time -- 23ms of the 25ms monitoring loop was spent idle. 
 This shows the eager checking finished reasonably quickly and the monitor could handle much longer formula durations or more complex formulas before the execution time becomes bad enough to require the hybrid algorithm for correctness guarantees. 
 
-\begin{figure}
-\includegraphics[width=4in]{img/scope_annotated}
-\caption{Oscilloscope capture of embedded monitor task execution \label{fig:arch:oscope}}
-\end{figure}

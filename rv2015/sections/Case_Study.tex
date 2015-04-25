@@ -4,7 +4,9 @@
 \section{Case Study}
 \label{sec:case_study}
 %% paragraph 1 -- experimental environment
-This section reports our case study performing real-time monitoring of a CAN network for realistic safety properties. We have implemented the \monitor algorithm on a low cost ARM-Cortex M4 development board which can be used to monitor CAN networks. For this case study we have obtained CAN network logs from a series of robustness tests on an autonomous research vehicle which we have replayed on a test CAN bus for the monitor to check. This setup is shown in Figure \ref{fig:replaySchem}.
+This section reports our case study performing real-time monitoring of a CAN network for realistic safety properties. We have implemented the \monitor algorithm on a low cost ARM-Cortex M4 development board which can be used to monitor CAN networks. 
+For this case study we have obtained CAN network logs from a series of robustness tests on the ARV which we have replayed on a test CAN bus for the monitor to check. 
+This setup, shown in Figure \ref{fig:replaySchem}, helps us show the feasibility of performing external bus monitoring on this class of system with real safety specifications.
 
 \begin{figure}
 \centering
@@ -13,11 +15,11 @@ This section reports our case study performing real-time monitoring of a CAN net
 \end{figure}
 
 %% paragraph 2 -- experiment goal
-We wish to use the CAN monitor to check a realistic set of safety policies over a real network trace. From this, we can see the feasibility of performing external bus monitoring for these types of systems.
+%We wish to use the CAN monitor to check a realistic set of safety policies over a real network trace. From this, we can see the feasibility of performing external bus monitoring for these types of systems.
 
 %% paragraph 3 -- description of experiment 
 %%% some of this is in para1, we should go over: specification, logs, etc
-The logs contain both normal operation as well as some operation under network-based robustness testing. During robustness testing, the testing framework can hijack targeted network messages on the bus to inject testing values. % could cite astaa here
+The logs contain both normal system operation as well as some operation under network-based robustness testing. During robustness testing, the testing framework can intercept targeted network messages on the bus and inject its own testing values. % could cite astaa here
 A PC was connected to a PCAN-USB Pro \cite{PCAN-USBPro} device which provides a USB interface to two CAN connections. One CAN channel was used as the log replayer, while the other was used as a bus logger for analysis purposes.
 
 %% paragraph 4 -- specification
@@ -25,8 +27,8 @@ Requirements documentation for this system was available, so we were able to bui
 The specification evaluated in the embedded monitor on the test logs are shown in Table \ref{tab:monspec}. This specification was derived from the system requirements based on the observable system state available in the testing logs. 
 
 
-Rule \#0 is a heartbeat detection which ensures that the interface component is still running (essentially a watchdog message). Rule \#1 is a second component of this check. The system's heartbeat message contains a single heartbeat status bit which we checked directly in Rule \#0, but the message also has a rolling counter field. We use the system interface to ensure that this counter is correct, and check the system interface's output ($\pred{HeartbeatOk}$) in Rule \#1.
-We also checked for illegal state transitions. Rules \#2 through \#5 check both for illegal transition commands and actual illegal state transitions.
+Rule \#0 is a heartbeat detection which ensures that the interface component is still running (essentially a watchdog message). Rule \#1 is a second component of this check. The system's heartbeat message contains a single heartbeat status bit which we checked directly in Rule \#0, but the message also has a rolling counter field. We use the \sfmap to ensure that this counter is incrementing correctly and output this check as the $\pred{HeartbeakOk}$ predicate which is checked in Rule \#1.
+We also checked for illegal state transitions. Rules \#2 through \#5 check both for illegal transition commands from the vehicle controller and actual illegal state transitions in the interface component.
 
 \begin{table}
 %\begin{tabular}{|p{3in}|l|}
@@ -55,17 +57,16 @@ We also checked for illegal state transitions. Rules \#2 through \#5 check both 
 \subsection{Monitoring Results}
 Monitoring the test logs with the above specification resulted in identifying two real violations as well as some false positive violation detections caused by the testing infrastructure.
 
-% covering all three possible violation types. One was a false positive
-Three different types of heartbeat violations were identified after inspecting the monitor results.
-% missing hb message
-The first is a late heartbeat message. In one of the robustness testing logs the heartbeat message was not sent on time, which is clearly a heartbeat violation. Figure \ref{fig:hb_arrival} shows the heartbeat counter values and the inter-arrival time of the heartbeat messages over time for this violation. We can see here that the heartbeat counter did in fact increment in a valid way, just too slowly. 
-
 \begin{figure}
 		\includegraphics[width=4.5in]{img/hb1}
 		\caption{Heartbeat counter values over time}
 		\label{fig:hb_arrival}
 \end{figure}
 
+% covering all three possible violation types. One was a false positive
+Three different types of heartbeat violations were identified after inspecting the monitor results.
+% missing hb message
+The first is a late heartbeat message. In one of the robustness testing logs the heartbeat message was not sent on time, which is clearly a heartbeat violation. Figure \ref{fig:hb_arrival} shows the heartbeat counter values and the inter-arrival time of the heartbeat messages over time for this violation. We can see here that the heartbeat counter did in fact increment in a valid way, just too slowly. 
 % bad status
 The second violation is on-time heartbeat status message but the heartbeat status field is 0. 
 We do not know from the available documentation whether a bad status in an on-time message with a good counter is valid or not. So without more information we cannot tell whether these violations are false positives or not. This is worthy of further investigation.

@@ -20,17 +20,19 @@ Our safety specification language for embedded systems, which we call \planguage
 Specification propositions come from a finite set of atomic propositions provided in the system trace by the \sfmap. 
 These propositions are derived from the observable system state and represent system properties, for example, a proposition $speedLT40mph$ could state whether the vehicle speed is less than 40mph.
 %
-The semantics of \planguage are common and standard, \eg, \cite{Basin2008}.
+The semantics of \planguage are standard for MTL, \eg, \cite{Basin2008}.
 
 %\paragraph{Semantics. }
 %\planguage formulas are interpreted over time-stamped \emph{traces}. A trace $\sigma$ is a sequence of states, each of which maps all propositions in \cP, to either \true or \false. We denote the $i^{th}$ position of the trace with $\sigma_i$ where $i\in\mathbb{N}$. Moreover, each $\sigma_i$ has an associated time stamp denoted by $\tau_i$ where $\tau_i\in\mathbb{N}$. 
 %We denote the sequence of time stamps with $\tau$. For all $i, j\in\mathbb{N}$ such that $i < j$, we require $\tau_i < \tau_j$. For a given trace $\sigma$ and time stamp sequence $\tau$, we write $\sigma, \tau, i\models\policy$ to denote that the formula \policy is true with respect to the $i^{th}$ position of $\sigma$ and $\tau$. 
 
-Our monitoring algorithm utilizes \emph{residues}, which are partially reduced (\ie, rewritten) policy formulas representing the remaining portion of a formula which could not be fully evaluated given the current trace. A residue $r^j_{\policy}$ is a tagged pair $\rpt{j}{\policyv}{\policy}$ where $j$ is a position in the trace, $\policy$ is the original residue formula and $\policyv$ is the residue formula. We use these residues to efficiently hold policy history for future time formulas which cannot be evaluated due to incomplete information.
+Our monitoring algorithm utilizes \emph{residues}, which are partially reduced (\ie, rewritten) policy formulas representing the remaining portion of a formula which could not be fully evaluated given the current trace. A residue $r^j_{\policy}$ is a tagged pair $\rpt{j}{\policyv}{\policy}$ where $j$ is a position in the trace, $\policy$ is the original residue formula and $\policyv$ is the residual formula. We use these residues to efficiently hold policy history for future time formulas which cannot be evaluated due to incomplete information. 
 
-Policy formulas have a wait delay $\wdelay(\policy)$ which defines an upper bound on the time duration necessary to guarantee complete information to evaluate the formula. Past and present-time formulas have no wait delay, since all trace steps necessary to evaluate them have already been seen by the monitor. Future time formulas have a delay based on their duration. The length $|\policy|$ of a policy $\policy$ is defined as the total number of subformula, (\ie, the number of nodes in the policy AST).
+Policy formulas have a wait delay $\wdelay(\policy)$ which defines an upper bound on the time duration necessary to guarantee complete information to evaluate the formula. Past and present-time formulas have no wait delay, since all trace steps necessary to evaluate them have already been seen by the monitor. Future time formulas have a delay based on their duration (\eg, $\wdelay(\LTLdiamond_{[0,3]} \pred{p}) = 3$). The length $|\policy|$ of a policy $\policy$ is defined as the total number of subformula, (\ie, the number of nodes in the policy AST).
 
-To evaluate \planguage policies, we need to save a limited amount of history state of child policies of temporal subformula within a policy. For example, given the policy $\pred{ACCCancelReq} \rightarrow \eventually_{\interval} \pred{ACCOff} \vee (\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq})$, $\pred{ACCOff}$ is a child policy of the temporal formula $\eventually_{\interval}$ and $\pred{ACCOn}$ and $\pred{ACCCancelReq}$ are children of the temporal formula $\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq}$. The monitor must store some history of these child policies in order to evaluate the parent policy.
+To evaluate \planguage policies, we need to save a limited amount of history state of child policies of temporal subformula within a policy. 
+For example, given the policy $\pred{ACCCancelReq} \rightarrow \eventually_{\interval} \pred{ACCOff} \vee (\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq})$, $\pred{ACCOff}$ is a child policy of the temporal formula $\eventually_{\interval} \pred{ACCOff}$ and $\pred{ACCOn}$ and $\pred{ACCCancelReq}$ are children of the temporal formula $\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq}$. 
+The monitor must store some history of these child policies in order to evaluate the parent policy.
 The operation $\tempSub(\varphi)$ identifies all the children of temporal subformula of a policy $\varphi$.
 %% might want to do a more abstract example to show recursiveness
 %That is, for $\alpha\, \mathcal{U}_{[l,h]}\, \beta$ we need to save the history of $\alpha$ and $\beta$ (and if either of those are also a temporal formula then we need their history as well). 
@@ -60,8 +62,9 @@ When the policy cannot be decided at a given step (\eg, it requires future state
 The history structure for formula $\policyv$ at trace step $i$ is denoted $\histst[\policyv]{i}$. 
 We use $\histSt[\policy]{i}$ to denote the set of history structures for all temporal subformula of $\policy$, \ie, 
 $\histSt[\policy]{i} = \bigcup_{\policyv \in \tempSub(\policy)} \histst[\policyv]{i}$.
-The high level algorithm \monitor is shown in Figure \ref{fig:algorithm}. 
 
+The high level algorithm \monitor is shown in Figure \ref{fig:algorithm}. 
+%
 First, all the necessary history structures $\histst[\policyv]{ }$ are identified using $\tempSub(\policy)$ and initialized. 
 Once these structures are identified, the monitoring loop begins.
 %
@@ -72,9 +75,9 @@ Each structure is updated using $\incrS(\histst[\policyv]{i-1},\histSt[\policyv]
 Then, the same procedure is performed for the top level policy that is being monitored -- the policy's structure is updated with $\incrS(\histst{i-1},\histSt{i},\sigma_i,\tau_i, i)$.
 Once updated, this structure contains the evaluation of the top-level policy. The algorithm reports any identified policy violations (\ie, any $\false$ residues) before continuing to the next trace step.
 %
-We note that due to the recursive nature of the monitoring algorithm, the top-level policy is treated exactly the same as any temporal subformula would be (which follows from the fact that the top-level policy contains an implicit $\henceforth$). 
-The history structures updates for the top-level policy are separated in the algorithm description for clarity only.
-The only difference between the top-level policy and temporal subformula is that violations are reported for the top-level policy. 
+We note that due to the recursive nature of the monitoring algorithm, the top-level policy is treated exactly the same as any temporal subformula would be (which follows from the fact that the top-level policy contains an implicit \emph{always} $\henceforth$). 
+The history structure updates for the top-level policy are separated in the algorithm description for clarity only.
+The only difference between the top-level policy and other temporal subformula is that violations are reported for the top-level policy. 
 
 \begin{figure}
 \begin{algorithmic}[1]
@@ -98,7 +101,7 @@ The only difference between the top-level policy and temporal subformula is that
 \end{figure}
 
 \subsubsection{Reducing Residues}
-\monitor works primarily by reducing policy residues down to truth values. Residues are reduced by the $\reduce(\sigma_i, \tau_i, \histSt{i}, \rpt{j}{\policyv}{\policy})$ function, which uses the current state $\sigma_i,\tau_i$ and the stored history in $\histSt{i}$ to rewrite the policy $\policyv$ to a reduced form, either a truth value or a new policy which will evaluate to the same truth value as the original. For past or present-time formulas, $\reduce()$ is able to return a truth value residue since all the necessary information to decide the policy is available in the history and current state. Future-time policies may be fully-reducable if enough state information is available. If a future-time policy cannot be reduced to a truth value, it is returned as a residue unchanged.
+\monitor works primarily by reducing policy residues down to truth values. Residues are reduced by the $\reduce(\sigma_i, \tau_i, \histSt{i}, \rpt{j}{\policyv}{\policy})$ function, which uses the current state ($\sigma_i,\tau_i$) and the stored history in $\histSt{i}$ to rewrite the policy $\policyv$ to a reduced form, either a truth value or a new policy which will evaluate to the same truth value as the original. For past or present-time formulas, $\reduce()$ is able to return a truth value residue since all the necessary information to decide the policy is available in the history and current state. Future-time policies may be fully-reducable if enough state information is available. If a future-time policy cannot be reduced to a truth value, it is returned as a residue unchanged.
 
 \subsubsection{Incrementing History Structures}
 To evaluate past and future-time policies, we must correctly store trace history which can be looked up during a residue reduction. 
@@ -126,12 +129,12 @@ For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\ta
 \end{theorem}
 \textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{TechPaper} \\
 
-Theorem \ref{thm:eagerness} states that \monitor is eager. 
-
-\begin{theorem}[Eagerness of \monitor]
-\label{thm:eagerness}
-For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\sigma_0,\ldots,\sigma_i$ is an informative prefix then if $\sigma,\tau, i \vDash \policy$ then $\rpt{i}{\true}{\policy} \in \histst{i}$ and if $\sigma, \tau, i \nvDash \policy$ then $\rpt{i}{\false}{\policy} \in \histst{i}$. 
-\end{theorem}
-\textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{TechPaper}
+%Theorem \ref{thm:eagerness} states that \monitor is eager. 
+%
+%\begin{theorem}[Eagerness of \monitor]
+%\label{thm:eagerness}
+%For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\sigma_0,\ldots,\sigma_i$ is an informative prefix then if $\sigma,\tau, i \vDash \policy$ then $\rpt{i}{\true}{\policy} \in \histst{i}$ and if $\sigma, \tau, i \nvDash \policy$ then $\rpt{i}{\false}{\policy} \in \histst{i}$. 
+%\end{theorem}
+%\textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{TechPaper}
 %%%%%%%%%%%%%%%%%%%%%%%%%%% REWRITE LINE %%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% REWRITE LINE %%%%%%%%%%%%%%%%%%%%%
