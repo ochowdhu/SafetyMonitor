@@ -1,10 +1,6 @@
 %%%% Conclusion section
 
 \section{Conclusion}
-The increase in use of third-party, black-box components in safety-critical systems increases the difficulty of verifying the safety and correctness of these systems. Runtime verification is a useful tool during testing and verification of these systems, but performing runtime monitoring of primarily black-box system's requires monitors which do not require instrumentation or source code access.
-
-We have presented an external bus-monitor architecture for safety-critical systems made up of potentially black-box components. 
-We have presented a real-time embedded monitoring algorithm for safety-critical embedded systems with black-box COTS components. The monitor utilizes a dynamic programming algorithm to check system state observed from a network bus against bounded MTL specifications.
-Our algorithm \monitor performs eager checking of future-time formulas, providing the opportunity for early detection of violations which can means more time for system recovery.
-%
-A real-time embedded implementation of this monitor targeting CAN buses has been evaluated against a bench CAN network using replayed logs from a research autonomous vehicle, showing the feasibility of monitoring realistic specifications in real time from these types of network.
+We have developed an online, real-time monitoring approach that targets an autonomous research vehicle, describing our experience. 
+Rather than instrumenting the target system, we passively monitor the system, generating the system trace from the observed network state.
+We have developed an efficient runtime monitoring algorithm, \monitor, that eagerly checks for violations of properties written in our future-bounded propositional MTL. We have shown the efficiency of \monitor by implementing it on an embedded platform and evaluating it against replayed logs obtained from system testing of the ARV. \monitor was able to detect violations of several safety requirements in real-time.

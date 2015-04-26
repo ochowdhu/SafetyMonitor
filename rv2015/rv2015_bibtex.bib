@@ -10,9 +10,9 @@
 @INPROCEEDINGS{Basin2008,
   author = {David Basin and Felix Klaedtke and Samuel Müller and Birgit Pfitzmann},
   title = {Runtime Monitoring of Metric First-order Temporal Properties},
-  booktitle = {Proceedings of the 28th International Conference on Foundations of Software Technology and Theoretical Computer Science (FSTTCS 08)},
+  booktitle = {FSTTCS},
   year = {2008},
-  volume = {Dagstuhl Seminar Proceedings},
+  volume = {8},
   pages = {49-60},
   file = {Basin2008.pdf:mPapers\\Basin2008.pdf:PDF},
   timestamp = {2015.02.04}
@@ -24,7 +24,7 @@
   booktitle = {Runtime Verification},
   publisher = {Springer Berlin / Heidelberg},
   year = {2012},
-  editor = {Khurshid, Sarfraz and Sen, Koushik},
+  //editor = {Khurshid, Sarfraz and Sen, Koushik},
   volume = {7186},
   series = {Lecture Notes in Computer Science},
   pages = {19-33},
@@ -63,43 +63,31 @@
 
 @ARTICLE{Chen2003,
   author = {Feng Chen and Grigore Rosu},
-  title = {Towards Monitoring-Oriented Programming: A Paradigm Combining Specification
-	and Implementation},
+  title = {Towards Monitoring-Oriented Programming: A Paradigm Combining Specification and Implementation},
   journal = {Electronic Notes in Theoretical Computer Science},
   year = {2003},
   volume = {89},
   pages = {108 - 127},
   number = {2},
-  note = {{RV} '2003, Run-time Verification (Satellite Workshop of CAV '03)},
+  //note = {{RV} '2003, Run-time Verification (Satellite Workshop of CAV '03)},
+ publisher={Elsevier},
   __markedentry = {[akane:]},
-  abstract = {With the explosion of software size, checking conformance of implementation
-	to specification becomes an increasingly important but also hard
-	problem. Current practice based on ad-hoc testing does not provide
-	correctness guarantees, while highly confident traditional formal
-	methods like model checking and theorem proving are still too expensive
-	to become common practice. In this paper we present a paradigm for
-	combining formal specification with implementation, called monitoring-oriented
-	programming (MoP), providing a light-weighted formal method to check
-	conformance of implementation to specification at runtime. System
-	requirements are expressed using formal specifications given as annotations
-	inserted at various user selected places in programs. Efficient monitoring
-	code using the same target language as the implementation is then
-	automatically generated during a pre-compilation stage. The generated
-	code has the same effect as a logical checking of requirements and
-	can be used in any context, in particular to trigger user defined
-	actions, when requirements are violated. Our proposal is language-
-	and logic- independent, and we argue that it smoothly integrates
-	other interesting system development paradigms, such as design by
-	contract and aspect oriented programming. A prototype has been implemented
-	for Java, which currently supports requirements expressed using past
-	time and future time linear temporal logics, as well as extended
-	regular expressions.},
   doi = {10.1016/S1571-0661(04)81045-4},
   file = {Chen2003.pdf:mPapers\\Chen2003.pdf:PDF},
   issn = {1571-0661},
   timestamp = {2013.01.22},
 }
 
+@article{chen2003towards,
+  title={Towards monitoring-oriented programming: A paradigm combining specification and implementation},
+    author={Chen, Feng and Ro{\c{s}}u, Grigore},
+	  journal={Electronic Notes in Theoretical Computer Science},
+	    volume={89},
+		  number={2},
+		    pages={108--127},
+			  year={2003},
+			    publisher={Elsevier}
+}
 
 @INCOLLECTION{Chowdhury2014,
   author = {Chowdhury, Omar and Jia, Limin and Garg, Deepak and Datta, Anupam},
@@ -107,10 +95,10 @@
   booktitle = {Computer Aided Verification},
   publisher = {Springer International Publishing},
   year = {2014},
-  editor = {Biere, Armin and Bloem, Roderick},
-  volume = {8559},
-  series = {Lecture Notes in Computer Science},
-  pages = {131-149},
+  //editor = {Biere, Armin and Bloem, Roderick},
+  //volume = {8559},
+  //series = {Lecture Notes in Computer Science},
+  //pages = {131-149},
   doi = {10.1007/978-3-319-08867-9_9},
   file = {Chowdhury2014.pdf:mPapers\\Chowdhury2014.pdf:PDF},
   isbn = {978-3-319-08866-2},
@@ -142,14 +130,12 @@
 
 @INPROCEEDINGS{Garg2011,
   author = {Garg, Deepak and Jia, Limin and Datta, Anupam},
-  title = {Policy Auditing over Incomplete Logs: Theory, Implementation and
-	Applications},
-  booktitle = {Proceedings of the 18th ACM Conference on Computer and Communications
-	Security},
+  title = {Policy Auditing over Incomplete Logs: Theory, Implementation and Applications},
+  booktitle = {Proceedings of the 18th ACM Conference on Computer and Communications Security},
   year = {2011},
-  series = {CCS '11},
+  //series = {CCS '11},
   pages = {151--162},
-  address = {New York, NY, USA},
+  //address = {New York, NY, USA},
   publisher = {ACM},
   acmid = {2046726},
   doi = {10.1145/2046707.2046726},
@@ -160,6 +146,14 @@
   timestamp = {2015.01.28},
 }
 
+@inproceedings{garg2011policy,
+  title={Policy auditing over incomplete logs: theory, implementation and applications},
+    author={Garg, Deepak and Jia, Limin and Datta, Anupam},
+	  booktitle={Proceedings of the 18th ACM conference on Computer and communications security},
+	    pages={151--162},
+		  year={2011},
+		    organization={ACM}
+}
 @ARTICLE{Goodloe2010,
   author = {Goodloe, Alwyn and Pike, Lee},
   title = {{Monitoring distributed real-time systems: a survey and future directions}},
@@ -204,7 +198,7 @@
   volume = {8},
   pages = {193-203},
   number = {5},
-  month = {October},
+  //month = {October},
   abstract = {The ISO 26262 Road vehicles Functional Safety Standard is intended
 	to guide the derivation of appropriate requirements and processes
 	for avoiding systematic and/or random failures in automotive electrical/electronic
@@ -243,66 +237,26 @@
   author = {Kane, A. and Fuhrman, T. and Koopman, P.},
   title = {Monitor Based Oracles for Cyber-Physical System Testing: Practical
 	Experience Report},
-  booktitle = {Dependable Systems and Networks (DSN), 2014 44th Annual IEEE/IFIP
-	International Conference on},
+  booktitle = {Dependable Systems and Networks (DSN), 2014 44th Annual IEEE/IFIP International Conference on},
   year = {2014},
   pages = {148-155},
-  month = {June},
-  abstract = {Testing Cyber-Physical Systems is becoming increasingly challenging
-	as they incorporate advanced autonomy features. We investigate using
-	an external runtime monitor as a partial test oracle to detect violations
-	of critical system behavioral requirements on an automotive development
-	platform. Despite limited source code access and using only existing
-	network messages, we were able to monitor a hardware-in-the-loop
-	vehicle simulator and analyze prototype vehicle log data to detect
-	violations of high-level critical properties. Interface robustness
-	testing was useful to further exercise the monitors. Beyond demonstrating
-	feasibility, the experience emphasized a number of remaining research
-	challenges, including: approximating system intent based on limited
-	system state observability, how to best balance the simplicity and
-	expressiveness of the specification language used to define monitored
-	properties, how to warm up monitoring of system variable state after
-	mode change discontinuities, and managing the differences between
-	simulation and real vehicles when conducting such tests.},
+  //month = {June},
   doi = {10.1109/DSN.2014.28},
   file = {Kane2014.pdf:mPapers\\Kane2014.pdf:PDF},
-  keywords = {automotive engineering;observability;program testing;safety-critical
-	software;source code (software);specification languages;advanced
-	autonomy feature;automotive development platform;critical system
-	behavioral requirements;cyber-physical system testing;external runtime
-	monitor;hardware-in-the-loop vehicle simulator;high-level critical
-	property;interface robustness testing;limited source code access;limited
-	system state observability;mode change discontinuity;monitor based
-	oracles;monitored property;partial test oracle;practical experience
-	report;prototype vehicle log data;specification language;system variable
-	state;Monitoring;Prototypes;Robustness;Runtime;Safety;Testing;Vehicles;cyber-physical
-	systems;runtime monitoring;testing},
   timestamp = {2014.12.11}
 }
-@ARTICLE{Kim2004,
-  author = {Kim, Moonzoo and Viswanathan, Mahesh and Kannan, Sampath and Lee,
-	Insup and Sokolsky, Oleg},
-  title = {Java-MaC: A Run-Time Assurance Approach for Java Programs},
-  journal = {Form. Methods Syst. Des.},
-  year = {2004},
-  volume = {24},
-  pages = {129--155},
-  number = {2},
-  month = mar,
-  __markedentry = {[akane:]},
-  acmid = {972567},
-  address = {Hingham, MA, USA},
-  doi = {10.1023/B:FORM.0000017719.43755.7c},
-  file = {Kim2004.pdf:mPapers\\Kim2004.pdf:PDF},
-  issn = {0925-9856},
-  issue_date = {March 2004},
-  keywords = {Java, Java bytecode engineering, execution trace validation, formal
-	specification, program instrumentation, run-time monitoring and checking,
-	software reliability},
-  numpages = {27},
-  publisher = {Kluwer Academic Publishers},
-  timestamp = {2012.11.29},
+
+@article{Kim2004,
+  title={Java-MaC: A run-time assurance approach for Java programs},
+  author={Kim, Moonzoo and Viswanathan, Mahesh and Kannan, Sampath and Lee, Insup and Sokolsky, Oleg},
+  journal={Formal methods in system design},
+  volume={24},
+  number={2},
+  pages={129--155},
+  year={2004},
+  publisher={Springer}
 }
+
 @CONFERENCE{Koopman2011,
   author = {Koopman, Philip},
   title = {Challenges In Representing CPS Safety},
@@ -347,18 +301,16 @@
   language = {English},
   publisher = {Kluwer Academic Publishers},
 }
-@INPROCEEDINGS{Pike2011,
-  author = {Lee Pike and Sebastian Niller and Nis Wegmann},
-  title = {Runtime Verification for Ultra-Critical Systems},
-  booktitle = {Proceedings of the 2nd Intl. Conference on Runtime Verification},
-  year = {2011},
-  series = {LNCS},
-  month = {September},
-  publisher = {Springer},
-  __markedentry = {[akane:]},
-  file = {Pike2011.pdf:mPapers\\Pike2011.pdf:PDF},
-  timestamp = {2011.09.26}
+
+@inproceedings{Pike2011,
+  title={Runtime verification for ultra-critical systems},
+  author={Pike, Lee and Niller, Sebastian and Wegmann, Nis},
+  booktitle={Runtime Verification},
+  pages={310--324},
+  year={2012},
+  organization={Springer}
 }
+
 @ARTICLE{Reinbacher2013,
   author = {Reinbacher, Thomas and Függer, Matthias and Brauer, Jörg},
   title = {Runtime verification of embedded real-time systems},
@@ -394,7 +346,7 @@
 @INPROCEEDINGS{Rushby2001,
   author = {Rushby, John M.},
   title = {Bus Architectures for Safety-Critical Embedded Systems},
-  booktitle = {Proceedings of the First International Workshop on Embedded Software},
+  booktitle = {Embedded Software},
   year = {2001},
   series = {EMSOFT '01},
   pages = {306--323},
@@ -407,6 +359,7 @@
   numpages = {18},
   timestamp = {2012.10.18},
 }
+
 @ARTICLE{Thati2005,
   author = {Thati, Prasanna and Ro\c{s}u, Grigore},
   title = {Monitoring Algorithms for Metric Temporal Logic Specifications},
@@ -430,8 +383,7 @@
 @INPROCEEDINGS{Havelund2002,
   author = {Havelund, Klaus and Rosu, Grigore},
   title = {Synthesizing Monitors for Safety Properties},
-  booktitle = {Proceedings of the 8th International Conference on Tools and Algorithms
-	for the Construction and Analysis of Systems},
+  booktitle = {Tools and Algorithms for the Construction and Analysis of Systems},
   year = {2002},
   series = {TACAS '02},
   pages = {342--356},
