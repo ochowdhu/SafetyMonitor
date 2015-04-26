@@ -5,27 +5,36 @@
 %%% MTL due to explicit time restrictions
 %%% need real-time finite trace checking
 
-In order to monitor our desired ARV system so that it adheres to its specification, 
+%In order to 
+For 
+monitoring our desired ARV system so that it adheres to its specification, 
 %distributed embedded systems 
 we need an algorithm which %can %continuously 
 incrementally checks explicit time specifications (\ie, propositional metric-time temporal logic~\cite{MTL}) over finite system traces. 
 This has led to our algorithm \monitor which is an iterative monitoring algorithm based on formula rewriting and summarizing the relevant history of the trace 
-in \emph{history-structures}. To detect violations early, \monitor, eagerly checks whether it can reduce subformulas of the original formula to either true/false 
+in \emph{history-structures}. To detect violations early, \monitor, eagerly checks whether it can reduce subformulas of the original formula to boolean value 
+%either true/false 
 using formula simplifications (\eg, $a\wedge \mathit{false} \equiv \mathit{false}$). Most of the existing algorithms, for evaluating  formulas like $\eventually_{[l,h]} a \vee b$ (read, 
 either $b$ is true or sometimes in the future $a$ is true such that the time difference between the evaluation state and the future state in which $a$ is true, $t_d$, is within the bound $[l,h]$) wait 
 enough time so that $\eventually_{[l,h]} a$ can be fully evaluated. \monitor however tries to eagerly evaluate both $\eventually_{[l,h]} a$ and $b$ and see whether it can 
-reduce the whole formula to either true or false. 
+reduce the whole formula to boolean.
+%either true or false. 
 %
 %To constantly check that the target system is adhering to its specification, we must constantly check the specification against the current system trace. To constantly check the system efficiently, \monitor is an iterative algorithm, performing additional checking as each new trace step arrives.
 
 \subsection{Specifications}
-\monitor checks specifications written in a future-bounded metric temporal logic. Many safety specification rules for safety-critical embedded systems require explicit time bounds to ensure timely behavior, so a specification language with explicit time bounds is important. 
+Many safety specification rules for ARV system require explicit time bounds to ensure timely behavior, 
+so a specification language with explicit time bounds is important. 
 Examples of rules that utilize explicit time bounds include: %
-\natlangrule{cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed} ($\pred{brakeDepressed} \rightarrow \eventually_{[0, 500]} \henceforth_{[0,250]} \neg \pred{CruiseEngaged}$), 
-\natlangrule{the cruise control mode cannot transition directly from Off to Engaged within 250ms} ($\neg (\pred{CruiseEngaged} \wedge \yesterday_{[0,250]} \pred{CruiseOff})$), 
+\natlangrule{cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed} 
+($\pred{brakeDepressed} \rightarrow \eventually_{[0, 500]} \henceforth_{[0,250]} \neg \pred{CruiseEngaged}$) 
+%, 
+%\natlangrule{the cruise control mode cannot transition directly from Off to Engaged within 250ms} ($\neg (\pred{CruiseEngaged} \wedge \yesterday_{[0,250]} \pred{CruiseOff})$), 
 and \natlangrule{the vehicle should not be within 1m of the current lane edge for 1s while lane centering is enabled} ($\neg \historically_{[0, 1000]}(\pred{LaneCentering} \wedge \pred{distToLaneEdgeLT1m})$).
-
-Our safety specification language for embedded systems, which we call \planguage, is a future bounded, propositional fragment of metric temporal logic (MTL \cite{Koymans1990}) where past temporal operators may have infinite bounds but future temporal operators must have finite bounds. 
+Our safety specification language for the ARV system, which we call \planguage, is a future-bounded, discrete time, propositional metric temporal logic (MTL \cite{Koymans1990}) where 
+%past temporal operators may have infinite bounds but 
+future temporal operators must have finite bounds. 
+%(\ie, $l$ and $h$ are both finite). 
 The syntax of \planguage is as follows:
 
 \(
@@ -34,22 +43,48 @@ The syntax of \planguage is as follows:
 \policy_1\since_{\interval}\policy_2 \mid \policy_1\until_{\interval}\policy_2\mid\yesterday_{\interval}\policy\mid \tomorrow_{\interval}\policy
 \end{array}
 \) \\
-with propositions $\pred{p}$, past temporal operators \emph{since} and \emph{previously} $(\since, \yesterday)$ and future temporal operators \emph{until} and \emph{next} $(\until, \tomorrow)$. The temporal bound $\interval$ must be future-finitely bounded.
-Specification propositions come from a finite set of atomic propositions provided in the system trace by the \sfmap. 
-These propositions are derived from the observable system state and represent system properties, for example, a proposition $\pred{speedLT40mph}$ could state whether the vehicle speed is less than 40mph.
+\textit{Syntax.}
+\planguage has boolean true (\ie, \true), 
+atomic propositions $\pred{p}$, logical connectives (\ie, $\neg, \vee$), 
+past temporal operators \emph{since} and \emph{previously} $(\since, \yesterday)$,  and future temporal operators \emph{until} and \emph{next} $(\until, \tomorrow)$. 
+The temporal bound $\interval$ of form $[l,h]$ ($l\leq h$ and $l,h\in\mathbb{N}$) associated with the future temporal operators must be finite.
+Specification propositions \pred{p} come from a finite set of atomic propositions provided in the system trace by the \sfmap. 
+These propositions are derived from the observable system state and represent specific system properties, for instance, 
+proposition $\pred{speedLT40mph}$ could mean whether the vehicle speed is less than 40mph.
 %
+
+
+\textit{Semantics. }
+\planguage formulas are interpreted over time-stamped \emph{traces}. A trace $\sigma$ is a sequence of states, each of which maps all propositions in \sfmap, to either \true or \false. We denote the $i^{th}$ position of the trace with $\sigma_i$ where $i\in\mathbb{N}$. Moreover, each $\sigma_i$ has an associated time stamp denoted by $\tau_i$ where $\tau_i\in\mathbb{N}$. 
+We denote the sequence of time stamps with $\tau$. For all $i, j\in\mathbb{N}$ such that $i < j$, we require $\tau_i < \tau_j$. For a given trace $\sigma$ and time stamp sequence $\tau$, we write $\sigma, \tau, i\models\policy$ to denote that the formula \policy is true with respect to the $i^{th}$ position of $\sigma$ and $\tau$. 
 The semantics of \planguage are standard for MTL, \eg, \cite{Basin2008}.
 
-%\paragraph{Semantics. }
-%\planguage formulas are interpreted over time-stamped \emph{traces}. A trace $\sigma$ is a sequence of states, each of which maps all propositions in \cP, to either \true or \false. We denote the $i^{th}$ position of the trace with $\sigma_i$ where $i\in\mathbb{N}$. Moreover, each $\sigma_i$ has an associated time stamp denoted by $\tau_i$ where $\tau_i\in\mathbb{N}$. 
-%We denote the sequence of time stamps with $\tau$. For all $i, j\in\mathbb{N}$ such that $i < j$, we require $\tau_i < \tau_j$. For a given trace $\sigma$ and time stamp sequence $\tau$, we write $\sigma, \tau, i\models\policy$ to denote that the formula \policy is true with respect to the $i^{th}$ position of $\sigma$ and $\tau$. 
+\textit{Auxiliary notions.} 
+Before we go any further, we introduce the readers with some auxiliary notions which will be 
+necessary to understand our algorithm \monitor. We first define ``\emph{residual formulas}'' or, just ``\emph{residues}''. 
+Given a formula \policy, we call another formula \policyv as \policy's residual, if we obtain \policyv after  evaluating 
+\policy with respect to the current information of the trace. Note that, residual of a formula might not be boolean because of future states 
+not yet being available. A residue $r^j_{\policy}$ is a tagged pair $\rpt{j}{\policyv}{\policy}$ where $j$ is a position in the trace in which we intend to evaluate $\policy$ (the original formula) and $
+\policyv$ is the current residual formula. We use these residues to efficiently hold policy summary for future time formulas which cannot be evaluated due to incomplete information.
 
-Our monitoring algorithm utilizes \emph{residues}, which are partially reduced (\ie, rewritten) policy formulas representing the remaining portion of a formula which could not be fully evaluated given the current trace. A residue $r^j_{\policy}$ is a tagged pair $\rpt{j}{\policyv}{\policy}$ where $j$ is a position in the trace, $\policy$ is the original residue formula and $\policyv$ is the residual formula. We use these residues to efficiently hold policy history for future time formulas which cannot be evaluated due to incomplete information. 
+%Our monitoring algorithm utilizes \emph{residues}, which are partially reduced (\ie, rewritten) policy formulas representing the remaining portion of a formula which could not be fully evaluated given the current trace. A residue $r^j_{\policy}$ is a tagged pair $\rpt{j}{\policyv}{\policy}$ where $j$ is a position in the trace, $\policy$ is the original residue formula and $\policyv$ is the residual formula. We use these residues to efficiently hold policy history for future time formulas which cannot be evaluated due to incomplete information. 
+The next notion we introduce is of ``\emph{wait delay}''. It is a function \wdelay that takes as input a formula \policy and 
+$\wdelay(\policy)$ returns 
+%Policy formulas have a wait delay $\wdelay(\policy)$ which defines 
+an upper bound on the time one has to wait before they can evaluate \policy with certainty. 
+%duration necessary to guarantee complete information to evaluate the formula. 
+For past- and present-time formulas \policyv, $\wdelay(\policyv)=0$.
+%, 
+%as \policyv can be evaluated currently. 
+%since all trace steps necessary to evaluate them have already been seen by the monitor. 
+Future time formulas have a delay based on the interval of the future operator 
+(\eg, $\wdelay(\LTLdiamond_{[0,3]} \pred{p}) = 3$). The length of a formula $\policy$, denoted $|\policy|$, returns the total number of subformulas of \policy.
+%, (\ie, the number of nodes in the policy AST).
 
-Policy formulas have a wait delay $\wdelay(\policy)$ which defines an upper bound on the time duration necessary to guarantee complete information to evaluate the formula. Past and present-time formulas have no wait delay, since all trace steps necessary to evaluate them have already been seen by the monitor. Future time formulas have a delay based on their duration (\eg, $\wdelay(\LTLdiamond_{[0,3]} \pred{p}) = 3$). The length $|\policy|$ of a policy $\policy$ is defined as the total number of subformula, (\ie, the number of nodes in the policy AST).
-
-To evaluate \planguage policies, we need to save a limited amount of history state of child policies of temporal subformula within a policy. 
-For example, given the policy $\pred{ACCCancelReq} \rightarrow \eventually_{\interval} \pred{ACCOff} \vee (\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq})$, $\pred{ACCOff}$ is a child policy of the temporal formula $\eventually_{\interval} \pred{ACCOff}$ and $\pred{ACCOn}$ and $\pred{ACCCancelReq}$ are children of the temporal formula $\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq}$. 
+To evaluate an \planguage formula \policy, we may need to save a limited amount of 
+past evaluation results for some temporal subformulas of \policy. We call this the \emph{history}. 
+%history state of child policies of temporal subformula within a policy. 
+For example, given the formula $\pred{ACCCancelReq} \rightarrow \eventually_{\interval} \pred{ACCOff} \vee (\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq})$, $\pred{ACCOff}$ is a child policy of the temporal formula $\eventually_{\interval} \pred{ACCOff}$ and $\pred{ACCOn}$ and $\pred{ACCCancelReq}$ are children of the temporal formula $\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq}$. 
 The monitor must store some history of these child policies in order to evaluate the parent policy.
 The operation $\tempSub(\varphi)$ identifies all the children of temporal subformula of a policy $\varphi$.
 %% might want to do a more abstract example to show recursiveness
@@ -59,7 +94,7 @@ The operation $\tempSub(\varphi)$ identifies all the children of temporal subfor
 %% maybe need formula length, storage delay, simplify\dots
 
 
-\subsection{Monitoring Algorithm}
+\subsection{\monitor}
 Our runtime monitoring algorithm \monitor takes as input a specification $\policy$ and monitors a growing trace, building history structures and reporting the specification violations as soon as they are detected. We summarize the relevant algorithm functions below:
 
 \begin{description}
