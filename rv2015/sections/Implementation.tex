@@ -16,7 +16,7 @@ Because our specification language is bounded, we can avoid dynamic allocation i
 Recursion is also usually prohibited because it can be difficult to guarantee a maximum stack depth when using recursion. Although \monitor utilizes recursion extensively, we can implement \monitor using a traditional iterative traversal of the specification formulas instead.
 
 \subsection{Hybrid Algorithm}
-Our eager monitoring algorithm attempts to evaluate specification rules as soon as possible, but this requires checking trace properties which may not be fully reducable given the current trace. These unfinished formula reductions require extra computation time, and in practice the majority of the policy reductions performed by \monitor will be these eager reductions which may not fully reduce.
+Our eager monitoring algorithm attempts to evaluate specification rules as soon as possible, but this requires checking trace properties which may not be fully reducible given the current trace. These unfinished formula reductions require extra computation time, and in practice the majority of the policy reductions performed by \monitor will be these eager reductions which may not fully reduce.
 
 While early detection of violations can be useful, there are situations where eagerly checking an entire target specification may require more computation than is available from the monitor in a given period.
 
@@ -61,7 +61,7 @@ helps us show the feasibility of performing external bus monitoring on this clas
 %% paragraph 3 -- description of experiment 
 %%% some of this is in para1, we should go over: specification, logs, etc
 The logs contain both normal system operation as well as some operation under network-based robustness testing. During robustness testing, the testing framework can intercept targeted network messages on the bus and inject its own testing values. % could cite astaa here
-A PC was connected to a PCAN-USB Pro \cite{PCAN-USBPro} device which provides a USB interface to two CAN connections. One CAN channel was used as the log replayer, while the other was used as a bus logger for analysis purposes.
+A PC was connected to a PCAN-USB Pro \cite{PCAN-USBPro} device which provides a USB interface to two CAN connections. One CAN channel was used as the log re-player, while the other was used as a bus logger for analysis purposes.
 
 %% paragraph 4 -- specification
 Requirements documentation for this system was available, so we were able to build a monitoring specification based on actual system requirements.
@@ -108,7 +108,7 @@ Three different types of heartbeat violations were identified after inspecting t
 		\label{fig:hb_arrival}
 \end{figure}
 
-\paragraph{Specification Violations}
+\paragraph{Specification violations.}
 % missing hb message
 The first violation is a late heartbeat message. In one of the robustness testing logs the heartbeat message was not sent on time, which is clearly a heartbeat violation. Figure \ref{fig:hb_arrival} shows the heartbeat counter values and the inter-arrival time of the heartbeat messages over time for this violation. We can see here that the heartbeat counter did in fact increment in a valid way, just too slowly. 
 % bad status
@@ -121,7 +121,7 @@ We do not know from the available documentation whether a bad status in an on-ti
 \caption{Bad heartbeat counter values \label{fig:hb_badcounter}}
 \end{figure}
 
-\paragraph{False-positive Violations}
+\paragraph{False-positive violations.}
 % bad counter
 The last type of heartbeat violation is a bad counter. 
 We have defined a good counter as one which increments by one every message up to its maximum (255 in this case) before wrapping back to zero.
