@@ -57,6 +57,9 @@ Both algorithms can return residual (i.e., incompletely reduced) formulas, but i
 The NASA PathExplorer project has led to both a set of dynamic programming-based monitoring algorithms as well as some formula-rewriting based algorithms \cite{Havelund2004} for past-time LTL. These dynamic programming algorithms require checking the trace in reverse (from the end to the beginning) which makes them somewhat unsuitable for online monitoring \cite{Havelund2002}. The formula rewriting algorithms utilize the Maude term rewriting engine to efficiently monitor specifications through formula rewriting \cite{Rosu2005}. 
 %
 Thati and Ro\c{s}u \cite{Thati2005} describe an dynamic programming algorithm for monitoring MTL which is based on resolving the past and deriving the future. They perform formula rewriting which resolves past-time formulas into equivalent formulas without unguarded past-time operators and derive new future-time formulas which separate the current state from future state. 
+While they have a tight encoding of their canonical formulas, they still require more state to be stored than some other algorithms (because formulas grow in size as they are rewritten), including this work.
+%Their evaluation algorithm is similar to ours, but they require more storage space to handle formula rewriting with potentially growing formulas.
+
 
 \paragraph{Embedded Monitors}
 %% Hef/Rein
@@ -66,3 +69,5 @@ The actual implementation they describe does however presume system memory acces
 
 Pellizzoni et. al. describe a monitor for COTS peripherals in \cite{Pellizzoni2008}. They generate FPGA monitors that passively observe PCI-E buses to verify system properties. This is a similar architecture to ours, but they only check past-time LTL and regular expressions so they cannot perform eager checking.
 %%%%%%%%%%%%%%
+
+Basin et. al. compare algorithms for monitoring real-time MTL properties in \cite{Basin2012}. Our monitoring algorithm works similarly to their point-based monitoring algorithm, iteratively calculating truth values over the formula structure using history lists. Though they discuss the use of delay queues to monitor future-time properties (and thus do not eagerly check future-time formulas), we could integrate their algorithm into our eager monitoring framework.
