@@ -127,7 +127,7 @@ The following theorem states that \monitor is correct and prompt. The theorem re
 For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\rp{j}{\false} \in \histst{i}$ then $\sigma, \tau, j \nvDash \policy$ and if $\rp{j}{\true} \in \histst{i}$ then $\sigma, \tau, j \vDash \policy$ (Correctness) and (2) if $\tau_i - \tau_j \geq \wdelay(\policy)$ then if $\sigma, \tau, j \nvDash \policy$ then $\rp{j}{\false} \in \histst{i}$ and if $\sigma, \tau, j \vDash \policy$ then $\rp{j}{\true} \in \histst{i}$ (Promptness)
 .
 \end{theorem}
-\textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{TechPaper} \\
+\textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{Kane2015} \\
 
 %Theorem \ref{thm:eagerness} states that \monitor is eager. 
 %
