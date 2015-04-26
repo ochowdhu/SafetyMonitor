@@ -17,6 +17,15 @@ Examples of rules that utilize explicit time bounds include: %
 and \natlangrule{the vehicle should not be within 1m of the current lane edge for 1s while lane centering is enabled} ($\neg \historically_{[0, 1000]}(\pred{LaneCentering} \wedge \pred{distToLaneEdgeLT1m})$).
 
 Our safety specification language for embedded systems, which we call \planguage, is a future bounded, propositional fragment of metric temporal logic (MTL \cite{Koymans1990}) where past temporal operators may have infinite bounds but future temporal operators must have finite bounds. 
+The syntax of \planguage is as follows:
+
+\(
+\begin{array}{ccc}
+\policy & ::=  & \true \mid \pred{p} \mid \neg \policy \mid \policy_1\vee \policy_2\mid
+\policy_1\since_{\interval}\policy_2 \mid \policy_1\until_{\interval}\policy_2\mid\yesterday_{\interval}\policy\mid \tomorrow_{\interval}\policy
+\end{array}
+\) \\
+with propositions $\pred{p}$, past temporal operators \emph{since} and \emph{previously} $(\since, \yesterday)$ and future temporal operators \emph{until} and \emph{next} $(\until, \tomorrow)$. The temporal bound $\interval$ must be future-finitely bounded.
 Specification propositions come from a finite set of atomic propositions provided in the system trace by the \sfmap. 
 These propositions are derived from the observable system state and represent system properties, for example, a proposition $\pred{speedLT40mph}$ could state whether the vehicle speed is less than 40mph.
 %
