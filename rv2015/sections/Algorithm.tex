@@ -80,21 +80,24 @@ For past- and present-time formulas \policyv, $\wdelay(\policyv)=0$.
 Future time formulas have a delay based on the interval of the future operator 
 (\eg, $\wdelay(\LTLdiamond_{[0,3]} \pred{p}) = 3$). The length of a formula $\policy$, denoted $|\policy|$, returns the total number of subformulas of \policy.
 %, (\ie, the number of nodes in the policy AST).
+The function \tempSub takes as input a formula \policy, and returns all the temporal subformulas \policyv of \policy and strict subformulas of \policyv. 
 
-To evaluate an \planguage formula \policy, we may need to save a limited amount of 
-past evaluation results for some temporal subformulas of \policy. We call this the \emph{history}. 
-%history state of child policies of temporal subformula within a policy. 
-For example, given the formula $\pred{ACCCancelReq} \rightarrow \eventually_{\interval} \pred{ACCOff} \vee (\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq})$, $\pred{ACCOff}$ is a child policy of the temporal formula $\eventually_{\interval} \pred{ACCOff}$ and $\pred{ACCOn}$ and $\pred{ACCCancelReq}$ are children of the temporal formula $\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq}$. 
-The monitor must store some history of these child policies in order to evaluate the parent policy.
-The operation $\tempSub(\varphi)$ identifies all the children of temporal subformula of a policy $\varphi$.
-%% might want to do a more abstract example to show recursiveness
-%That is, for $\alpha\, \mathcal{U}_{[l,h]}\, \beta$ we need to save the history of $\alpha$ and $\beta$ (and if either of those are also a temporal formula then we need their history as well). 
+
+
+%To evaluate an \planguage formula \policy, we may need to save a limited amount of 
+%past evaluation results for some temporal subformulas of \policy. We call this the \emph{history}. 
+%%history state of child policies of temporal subformula within a policy. 
+%For example, given the formula $\pred{ACCCancelReq} \rightarrow \eventually_{\interval} \pred{ACCOff} \vee (\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq})$, $\pred{ACCOff}$ is a child policy of the temporal formula $\eventually_{\interval} \pred{ACCOff}$ and $\pred{ACCOn}$ and $\pred{ACCCancelReq}$ are children of the temporal formula $\pred{ACCOn} \since_{\interval} \pred{ACCCancelReq}$. 
+%The monitor must store some history of these child policies in order to evaluate the parent policy.
+%The operation $\tempSub(\varphi)$ identifies all the children of temporal subformula of a policy $\varphi$.
+%%% might want to do a more abstract example to show recursiveness
+%%That is, for $\alpha\, \mathcal{U}_{[l,h]}\, \beta$ we need to save the history of $\alpha$ and $\beta$ (and if either of those are also a temporal formula then we need their history as well). 
 
 
 %% maybe need formula length, storage delay, simplify\dots
 
 
-\subsection{\monitor}
+\subsection{\monitor Algorithm}
 Our runtime monitoring algorithm \monitor takes as input a specification $\policy$ and monitors a growing trace, building history structures and reporting the specification violations as soon as they are detected. We summarize the relevant algorithm functions below:
 
 \begin{description}
