@@ -1,10 +1,11 @@
 \section{Introduction}
-Embedded systems, from home appliances to automobiles, are becoming increasingly complex due to the addition of new advanced features. 
-It is paramount for these embedded systems, especially safety-critical systems (\eg, autonomous vehicles, aircraft flight control), to be formally verified to avoid catastrophic consequences of malfunctioning (\eg, loss of life, property damage) due to implementation errors or design flaws. 
-% want to cover abstraction and scalability
-Static verification techniques such as model checking \cite{Clarke1996} and theorem proving \cite{Chang1997} can provide provable guarantees about system correctness, but scalability restrictions (\ie, the state-space explosion problem) and runtime failures beyond the scope of model abstractions \cite{Koopman2011} create the need for additional techniques.
-%Static verification techniques like model checking and theorem provers are applicable to obtain provable guarantees about the SC systems' correctness. However, model checking suffers from the state-space explosion problem whereas theorem provers require significant manual intervention. 
-Runtime verification (RV) is a promising alternative to its static counterpart for checking system safety and correctness in the face of increasing design complexity. 
+%Embedded systems, from home appliances to automobiles, are becoming increasingly complex due to the addition of new advanced features. 
+%It is paramount for these embedded systems, especially safety-critical systems (\eg, autonomous vehicles, aircraft flight control), to be formally verified to avoid catastrophic consequences of malfunctioning (\eg, loss of life, property damage) due to implementation errors or design flaws. 
+%% want to cover abstraction and scalability
+%Static verification techniques such as model checking \cite{Clarke1996} and theorem proving \cite{Chang1997} can provide provable guarantees about system correctness, but scalability restrictions (\ie, the state-space explosion problem) and runtime failures beyond the scope of model abstractions \cite{Koopman2011} create the need for additional techniques.
+%%Static verification techniques like model checking and theorem provers are applicable to obtain provable guarantees about the SC systems' correctness. However, model checking suffers from the state-space explosion problem whereas theorem provers require significant manual intervention. 
+Runtime verification (RV) is a promising alternative to its static counterpart (\eg, model checking \cite{Clarke1996} and theorem proving \cite{Chang1997}) 
+for checking system safety and correctness safety-critical embedded systems in the face of increasing design complexity. 
 In RV, a runtime monitor observes the execution of the system in question and checks for violations of some well-defined properties. 
 When the monitor detects a violation, it can notify a command module which then attempts to recover from the violation. \emph{In this paper, we develop a runtime monitor that monitors an autonomous research vehicle (ARV) and describe our experience with it}.
 
@@ -19,7 +20,7 @@ These systems are also often hard real-time systems which leads to additional co
 This type of system architecture is incompatible with many existing runtime monitoring techniques, which often require program or system instrumentation \cite{Havelund2004, Chen2003, Bonakdarpour2012,Kim2004} to obtain the relevant events or policy-constructs (\eg, propositions) necessary to check for violation. 
 Instrumenting systems without access to component source code is more difficult, and even when the source is available there are risks of affecting the timing and correctness of the target system when instrumented.
 
-\paragraph{Obtaining relevant policy constructs.}
+\textit{Obtaining relevant policy constructs.}
 Instead of instrumentation, we obtain the relevant information for monitoring the ARV system through passive observation of the system's broadcast buses. % \cite{Rushby2001}. 
 Controller area network (CAN) is a common and standard broadcast bus for ground vehicles which is the primary system bus in the ARV. We can obtain useful amount of system state relevant to monitoring the system safety specification by observing the data within the CAN messages being broadcast between system components.
 However, before we can start monitoring the ARV system, we need a component, which we call the \textsf{SF Map}, that observes messages transmitted on the bus, decoding them into policy-constructs relevant to monitoring which are fed into the monitor. 
@@ -27,7 +28,7 @@ This acts similarly to the low-level specification and filter/event recognizers 
 We want to emphasize that the limits of external observability can cause significant challenges  in designing the \textsf{SF Map} when considering the state available from the system messages and the necessary atomic policy-constructs \cite{Kane2014}.
 %We want to emphasize that depending on the granularity of the information available in the messages and the necessary atomic policy-constructs, developing the \textsf{SF Map} poses a significant challenge. 
 
-\paragraph{Specification logic.}
+\textit{Specification logic.}
 To obtain the relevant safety requirements and invariants for monitoring the ARV system, we consulted the safety requirements of the ARV system. 
 We observed that many desired properties for these types of systems are timing related, so using an explicit-time based specification language for expressing these properties is helpful. 
 System requirements such as ``\emph{the system must perform action $a$ within $t$ seconds of event $e$}'' are common, 
@@ -36,13 +37,13 @@ for example: \emph{Cruise control shall disengage for 250ms within 500ms of the 
 %
 For efficient monitoring, we use a fragment of propositional, discrete time metric temporal logic (MTL)\cite{Koymans1990} in which the bound associated with the future temporal operators can only be finite. % classic cite, could go newer, thati2005 is close to ours
 
-\paragraph{Monitoring algorithm.}
+\textit{Monitoring algorithm.}
 We have developed a runtime monitoring algorithm, which we call \monitor, that incrementally takes as input a system state (\ie, a state maps relevant propositions to either true or false) and a MTL formula and eagerly checks the state trace for violation. 
 Some of the existing monitoring algorithms that support bounded future formulas wait for the full-time of the bound before evaluating the formula (\eg, \cite{Basin2008}). 
 \monitor uses a dynamic programming based iterative algorithm that tries to reduce the input formula as soon as possible using history summarizing structures and straightforward formula-rewriting based simplifications when possible (leaving a partially reduced formula when future input is required).
 This eager nature of the algorithm is helpful because detecting a violation earlier provides the system more time to attempt a recovery. We have also proved the correctness of our algorithm. 
 
-\paragraph{Empirical evaluation.} 
+\textit{Empirical evaluation.} 
 We have implemented \monitor on an inexpensive embedded platform and empirically evaluated it against logs obtained from the testing of an ARV system using properties derived from its safety requirements.
 \monitor has moderate monitoring overhead and detected several safety violations in our experimental evaluation.  
 
