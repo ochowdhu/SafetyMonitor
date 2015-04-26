@@ -39,6 +39,13 @@ This is a simple architecture which requires few (essentially no) changes to the
 %%% Precis
 \subsection{Monitors}
 Our monitoring algorithm is similar to existing dynamic programming and formula-rewriting based algorithms. 
+% need to get good novelty wording
+% topics:
+%	real-time eager checking of future properties
+%	hybrid eager checking for efficiency
+%	practical experience showing suitability of our language for safety monitoring
+%The primary novelty in our approach is the combination of eager and delayed checking for real-time monitoring, 
+Our main area of novelty is the combination of eager and conservative specification checking used in a practical setting showing the suitability of our bounded future logic for safety monitoring.
 \paragraph{Dynamic programming monitors}
 %% garg/precis
 Our monitoring algorithm is inspired by the algorithms \greduce\ \cite{Garg2011} and \precis\ \cite{Chowdhury2014}, adjusted for propositional logic and eager checking. 

@@ -4,10 +4,10 @@
 %There are many proposed architectures for use in runtime monitoring. Fundamental questions such as where the monitor executes (\eg, external hardware or on-system), what the monitor watches (\eg, memory values, executed instructions, etc.) and how the monitor obtains input (\eg, system instrumentation, external sensors) are dependent on both the properties of the system being monitored and the desired effects of monitoring (\ie, observation or enforcement/control).  
 
 %% what are existing system architectures
-Most modern safety-critical embedded systems are designed as distributed systems to provide the ability to meet the necessary reliability, fault-tolerance, and redundancy. The individual system components are typically connected via a network bus, of which there are many different common types \cite{Rushby2001}. %Controller Area Network (CAN) is a common bus for ground vehicles, being standard on automobiles and widely used in other systems.
+Many modern safety-critical embedded systems are designed as distributed systems to provide the ability to meet the necessary reliability, fault-tolerance, and redundancy. The individual system components are typically connected via a network bus, of which there are many different common types \cite{Rushby2001}. %Controller Area Network (CAN) is a common bus for ground vehicles, being standard on automobiles and widely used in other systems.
 %
 \paragraph{Controller Area Network} % add CAN citation?
-Controller Area Network is a widely used automotive network developed by Bosch in the 1980s. 
+Controller Area Network is a widely used automotive network developed by Bosch in the 1980s \cite{Bosch1991}. 
 In this work we focus primarily on monitoring CAN because it is a common automotive bus which typically conveys enough of the state we wish to observe without instrumentation.
 %
 CAN is an event-based broadcast network with data rates up to 1Mb/s (although usually used at 125-500kbps). Messages on CAN are broadcast with an identifier which is used to denote both the message and the intended recipients. The message identifiers are also used as the message priorities for access control.

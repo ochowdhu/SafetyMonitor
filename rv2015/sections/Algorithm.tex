@@ -18,7 +18,7 @@ and \natlangrule{the vehicle should not be within 1m of the current lane edge fo
 
 Our safety specification language for embedded systems, which we call \planguage, is a future bounded, propositional fragment of metric temporal logic (MTL \cite{Koymans1990}) where past temporal operators may have infinite bounds but future temporal operators must have finite bounds. 
 Specification propositions come from a finite set of atomic propositions provided in the system trace by the \sfmap. 
-These propositions are derived from the observable system state and represent system properties, for example, a proposition $speedLT40mph$ could state whether the vehicle speed is less than 40mph.
+These propositions are derived from the observable system state and represent system properties, for example, a proposition $\pred{speedLT40mph}$ could state whether the vehicle speed is less than 40mph.
 %
 The semantics of \planguage are standard for MTL, \eg, \cite{Basin2008}.
 

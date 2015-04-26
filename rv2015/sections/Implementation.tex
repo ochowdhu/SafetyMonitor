@@ -37,7 +37,7 @@ This conservative check can be done quickly at each period, leaving any extra ti
 
 We have implemented the hybrid monitoring algorithm in our embedded monitor. The monitor updates the history structures (shared between the conservative and eager checking) and performs a conservative check once every monitoring period. It then uses the idle time between periods to perform eager checking of any remaining unchecked specification properties.
 %
-Figure \ref{fig:arch:oscope} shows the execution of the embedded monitor instrumented to output the currently executing task to an oscilloscope. 
+Figure \ref{fig:arch:oscope} shows the execution of the embedded monitor instrumented to output the currently executing task to an oscilloscope. The residue checks run twice per trace update due to the monitor configuration used during the test, but this is not required for correct monitoring.
 This task output was captured while monitoring the specification used in the case study (see Section \ref{sec:case_study} plus another 200 time-step \emph{eventually} rule which was never satisfied. 
 %(guaranteeing an extra 200 eager residue checks every period). 
 The rule never being satisfied means that at every step the monitor performed an eager check of all 200 residues for this rule at every step (i.e., since they were never satisfied, they could never be reduced early). 
