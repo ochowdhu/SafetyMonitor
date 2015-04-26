@@ -5,9 +5,18 @@
 %%% MTL due to explicit time restrictions
 %%% need real-time finite trace checking
 
-In order to monitor distributed embedded systems we need an algorithm which can continuously check explicit time specifications over finite traces. This has led to our algorithm \monitor which is an iterative monitoring algorithm based on formula reduction (essentially formula-rewriting). 
+In order to monitor our desired ARV system so that it adheres to its specification, 
+%distributed embedded systems 
+we need an algorithm which %can %continuously 
+incrementally checks explicit time specifications (\ie, propositional metric-time temporal logic~\cite{MTL}) over finite system traces. 
+This has led to our algorithm \monitor which is an iterative monitoring algorithm based on formula rewriting and summarizing the relevant history of the trace 
+in \emph{history-structures}. To detect violations early, \monitor, eagerly checks whether it can reduce subformulas of the original formula to either true/false 
+using formula simplifications (\eg, $a\wedge \mathit{false} \equiv \mathit{false}$). Most of the existing algorithms, for evaluating  formulas like $\eventually_{[l,h]} a \vee b$ (read, 
+either $b$ is true or sometimes in the future $a$ is true such that the time difference between the evaluation state and the future state in which $a$ is true, $t_d$, is within the bound $[l,h]$) wait 
+enough time so that $\eventually_{[l,h]} a$ can be fully evaluated. \monitor however tries to eagerly evaluate both $\eventually_{[l,h]} a$ and $b$ and see whether it can 
+reduce the whole formula to either true or false. 
 %
-To constantly check that the target system is adhering to its specification, we must constantly check the specification against the current system trace. To constantly check the system efficiently, \monitor is an iterative algorithm, performing additional checking as each new trace step arrives.
+%To constantly check that the target system is adhering to its specification, we must constantly check the specification against the current system trace. To constantly check the system efficiently, \monitor is an iterative algorithm, performing additional checking as each new trace step arrives.
 
 \subsection{Specifications}
 \monitor checks specifications written in a future-bounded metric temporal logic. Many safety specification rules for safety-critical embedded systems require explicit time bounds to ensure timely behavior, so a specification language with explicit time bounds is important. 
