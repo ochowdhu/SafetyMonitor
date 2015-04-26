@@ -25,15 +25,17 @@ reduce the whole formula to boolean.
 \subsection{Specifications}
 Many safety specification rules for ARV system require explicit time bounds to ensure timely behavior, 
 so a specification language with explicit time bounds is important. 
-Examples of rules that utilize explicit time bounds include: %
-\natlangrule{cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed} 
-($\pred{brakeDepressed} \rightarrow \eventually_{[0, 500]} \henceforth_{[0,250]} \neg \pred{CruiseEngaged}$) 
+For instance, 
+%Examples of rules that utilize explicit time bounds include: %
+``\natlangrule{cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed}'' 
+($\pred{brakeDepress} \rightarrow \eventually_{[0, 500]} \henceforth_{[0,250]} \neg \pred{CruiseEng}$). 
 %, 
 %\natlangrule{the cruise control mode cannot transition directly from Off to Engaged within 250ms} ($\neg (\pred{CruiseEngaged} \wedge \yesterday_{[0,250]} \pred{CruiseOff})$), 
-and \natlangrule{the vehicle should not be within 1m of the current lane edge for 1s while lane centering is enabled} ($\neg \historically_{[0, 1000]}(\pred{LaneCentering} \wedge \pred{distToLaneEdgeLT1m})$).
-Our safety specification language for the ARV system, which we call \planguage, is a future-bounded, discrete time, propositional metric temporal logic (MTL \cite{Koymans1990}) where 
-%past temporal operators may have infinite bounds but 
-future temporal operators must have finite bounds. 
+%and \natlangrule{the vehicle should not be within 1m of the current lane edge for 1s while lane centering is enabled} ($\neg \historically_{[0, 1000]}(\pred{LaneCentering} \wedge \pred{distToLaneEdgeLT1m})$).
+Our safety specification language for the ARV system, which we call \planguage, is a future-bounded, discrete time, propositional metric temporal logic (MTL \cite{Koymans1990}). 
+%where 
+%%past temporal operators may have infinite bounds but 
+%future temporal operators must have finite bounds. 
 %(\ie, $l$ and $h$ are both finite). 
 The syntax of \planguage is as follows:
 
@@ -98,7 +100,7 @@ The function \tempSub takes as input a formula \policy, and returns all the temp
 
 
 \subsection{\monitor Algorithm}
-Our runtime monitoring algorithm \monitor takes as input a specification $\policy$ and monitors a growing trace, building history structures and reporting the specification violations as soon as they are detected. We summarize the relevant algorithm functions below:
+Our runtime monitoring algorithm \monitor takes as input an \planguage formula $\policy$ and monitors a growing trace, building history structures and reporting the specification violations as soon as they are detected. We summarize the relevant algorithm functions below:
 
 \begin{description}
 \item[$\monitor{}(\policy)$] is the top-level function. 
@@ -110,7 +112,7 @@ Our runtime monitoring algorithm \monitor takes as input a specification $\polic
 
 
 
-\subsubsection{Top-level monitoring algorithm}
+\textbf{Top-level monitoring algorithm.}
 The top-level monitoring algorithm \monitor is a sampling-based periodic monitor which uses history structures to store trace state for evaluating temporal subformulas. 
 \emph{History structures} are lists of residues along with past-time markers for evaluating infinite past-time formulas. 
 The algorithm checks the given policy $\policy$ periodically at every trace sample step. 
@@ -156,10 +158,10 @@ The only difference between the top-level policy and other temporal subformula i
 \caption{\monitor Algorithm}\label{fig:algorithm}
 \end{figure}
 
-\subsubsection{Reducing Residues}
+\textbf{Reducing Residues.}
 \monitor works primarily by reducing policy residues down to truth values. Residues are reduced by the $\reduce(\sigma_i, \tau_i, \histSt{i}, \rpt{j}{\policyv}{\policy})$ function, which uses the current state ($\sigma_i,\tau_i$) and the stored history in $\histSt{i}$ to rewrite the policy $\policyv$ to a reduced form, either a truth value or a new policy which will evaluate to the same truth value as the original. For past or present-time formulas, $\reduce()$ is able to return a truth value residue since all the necessary information to decide the policy is available in the history and current state. Future-time policies may be fully-reducable if enough state information is available. If a future-time policy cannot be reduced to a truth value, it is returned as a residue unchanged.
 
-\subsubsection{Incrementing History Structures}
+\textbf{Incrementing History Structures.}
 To evaluate past and future-time policies, we must correctly store trace history which can be looked up during a residue reduction. 
 We store the trace history of a policy $\policyv$ in a history structure $\histst[\policyv]{}$. 
 This history structure contains a list of residues for the number of steps required to evaluate the top-level policy. History structures are incremented by the function 
@@ -175,7 +177,8 @@ Together, these two actions leave an updated history structure $\histst[policyv]
 \subsection{Algorithm Properties}
 There are two important correctness properties of our monitoring algorithm which need to be shown. \emph{Correctness} states that the algorithm's results are correct with respect to the syntax. That is, that if \monitor reports a policy violation, the trace really did violate the policy. Related is \emph{promptness}, which requires that the algorithm provide a decision for the given policy at any given time $t$ within a finite bound, $\wdelay(\policy)$. Promptness requires that the algorithm decide satisfaction as soon as it is guaranteed to be possible to decide. 
 %
-Besides correctness guarantees, our algorithm is also \emph{eager}. An eager algorithm reports satisfaction as soon as the trace is an informative prefix \cite{Kupferman2001} for the policy. Many temporal policies will be decidable before the promptness delay, providing early detection and extra time for recovery actions compared to monitoring algorithms which wait until the promptness delay to ensure they can check the policy. 
+%Besides correctness guarantees, our algorithm is also \emph{eager}. An eager algorithm reports satisfaction as soon as the trace is an informative prefix \cite{Kupferman2001} for the policy. 
+%Many temporal policies can be evaluated before the promptness delay, providing early detection and extra time for recovery actions compared to other monitoring algorithms which wait until the promptness delay to ensure they can check the policy. 
 
 The following theorem states that \monitor is correct and prompt. The theorem requires that the history structures $\histSt{i}$ be consistent at $i$ with respect to the trace $\sigma,\tau$. This means that the history structures contain the actual history of the trace up to step $i$. The algorithm provides this consistency itself if run iteratively from step $0$.
 
@@ -183,7 +186,7 @@ The following theorem states that \monitor is correct and prompt. The theorem re
 For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\rp{j}{\false} \in \histst{i}$ then $\sigma, \tau, j \nvDash \policy$ and if $\rp{j}{\true} \in \histst{i}$ then $\sigma, \tau, j \vDash \policy$ (Correctness) and (2) if $\tau_i - \tau_j \geq \wdelay(\policy)$ then if $\sigma, \tau, j \nvDash \policy$ then $\rp{j}{\false} \in \histst{i}$ and if $\sigma, \tau, j \vDash \policy$ then $\rp{j}{\true} \in \histst{i}$ (Promptness)
 .
 \end{theorem}
-\textit{Proof.} By mutual induction on the policy formula $\policy$ and time step $i$. See \cite{Kane2015} \\
+\textit{Proof.} By  induction on the policy formula $\policy$ and time step $i$. See \cite{Kane2015} \\
 
 %Theorem \ref{thm:eagerness} states that \monitor is eager. 
 %

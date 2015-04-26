@@ -45,7 +45,7 @@ In order to provide flexibility to map system state onto the formal specificatio
 This type of interface is common in monitors for real systems, including MaC's filters \cite{Kim2004} and the AP evaluation filter from \cite{Heffernan2014}.
 %% 
 The monitor's \sfmap generates the system trace by building the necessary propositions based on the observed bus traffic. 
-This generated trace is provided to the monitoring algorithm which checks it against the given system specification, outputting whether the trace violated or satisfied the specification at each trace step (subject to delays waiting on future trace state).
+This generated trace is provided to the monitoring algorithm which checks it against the given system specification, outputting whether the trace violated or satisfied the specification at each trace step (subject to delays waiting on future  state).
 %% took action controller out of arch picture so let's not mention it, could add it back in if we want...
 %The algorithm's output is sent to an action controller which can perform the desired response to any specification violations, such as logging the violations or triggering a recovery action.
 
