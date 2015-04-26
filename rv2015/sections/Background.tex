@@ -23,7 +23,7 @@ These constraints emphasize the need for strong isolation between the target sys
 %The three monitor architectures proposed by Goodloe and Pike are the Bus-Monitor Architecture, the single process monitor architecture, and the distributed process monitor architecture. 
 One of Goodloe and Pike's proposed distributed real-time system monitor architectures is the bus-monitor architecture.
 This architecture contains an external monitor which receives network messages over an existing system bus, acting as another system component.
-The monitor can be configured in a silent or receive only mode to ensure it does not peturb the system. 
+The monitor can be configured in a silent or receive only mode to ensure it does not perturb the system. 
 This is a simple architecture which requires few (essentially no) changes to the target system architecture. We utilize this architecture for our monitoring framework. 
 
 %%%% NEED TO SHRINK THIS DOWN TO A PAGE OR TWO
@@ -63,7 +63,7 @@ While they have a tight encoding of their canonical formulas, they still require
 
 \paragraph{Embedded Monitors}
 %% Hef/Rein
-Heffernan et. al. present a monitor for autonomotive systems using ISO 26262 as a guide to identify the monitored properties in \cite{Heffernan2014}. They monitor past-time linear temporal logic (LTL) formulas and obtain system state from target system buses (CAN in their example). Our semi-formal interface is similar to their ``filters'' used to translate system state to the atomic propositions that are monitored. Their motivation and goals are similar to ours, but they use on-chip system-on-a-chip based monitors which utilize instrumentation to obtain system state, which is not suitable for monitoring black-box systems.
+Heffernan et. al. present a monitor for automotive systems using ISO 26262 as a guide to identify the monitored properties in \cite{Heffernan2014}. They monitor past-time linear temporal logic (LTL) formulas and obtain system state from target system buses (CAN in their example). Our semi-formal interface is similar to their ``filters'' used to translate system state to the atomic propositions that are monitored. Their motivation and goals are similar to ours, but they use on-chip system-on-a-chip based monitors which utilize instrumentation to obtain system state, which is not suitable for monitoring black-box systems.
 Reinbacher et. al. present an embedded past-time MTL monitor in \cite{Reinbacher2013} which generates FPGA-based non-invasive monitors. 
 The actual implementation they describe does however presume system memory access to obtain system state (rather than using state from the target network).
 
