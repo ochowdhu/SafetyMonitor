@@ -68,8 +68,6 @@ Requirements documentation for this system was available, so we were able to bui
 The specification evaluated in the embedded monitor on the test logs are shown in Table \ref{tab:monspec}. This specification was derived from the system requirements based on the observable system state available in the testing logs. 
 
 
-Rule \#0 is a heartbeat detection which ensures that the interface component is still running (essentially a watchdog message). Rule \#1 is a second component of this check. The system's heartbeat message contains a single heartbeat status bit which we checked directly in Rule \#0, but the message also has a rolling counter field. We use the \sfmap to ensure that this counter is incrementing correctly and output this check as the $\pred{HeartbeakOk}$ predicate which is checked in Rule \#1.
-We also checked for illegal state transitions. Rules \#2 through \#5 check both for illegal transition commands from the vehicle controller and actual illegal state transitions in the interface component.
 
 \begin{table}[t]
 %\begin{tabular}{|p{3in}|l|}
@@ -93,6 +91,9 @@ We also checked for illegal state transitions. Rules \#2 through \#5 check both 
 \caption{Case study monitoring specification \label{tab:monspec}}
 \end{table}
 
+Rule \#0 is a heartbeat detection which ensures that the interface component is still running (essentially a watchdog message). Rule \#1 is a second component of this check. The system's heartbeat message contains a single heartbeat status bit which we checked directly in Rule \#0, but the message also has a rolling counter field. We use the \sfmap to ensure that this counter is incrementing correctly and output this check as the $\pred{HeartbeakOk}$ predicate which is checked in Rule \#1.
+We also checked for illegal state transitions. Rules \#2 through \#5 check both for illegal transition commands from the vehicle controller and actual illegal state transitions in the interface component.
+
 %% move hybrid algorithm explanation here maybe?
 
 \subsection{Monitoring Results}
@@ -101,7 +102,7 @@ Monitoring the test logs with the above specification resulted in identifying tw
 % covering all three possible violation types. One was a false positive
 Three different types of heartbeat violations were identified after inspecting the monitor results, some actual violations and some false-positives caused by the testing infrastructure. We also identified infrastructure-caused false-positive violations of the transition rules.
 
-\begin{figure}
+\begin{figure}[t]
 		\includegraphics[width=4.5in]{img/hb1}
 		\caption{Heartbeat counter values over time}
 		\label{fig:hb_arrival}
@@ -115,7 +116,7 @@ The second violation is on-time heartbeat status message but the heartbeat statu
 We do not know from the available documentation whether a bad status in an on-time message with a good counter is valid or not. So without more information we cannot tell whether these violations are false positives or not. This is worthy of further investigation.
 
 
-\begin{figure}
+\begin{figure}[t]
 \includegraphics[width=4.5in]{img/hb2}
 \caption{Bad heartbeat counter values \label{fig:hb_badcounter}}
 \end{figure}
