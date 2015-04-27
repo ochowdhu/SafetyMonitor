@@ -191,7 +191,7 @@ Figure \ref{fig:until} shows the reduction algorithm for \emph{until} temporal f
 & \quad\mathbf{return} \rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}
 \end{aligned} \right. \\
 \end{align*}
-\normalsize
+%\normalsize
 \caption{Definition of \reduce for \emph{until} formulas \label{fig:until}}
 \end{figure}
 
@@ -204,21 +204,29 @@ We store the trace history of a policy $\policyv$ in a history structure $\hists
 This history structure contains a list of residues for the number of steps required to evaluate the top-level policy. History structures are incremented by the function 
 $\incrS(\histst[\policyv]{i-1}, \histSt[\policyv]{i}, \sigma_i, \tau_i, i) = (\bigcup_{r \in \histst[\policyv]{i-1}} \reduce(\sigma_i, \tau_i, \histst[\policyv]{i}, r)) \cup \reduce(\sigma_i, \tau_i, \histst[\policyv]{i}, \rp{i}{\policyv})$
 %
-This function takes the previous step's history structure $\histst[\policyv]{i-1}$ and the current state ($\sigma_i,\tau_i$, and the updated smaller history structures $\histSt[\policyv]{i}$) and performs two actions:
+This function takes the previous step's history structure $\histst[\policyv]{i-1}$ and the current state 
+%($\sigma_i,\tau_i$, and the updated smaller history structures $\histSt[\policyv]{i}$) 
+and performs two actions:
 %\begin{enumerate}
 	1) Adds a residue for the current step $i$ to $\histst[\policyv]{i-1}$ and
 	2) Reduces all residues contained in $\histst[\policyv]{i-1}$ with the current state.
 %\end{enumerate}
-Together, these two actions leave an updated history structure $\histst[\policyv]{i}$ which has updated history information for all the required steps.
+%Together, these two actions leave an updated history structure $\histst[\policyv]{i}$ which has updated history information for all the required steps.
 
 
 \subsection{Algorithm Properties}
-There are two important correctness properties of our monitoring algorithm which need to be shown. \emph{Correctness} states that the algorithm's results are correct with respect to the syntax. That is, that if \monitor reports a policy violation, the trace really did violate the policy. Related is \emph{promptness}, which requires that the algorithm provide a decision for the given policy at any given time $t$ within a finite bound, $\wdelay(\policy)$. Promptness requires that the algorithm decide satisfaction as soon as it is guaranteed to be possible to decide. 
+There are two important properties of \monitor which need to be shown. First, \emph{correctness} states that the algorithm's results are correct. 
+That is, that if \monitor reports a policy violation, the trace really did violate the policy. Second, \emph{promptness}  requires that the algorithm 
+provide a decision for the given policy in a timely fashion (\ie, with $t$ such that $t\leq \wdelay(\policy)$). 
+%at any given time $t$ within a finite bound, $\wdelay(\policy)$. 
+Promptness requires that the algorithm decide satisfaction as soon as it is possible. 
+%guaranteed to be possible to decide. 
 %
 %Besides correctness guarantees, our algorithm is also \emph{eager}. An eager algorithm reports satisfaction as soon as the trace is an informative prefix \cite{Kupferman2001} for the policy. 
 %Many temporal policies can be evaluated before the promptness delay, providing early detection and extra time for recovery actions compared to other monitoring algorithms which wait until the promptness delay to ensure they can check the policy. 
 
-The following theorem states that \monitor is correct and prompt. The theorem requires that the history structures $\histSt{i}$ be consistent at $i$ with respect to the trace $\sigma,\tau$. This means that the history structures contain the actual history of the trace up to step $i$. The algorithm provides this consistency itself if run iteratively from step $0$.
+The following theorem states that \monitor is correct and prompt. It requires  the history structures $\histSt{i}$ to be consistent at $i$ analogous to the trace $\sigma,\tau$. 
+This means that the history structures contain correct history of the trace till step $i$. %The algorithm provides this consistency itself if run iteratively from step $0$.
 
 \begin{theorem}[Correctness and Promptness of \monitor]
 For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\rp{j}{\false} \in \histst{i}$ then $\sigma, \tau, j \nvDash \policy$ and if $\rp{j}{\true} \in \histst{i}$ then $\sigma, \tau, j \vDash \policy$ (Correctness) and (2) if $\tau_i - \tau_j \geq \wdelay(\policy)$ then if $\sigma, \tau, j \nvDash \policy$ then $\rp{j}{\false} \in \histst{i}$ and if $\sigma, \tau, j \vDash \policy$ then $\rp{j}{\true} \in \histst{i}$ (Promptness)
