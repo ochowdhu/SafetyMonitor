@@ -120,36 +120,6 @@ The history structure for formula $\policyv$ at trace step $i$ is denoted $\hist
 We use $\histSt[\policy]{i}$ to denote the set of history structures for all temporal subformula of $\policy$, \ie, 
 $\histSt[\policy]{i} = \bigcup_{\policyv \in \tempSub(\policy)} \histst[\policyv]{i}$.
 
-Figure \ref{fig:until} shows the reduction algorithm for \emph{until} temporal formula. Reducing \emph{since} formulas is essentially the same, except with the indices checked in the past.
-
-%%% TAU UNTIL
-\begin{figure}
-\tiny
-\begin{align*}
-\mathbf{reduce}(\sigma_i,\tau, i,\mathbb{S}^i_{\alpha\, \mathcal{U}_{[l,h]}\, \beta} ,\rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}) = \left\{
-\begin{aligned}
-&\text{let } a_a \leftarrow min(\{k | \tau_j \leq \tau_k \leq \tau_j+h  \wedge \rp{k}{\bot} \in S^i_\alpha \},i) \\ 
-% a_u
-%& a_u \leftarrow max({k| \tau_j \leq \tau_k \leq \tau_j+h \wedge \rp{k}{\alpha'} \in S^i_\alpha \wedge \alpha' \not\equiv \top},i) \\
-& a_u \leftarrow max(\{k| \tau_k \in [\tau_j,\tau_j+h] \\
-& \quad \quad \quad \wedge \forall k' \in [j,k-1].(\rp{k'}{\alpha'} \in S^i_\alpha \wedge \alpha' \equiv \top\},i) \\
-% b_a
-& b_a \leftarrow min(\{k | \tau_j+l \leq \tau_k \leq \tau_j+h \wedge \rp{k}{\beta'} \in S^i_\beta \wedge \beta' \neq \bot\}) \\ 
-% b_t
-&b_t \leftarrow min(\{k | \tau_j+l \leq \tau_k \leq \tau_j+h \wedge \rp{k}{\top} \in S^i_{\beta} \}) \\
-% b_n
-&b_n \leftarrow \top \text{ if } (\tau_i - \tau_j \geq \wdelay(\psi)) \\
-& \quad \quad \quad \wedge \forall k.(\tau_j+l \leq \tau_k \leq \tau_j+h). \rp{k}{\bot} \in S^i_{\beta} \\
-&\text{if } b_t \neq \emptyset \wedge a_u \geq b_t \\
-& \quad\mathbf{return} \rp{j}{\top} \\
-&\text{else if } (b_a \neq \emptyset \wedge a_a < b_a) \text{ or } b_n = \top\\ & \quad\mathbf{return} \rp{j}{\bot} \\
-&\text{else} \\
-& \quad\mathbf{return} \rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}
-\end{aligned} \right. \\
-\end{align*}
-\normalsize
-\caption{Definition of \reduce for \emph{until} formulas \label{fig:until}}
-\end{figure}
 
 The high level algorithm \monitor is shown in Figure \ref{fig:algorithm}. 
 %
@@ -204,6 +174,38 @@ This function takes the previous step's history structure $\histst[\policyv]{i-1
 %\end{enumerate}
 Together, these two actions leave an updated history structure $\histst[\policyv]{i}$ which has updated history information for all the required steps.
 
+For residues whose formula is an \emph{until} formula $\alpha \until_{[l,h]} \beta$, the history structures $\histst[\alpha]{i}$ and $\histst[\beta]{i}$ are used to reduce the formula. 
+If the formula can be evaluated conclusively then the truth value is returned, otherwise the residue is returned unchanged. 
+Figure \ref{fig:until} shows the reduction algorithm for \emph{until} temporal formula. Reducing \emph{since} formulas is essentially the same except with reversed minimum/maximums and past time bounds.
+
+%%% TAU UNTIL
+\begin{figure}
+\tiny
+\begin{align*}
+\mathbf{reduce}(\sigma_i,\tau, i,\mathbb{S}^i_{\alpha\, \mathcal{U}_{[l,h]}\, \beta} ,\rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}) = \left\{
+\begin{aligned}
+&\text{let } a_a \leftarrow min(\{k | \tau_j \leq \tau_k \leq \tau_j+h  \wedge \rp{k}{\bot} \in S^i_\alpha \},i) \\ 
+% a_u
+%& a_u \leftarrow max({k| \tau_j \leq \tau_k \leq \tau_j+h \wedge \rp{k}{\alpha'} \in S^i_\alpha \wedge \alpha' \not\equiv \top},i) \\
+& a_u \leftarrow max(\{k| \tau_k \in [\tau_j,\tau_j+h] \\
+& \quad \quad \quad \wedge \forall k' \in [j,k-1].(\rp{k'}{\alpha'} \in S^i_\alpha \wedge \alpha' \equiv \top\},i) \\
+% b_a
+& b_a \leftarrow min(\{k | \tau_j+l \leq \tau_k \leq \tau_j+h \wedge \rp{k}{\beta'} \in S^i_\beta \wedge \beta' \neq \bot\}) \\ 
+% b_t
+&b_t \leftarrow min(\{k | \tau_j+l \leq \tau_k \leq \tau_j+h \wedge \rp{k}{\top} \in S^i_{\beta} \}) \\
+% b_n
+&b_n \leftarrow \top \text{ if } (\tau_i - \tau_j \geq \wdelay(\psi)) \\
+& \quad \quad \quad \wedge \forall k.(\tau_j+l \leq \tau_k \leq \tau_j+h). \rp{k}{\bot} \in S^i_{\beta} \\
+&\text{if } b_t \neq \emptyset \wedge a_u \geq b_t \\
+& \quad\mathbf{return} \rp{j}{\top} \\
+&\text{else if } (b_a \neq \emptyset \wedge a_a < b_a) \text{ or } b_n = \top\\ & \quad\mathbf{return} \rp{j}{\bot} \\
+&\text{else} \\
+& \quad\mathbf{return} \rp{j}{\alpha\, \mathcal{U}_{[l,h]}\, \beta}
+\end{aligned} \right. \\
+\end{align*}
+\normalsize
+\caption{Definition of \reduce for \emph{until} formulas \label{fig:until}}
+\end{figure}
 \subsection{Algorithm Properties}
 There are two important correctness properties of our monitoring algorithm which need to be shown. \emph{Correctness} states that the algorithm's results are correct with respect to the syntax. That is, that if \monitor reports a policy violation, the trace really did violate the policy. Related is \emph{promptness}, which requires that the algorithm provide a decision for the given policy at any given time $t$ within a finite bound, $\wdelay(\policy)$. Promptness requires that the algorithm decide satisfaction as soon as it is guaranteed to be possible to decide. 
 %
