@@ -11,15 +11,12 @@ In this section we briefly introduce the background concepts and review relevant
 \label{sec:bg:sc_monitor}
 Goodloe and Pike present a thorough survey of monitoring distributed real-time systems in \cite{Goodloe2010}. Notably, they present a set of monitor architecture constraints and propose three abstract monitor architectures in the context of monitoring these types of systems.
 %
-In \cite{Pike2011} Pike et. al update these constraints with the acronym ``FaCTS'': Functionality, Certifiability, Timing, and SWaP (size, weight and power). 
-These constraints emphasize the need for strong isolation between the target system and the monitor. Without isolation, the monitor may affect the target system in a way which could cause a system failure (e.g., disrupting system timing, adding extensive development costs, etc).
-
+%In \cite{Pike2011} Pike et. al update these constraints with the acronym ``FaCTS'': Functionality, Certifiability, Timing, and SWaP (size, weight and power). 
+%These constraints emphasize the need for strong isolation between the target system and the monitor. Without isolation, the monitor may affect the target system in a way which could cause a system failure (e.g., disrupting system timing, adding extensive development costs, etc).
 %The Functionality constraint demands that a monitor cannot change the system under observation's (SUO's) behavior unless the target has violated the system specification. 
 %The Timing constraint similarly says that the monitor can not interfere with the non-faulty SUO's timing (e.g., task period/deadlines).
 %The Certifiability constraint is a softer constraint, arguing that a monitor should not make re-certification of SUO onerous. This is important because certification can be a major portion of design cost for these systems and nominally simple changes/additions to the SUO can require a broad and costly recertification.
 %Lastly, safety critical systems are often extremely cost sensitive with tight tolerances for additional physical size, weight or required power. Any monitor we wish to add to an existing system must fit within these existing tolerances.
-
-
 %The three monitor architectures proposed by Goodloe and Pike are the Bus-Monitor Architecture, the single process monitor architecture, and the distributed process monitor architecture. 
 One of Goodloe and Pike's proposed distributed real-time system monitor architectures is the bus-monitor architecture.
 This architecture contains an external monitor which receives network messages over an existing system bus, acting as another system component.

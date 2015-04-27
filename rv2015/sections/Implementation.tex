@@ -15,7 +15,7 @@ Because our specification language is bounded, we can avoid dynamic allocation i
 % recursion
 Recursion is also usually prohibited because it can be difficult to guarantee a maximum stack depth when using recursion. Although \monitor utilizes recursion extensively, we can implement \monitor using a traditional iterative traversal of the specification formulas instead.
 
-\subsection{Hybrid Algorithm}
+\noindent\textbf{Hybrid Algorithm.}
 Our eager monitoring algorithm attempts to evaluate specification rules as soon as possible, but this requires checking trace properties which may not be fully reducible given the current trace. These unfinished formula reductions require extra computation time, and in practice the majority of the policy reductions performed by \monitor will be these eager reductions which may not fully reduce.
 
 While early detection of violations can be useful, there are situations where eagerly checking an entire target specification may require more computation than is available from the monitor in a given period.
