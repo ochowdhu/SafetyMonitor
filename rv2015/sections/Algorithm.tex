@@ -161,19 +161,7 @@ The only difference between the top-level policy and other temporal subformula i
 \textbf{Reducing Residues.}
 \monitor works primarily by reducing policy residues down to truth values. Residues are reduced by the $\reduce(\sigma_i, \tau_i, \histSt{i}, \rpt{j}{\policyv}{\policy})$ function, which uses the current state ($\sigma_i,\tau_i$) and the stored history in $\histSt{i}$ to rewrite the policy $\policyv$ to a reduced form, either a truth value or a new policy which will evaluate to the same truth value as the original. For past or present-time formulas, $\reduce()$ is able to return a truth value residue since all the necessary information to decide the policy is available in the history and current state. Future-time policies may be fully-reducible if enough state information is available. If a future-time policy cannot be reduced to a truth value, it is returned as a residue unchanged.
 
-\textbf{Incrementing History Structures.}
-To evaluate past and future-time policies, we must correctly store trace history which can be looked up during a residue reduction. 
-We store the trace history of a policy $\policyv$ in a history structure $\histst[\policyv]{}$. 
-This history structure contains a list of residues for the number of steps required to evaluate the top-level policy. History structures are incremented by the function 
-$\incrS(\histst[\policyv]{i-1}, \histSt[\policyv]{i}, \sigma_i, \tau_i, i) = (\bigcup_{r \in \histst[\policyv]{i-1}} \reduce(\sigma_i, \tau_i, \histst[\policyv]{i}, r)) \cup \reduce(\sigma_i, \tau_i, \histst[\policyv]{i}, \rp{i}{\policyv})$
-%
-This function takes the previous step's history structure $\histst[\policyv]{i-1}$ and the current state ($\sigma_i,\tau_i$, and the updated smaller history structures $\histSt[\policyv]{i}$) and performs two actions:
-%\begin{enumerate}
-	1) Adds a residue for the current step $i$ to $\histst[\policyv]{i-1}$ and
-	2) Reduces all residues contained in $\histst[\policyv]{i-1}$ with the current state.
-%\end{enumerate}
-Together, these two actions leave an updated history structure $\histst[\policyv]{i}$ which has updated history information for all the required steps.
-
+% reduce for until
 For residues whose formula is an \emph{until} formula $\alpha \until_{[l,h]} \beta$, the history structures $\histst[\alpha]{i}$ and $\histst[\beta]{i}$ are used to reduce the formula. 
 If the formula can be evaluated conclusively then the truth value is returned, otherwise the residue is returned unchanged. 
 Figure \ref{fig:until} shows the reduction algorithm for \emph{until} temporal formula. Reducing \emph{since} formulas is essentially the same except with reversed minimum/maximums and past time bounds.
@@ -206,6 +194,24 @@ Figure \ref{fig:until} shows the reduction algorithm for \emph{until} temporal f
 \normalsize
 \caption{Definition of \reduce for \emph{until} formulas \label{fig:until}}
 \end{figure}
+
+The \reduce function for $\emph{until}$ formulas uses marker values to evaluate the semantics of $\emph{until}$. \reduce calculates five marker values: $a_a$ is the earliest step within the time interval where $\alpha$ is known false. $a_u$ is the latest step within the interval that $\alpha \until_{[l,h]} \beta$ would be true if $\beta$ were true at that step. $b_a$ is the earliest step within the interval at which $\beta$ is not conclusively false, and $b_t$ is the earliest step within the interval at which $\beta$ is conclusively true. $b_n$ holds whether the current step $i$ is later than the wait delay and all $\beta$ values within the interval are false. With these marker variables, reduce can directly check the semantics of \emph{until}, and either return the correct value or the unchanged residue if the semantics are not conclusive with the current history. Reducing \emph{since} formulas works in the same way (using the same marker values) adjusted to past time intervals and utilizing the unbounded past time history values.
+
+
+\textbf{Incrementing History Structures.}
+To evaluate past and future-time policies, we must correctly store trace history which can be looked up during a residue reduction. 
+We store the trace history of a policy $\policyv$ in a history structure $\histst[\policyv]{}$. 
+This history structure contains a list of residues for the number of steps required to evaluate the top-level policy. History structures are incremented by the function 
+$\incrS(\histst[\policyv]{i-1}, \histSt[\policyv]{i}, \sigma_i, \tau_i, i) = (\bigcup_{r \in \histst[\policyv]{i-1}} \reduce(\sigma_i, \tau_i, \histst[\policyv]{i}, r)) \cup \reduce(\sigma_i, \tau_i, \histst[\policyv]{i}, \rp{i}{\policyv})$
+%
+This function takes the previous step's history structure $\histst[\policyv]{i-1}$ and the current state ($\sigma_i,\tau_i$, and the updated smaller history structures $\histSt[\policyv]{i}$) and performs two actions:
+%\begin{enumerate}
+	1) Adds a residue for the current step $i$ to $\histst[\policyv]{i-1}$ and
+	2) Reduces all residues contained in $\histst[\policyv]{i-1}$ with the current state.
+%\end{enumerate}
+Together, these two actions leave an updated history structure $\histst[\policyv]{i}$ which has updated history information for all the required steps.
+
+
 \subsection{Algorithm Properties}
 There are two important correctness properties of our monitoring algorithm which need to be shown. \emph{Correctness} states that the algorithm's results are correct with respect to the syntax. That is, that if \monitor reports a policy violation, the trace really did violate the policy. Related is \emph{promptness}, which requires that the algorithm provide a decision for the given policy at any given time $t$ within a finite bound, $\wdelay(\policy)$. Promptness requires that the algorithm decide satisfaction as soon as it is guaranteed to be possible to decide. 
 %
