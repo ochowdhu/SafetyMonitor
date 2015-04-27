@@ -47,10 +47,10 @@ Our main area of novelty is the combination of eager and conservative specificat
 
 \textit{Dynamic programming monitors.}
 %% garg/precis
-Our monitoring algorithm is inspired by the algorithms \greduce\ \cite{Garg2011} and \precis\ \cite{Chowdhury2014}, adjusted for propositional logic and eager checking. 
-The structure of our algorithm is based on \greduce{}. 
-We utilize an iterative, formula-rewriting based algorithm, also named \monitor, but targeted at both offline log analysis as well as runtime monitoring. 
-Both \greduce and \precis can handle future incompleteness but \greduce also consider incompleteness for missing information which we do not consider. 
+Our monitoring algorithm is inspired by the algorithms \greduce \cite{Garg2011} and \precis \cite{Chowdhury2014}, adjusted for propositional logic and eager checking. 
+The structure of our algorithm is based on \greduce. 
+We utilize an iterative, formula-rewriting based algorithm targeted at both offline log analysis as well as runtime monitoring. 
+Both \greduce and \precis can handle future incompleteness but \greduce also considers incompleteness for missing information which we do not consider. 
 \precis and \monitor both require the input trace to contain complete information.  
 
 %return residual (i.e., incompletely reduced) formulas, but incompleteness in \greduce\ is due to incomplete logs which lead to unknown predicate substitutions, whereas our algorithm works on complete logs but must deal with temporal (i.e., future-time) incompleteness. 

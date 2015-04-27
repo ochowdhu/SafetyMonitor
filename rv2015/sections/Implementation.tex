@@ -30,7 +30,7 @@ This conservative check can be done quickly at each period, leaving any extra ti
 
 %As long as we know that the worst case execution time for message handing, incrementing the structures, and a single residue check is short enough to finish within a monitor period then we are guaranteed at least a conservatively correct and prompt output.
 
-\begin{figure}[htbp]
+\begin{figure}[tbp]
 \centering 
 \includegraphics[width=3.7in]{img/scope_annotated_crop}
 \caption{Oscilloscope capture of embedded monitor task execution \label{fig:arch:oscope}}
@@ -39,9 +39,9 @@ This conservative check can be done quickly at each period, leaving any extra ti
 We have implemented the hybrid monitoring algorithm in our embedded monitor. The monitor updates the history structures (shared between the conservative and eager checking) and performs a conservative check once every monitoring period. It then uses the idle time between periods to perform eager checking of any remaining unchecked specification properties.
 %
 Figure \ref{fig:arch:oscope} shows the execution of the embedded monitor instrumented to output the currently executing task to an oscilloscope. The residue checks run twice per trace update due to the monitor configuration used during the test, but this is not required for correct monitoring.
-This task output was captured while monitoring the specification used in the case study (see Section \ref{sec:case_study} plus another 200 time-step \emph{eventually} rule which was never satisfied. 
+This task output was captured while monitoring the specification used in the case study (see Section \ref{sec:case_study}) plus another 200 time-step \emph{eventually} rule which was never satisfied. 
 %(guaranteeing an extra 200 eager residue checks every period). 
-The rule never being satisfied means that at every step the monitor performed an eager check of all 200 residues for this rule at every step (i.e., since they were never satisfied, they could never be reduced early). 
+The rule never being satisfied means that the monitor performed an eager check of all 200 residues for this rule at every step (i.e., since they were never satisfied, they could never be reduced early). 
 Even with this excess computation there was still a large portion of extra idle time -- 23ms of the 25ms monitoring loop was spent idle. 
 This shows the eager checking finished reasonably quickly and the monitor could handle much longer formula durations or more complex formulas before the execution time becomes bad enough to require the hybrid algorithm for correctness guarantees. 
 
@@ -49,7 +49,7 @@ This shows the eager checking finished reasonably quickly and the monitor could 
 \label{sec:case_study}
 This section reports our case study performing real-time monitoring of a CAN network for realistic safety properties. 
 For this case study we have obtained CAN network logs from a series of robustness tests on the ARV which we have replayed on a test CAN bus for the monitor to check. 
-This setup, %shown in Figure \ref{fig:replaySchem}, 
+This setup %, shown in Figure \ref{fig:replaySchem}, 
 helps us show the feasibility of performing external bus monitoring on this class of system with real safety specifications.
 
 %% removing, takes space and not that important
@@ -70,12 +70,12 @@ The specification evaluated in the embedded monitor on the test logs are shown i
 
 
 
-\begin{table}[htbp]
+\begin{table}[t]
 \centering 
 %\begin{tabular}{|p{3in}|l|}
 \footnotesize
 \begin{tabular}{|c|p{4.5in}|}
-\hline \multirow{2}{*}{Rule \#} & Informal Rule \\ & BMTL \\
+\hline \multirow{2}{*}{Rule \#} & Informal Rule \\ & MTL \\
 \hline \multirow{2}{*}{0} & A feature heartbeat will be sent within every 500ms \\
 & $\pred{HeartbeatOn} \rightarrow \LTLdiamond_{[0,500ms]} \pred{HeartBeat}$ \\
 \hline \multirow{2}{*}{1} & The interface component heartbeat counter is correct \\
@@ -103,9 +103,11 @@ We also checked for illegal state transitions. Rules \#2 through \#5 check both 
 Monitoring the test logs with the above specification resulted in identifying two real violations as well as some false positive violation detections caused by the testing infrastructure.
 %
 % covering all three possible violation types. One was a false positive
-Three different types of heartbeat violations were identified after inspecting the monitor results, some actual violations and some false-positives caused by the testing infrastructure. We also identified infrastructure-caused false-positive violations of the transition rules.
+Three different types of heartbeat violations were identified after inspecting the monitor results, with one being a false positive. 
+%some actual violations and some false-positives caused by the testing infrastructure. 
+We also identified infrastructure-caused false-positive violations of the transition rules.
 
-\begin{figure}[!h]
+\begin{figure}[!t]
 		\centering 
 		\includegraphics[width=4.0in]{img/hb1}
 		\caption{Heartbeat counter values over time}
@@ -120,7 +122,7 @@ The second violation is on-time heartbeat status message but the heartbeat statu
 We do not know from the available documentation whether a bad status in an on-time message with a good counter is valid or not. So without more information we cannot tell whether these violations are false positives or not. This is worthy of further investigation.
 
 
-\begin{figure}[!h]
+\begin{figure}[!t]
 \centering 
 \includegraphics[width=4.0in]{img/hb2}
 \caption{Bad heartbeat counter values \label{fig:hb_badcounter}}
@@ -129,7 +131,8 @@ We do not know from the available documentation whether a bad status in an on-ti
 \textit{False-positive violations.}
 % bad counter
 The last type of heartbeat violation is a bad counter. 
-We have defined a good counter as one which increments by one every message up to its maximum (255 in this case) before wrapping back to zero.
+A good rolling counter should increment by one every message up to its maximum (255 in this case) before wrapping back to zero.
+%We have defined a good counter as one which increments by one every message up to its maximum (255 in this case) before wrapping back to zero.
 Every consecutive heartbeat status message must have an incremented heartbeat counter or a violation will be triggered. Figure \ref{fig:hb_badcounter} shows the counter value history for one of the traces with a heartbeat violation caused by a bad counter value.
 %
 %@EDIT describe robustness testing, define these false positives like the talk?

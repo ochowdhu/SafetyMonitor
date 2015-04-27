@@ -13,7 +13,7 @@ In this work we focus primarily on monitoring CAN because it is a common automot
 %
 CAN is an event-based broadcast network with data rates up to 1Mb/s (although usually used at 125-500kbps). Messages on CAN are broadcast with an identifier which is used to denote both the message and the intended recipients. The message identifiers are also used as the message priorities for access control.
 
-Although CAN is an event-based bus it is often used with periodic scheduling schemes so the network usage can be statically analyzed. Because of this our monitoring scheme is based on a time-triggered network sampling model, which allows it to monitor time-triggered networks as well.
+Although CAN is an event-based bus it is often used with periodic scheduling schemes so the network usage can be statically analyzed. Because of this our monitoring scheme is based on a time-triggered, network sampling model which allows it to monitor time-triggered networks as well.
 %% old CAN paragraph, stealing above from background instead
 %CAN is an event-triggered multi-master broadcast bus originally designed for automotive applications. Message arbitration utilizes a message-id based priority scheme and physical layer bit dominance to control bus access. CAN nodes take turns transmitting their messages onto the bus using the individual message identifiers as network priorities. In this way, the highest priority message that is ready to be sent at any given time is the message that gets sent.
 

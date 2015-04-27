@@ -13,17 +13,15 @@ incrementally checks explicit time specifications (\ie, propositional metric-tim
 This has led to our algorithm \monitor which is an iterative monitoring algorithm based on formula rewriting and summarizing the relevant history of the trace 
 in \emph{history-structures}. To detect violations early, \monitor, eagerly checks whether it can reduce subformulas of the original formula to boolean value 
 %either true/false 
-using formula simplifications (\eg, $a\wedge \mathit{false} \equiv \mathit{false}$). Most of the existing algorithms, for evaluating  formulas like $\eventually_{[l,h]} a \vee b$ (read, 
-either $b$ is true or sometimes in the future $a$ is true such that the time difference between the evaluation state and the future state in which $a$ is true, $t_d$, is within the bound $[l,h]$) wait 
-enough time so that $\eventually_{[l,h]} a$ can be fully evaluated. \monitor however tries to eagerly evaluate both $\eventually_{[l,h]} a$ and $b$ and see whether it can 
-reduce the whole formula to boolean.
+using formula simplifications (\eg, $a\wedge \mathit{false} \equiv \mathit{false}$). 
+Many of the existing algorithms for evaluating formulas like $\eventually_{[l,h]} a \vee b$ (read, either $b$ is true or sometimes in the future $a$ is true such that the time difference between the evaluation state and the future state in which $a$ is true, $t_d$, is within the bound $[l,h]$) wait enough time so that $\eventually_{[l,h]} a$ can be fully evaluated. 
+\monitor however tries to eagerly evaluate both $\eventually_{[l,h]} a$ and $b$ and see whether it can reduce the whole formula to boolean.
 %either true or false. 
 %
 %To constantly check that the target system is adhering to its specification, we must constantly check the specification against the current system trace. To constantly check the system efficiently, \monitor is an iterative algorithm, performing additional checking as each new trace step arrives.
 
 \subsection{Specifications}
-Many safety specification rules for ARV system require explicit time bounds to ensure timely behavior, 
-so a specification language with explicit time bounds is important. 
+Many safety specification rules for ARV-like systems require explicit time bounds to ensure timely behavior, so a specification language with explicit time bounds is important. 
 For instance, 
 %Examples of rules that utilize explicit time bounds include: %
 ``\natlangrule{cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed}'' 
@@ -51,7 +49,7 @@ past temporal operators \emph{since} and \emph{previously} $(\since, \yesterday)
 The temporal bound $\interval$ of form $[l,h]$ ($l\leq h$ and $l,h\in\mathbb{N}$) associated with the future temporal operators must be finite.
 Specification propositions \pred{p} come from a finite set of atomic propositions provided in the system trace by the \sfmap. 
 These propositions are derived from the observable system state and represent specific system properties, for instance, 
-proposition $\pred{speedLT40mph}$ could mean whether the vehicle speed is less than 40mph.
+proposition $\pred{speedLT40mph}$ could describe whether the vehicle speed is less than 40mph.
 %
 
 
@@ -104,7 +102,7 @@ Our runtime monitoring algorithm \monitor takes as input an \planguage formula $
 \begin{description}
 \item[$\monitor{}(\policy)$] is the top-level function. 
 \item[$\reduce(\sigma_i, \tau_i, \histSt{i}, \rpt{i}{\policy}{\policy})$] reduces the given residue based on the current state $(\sigma_i,\tau_i)$ and the history $\histSt{i}$.
-\item[$\tempSub(\policy)$] identifies the sub-formulas which require a history structure to evaluate the policy $\policy$.
+\item[$\tempSub(\policy)$] identifies the subformulas which require a history structure to evaluate the policy $\policy$.
 \item[$\incrS(\histst{i-1}, \histSt{i}, \sigma_i, \tau_i, i)$] updates the history structure $\histst{i-1}$ to step $i$ given the current trace and history state.
 \end{description}
 
@@ -137,7 +135,7 @@ We note that due to the recursive nature of the monitoring algorithm, the top-le
 The history structure updates for the top-level policy are separated in the algorithm description for clarity only.
 The only difference between the top-level policy and other temporal subformula is that violations are reported for the top-level policy. 
 
-\begin{figure}
+\begin{figure}[t]
 \begin{algorithmic}[1]
 %\STATE Recognize formulas for which we build structures
 \STATE For all recognized formulas $\policyv \in \tempSub(\policy)$: $\histst[\policy_1]{-1} \leftarrow \emptyset$
@@ -159,7 +157,7 @@ The only difference between the top-level policy and other temporal subformula i
 \end{figure}
 
 \textbf{Reducing Residues.}
-\monitor works primarily by reducing policy residues down to truth values. Residues are reduced by the $\reduce(\sigma_i, \tau_i, \histSt{i}, \rpt{j}{\policyv}{\policy})$ function, which uses the current state ($\sigma_i,\tau_i$) and the stored history in $\histSt{i}$ to rewrite the policy $\policyv$ to a reduced form, either a truth value or a new policy which will evaluate to the same truth value as the original. For past or present-time formulas, $\reduce()$ is able to return a truth value residue since all the necessary information to decide the policy is available in the history and current state. Future-time policies may be fully-reducible if enough state information is available. If a future-time policy cannot be reduced to a truth value, it is returned as a residue unchanged.
+\monitor works primarily by reducing policy residues down to truth values. Residues are reduced by the $\reduce(\sigma_i, \tau_i, \histSt{i}, \rpt{j}{\policyv}{\policy})$ function, which uses the current state ($\sigma_i,\tau_i$) and the stored history in $\histSt{i}$ to rewrite the policy $\policyv$ to a reduced form, either a truth value or a new policy which will evaluate to the same truth value as the original. For past or present-time formulas, $\reduce()$ is able to return a truth value residue since all the necessary information to decide the policy is available in the history and current state. Future-time policies may be fully-reducible if enough state information is available. If a future-time policy cannot be reduced to a truth value, it is returned as a reduced (potentially unchanged) residue.
 
 % reduce for until
 For residues whose formula is an \emph{until} formula $\alpha \until_{[l,h]} \beta$, the history structures $\histst[\alpha]{i}$ and $\histst[\beta]{i}$ are used to reduce the formula. 
@@ -219,7 +217,7 @@ There are two important properties of \monitor which need to be shown. First, \e
 That is, that if \monitor reports a policy violation, the trace really did violate the policy. Second, \emph{promptness}  requires that the algorithm 
 provide a decision for the given policy in a timely fashion (\ie, with $t$ such that $t\leq \wdelay(\policy)$). 
 %at any given time $t$ within a finite bound, $\wdelay(\policy)$. 
-Promptness requires that the algorithm decide satisfaction as soon as it is possible. 
+Promptness requires that the algorithm decide satisfaction as soon as it is guaranteed to be possible. 
 %guaranteed to be possible to decide. 
 %
 %Besides correctness guarantees, our algorithm is also \emph{eager}. An eager algorithm reports satisfaction as soon as the trace is an informative prefix \cite{Kupferman2001} for the policy. 
