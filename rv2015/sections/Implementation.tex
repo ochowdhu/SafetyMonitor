@@ -30,9 +30,9 @@ This conservative check can be done quickly at each period, leaving any extra ti
 
 %As long as we know that the worst case execution time for message handing, incrementing the structures, and a single residue check is short enough to finish within a monitor period then we are guaranteed at least a conservatively correct and prompt output.
 
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centering 
-\includegraphics[width=4.5in]{img/scope_annotated_crop}
+\includegraphics[width=3.7in]{img/scope_annotated_crop}
 \caption{Oscilloscope capture of embedded monitor task execution \label{fig:arch:oscope}}
 \end{figure}
 
@@ -70,9 +70,10 @@ The specification evaluated in the embedded monitor on the test logs are shown i
 
 
 
-\begin{table}[t]
+\begin{table}[htbp]
 \centering 
 %\begin{tabular}{|p{3in}|l|}
+\footnotesize
 \begin{tabular}{|c|p{4.5in}|}
 \hline \multirow{2}{*}{Rule \#} & Informal Rule \\ & BMTL \\
 \hline \multirow{2}{*}{0} & A feature heartbeat will be sent within every 500ms \\
@@ -104,14 +105,14 @@ Monitoring the test logs with the above specification resulted in identifying tw
 % covering all three possible violation types. One was a false positive
 Three different types of heartbeat violations were identified after inspecting the monitor results, some actual violations and some false-positives caused by the testing infrastructure. We also identified infrastructure-caused false-positive violations of the transition rules.
 
-\begin{figure}[t]
+\begin{figure}[!h]
 		\centering 
-		\includegraphics[width=4.5in]{img/hb1}
+		\includegraphics[width=4.0in]{img/hb1}
 		\caption{Heartbeat counter values over time}
 		\label{fig:hb_arrival}
 \end{figure}
 
-\paragraph{Specification violations.}
+\textit{Specification violations.}
 % missing hb message
 The first violation is a late heartbeat message. In one of the robustness testing logs the heartbeat message was not sent on time, which is clearly a heartbeat violation. Figure \ref{fig:hb_arrival} shows the heartbeat counter values and the inter-arrival time of the heartbeat messages over time for this violation. We can see here that the heartbeat counter did in fact increment in a valid way, just too slowly. 
 % bad status
@@ -119,13 +120,13 @@ The second violation is on-time heartbeat status message but the heartbeat statu
 We do not know from the available documentation whether a bad status in an on-time message with a good counter is valid or not. So without more information we cannot tell whether these violations are false positives or not. This is worthy of further investigation.
 
 
-\begin{figure}[t]
+\begin{figure}[!h]
 \centering 
-\includegraphics[width=4.5in]{img/hb2}
+\includegraphics[width=4.0in]{img/hb2}
 \caption{Bad heartbeat counter values \label{fig:hb_badcounter}}
 \end{figure}
 
-\paragraph{False-positive violations.}
+\textit{False-positive violations.}
 % bad counter
 The last type of heartbeat violation is a bad counter. 
 We have defined a good counter as one which increments by one every message up to its maximum (255 in this case) before wrapping back to zero.
