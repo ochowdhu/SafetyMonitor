@@ -31,6 +31,7 @@ This conservative check can be done quickly at each period, leaving any extra ti
 %As long as we know that the worst case execution time for message handing, incrementing the structures, and a single residue check is short enough to finish within a monitor period then we are guaranteed at least a conservatively correct and prompt output.
 
 \begin{figure}[t]
+\centering 
 \includegraphics[width=4.5in]{img/scope_annotated_crop}
 \caption{Oscilloscope capture of embedded monitor task execution \label{fig:arch:oscope}}
 \end{figure}
@@ -70,8 +71,9 @@ The specification evaluated in the embedded monitor on the test logs are shown i
 
 
 \begin{table}[t]
+\centering 
 %\begin{tabular}{|p{3in}|l|}
-\begin{tabular}{|l|p{4.5in}|}
+\begin{tabular}{|c|p{4.5in}|}
 \hline \multirow{2}{*}{Rule \#} & Informal Rule \\ & BMTL \\
 \hline \multirow{2}{*}{0} & A feature heartbeat will be sent within every 500ms \\
 & $\pred{HeartbeatOn} \rightarrow \LTLdiamond_{[0,500ms]} \pred{HeartBeat}$ \\
@@ -103,6 +105,7 @@ Monitoring the test logs with the above specification resulted in identifying tw
 Three different types of heartbeat violations were identified after inspecting the monitor results, some actual violations and some false-positives caused by the testing infrastructure. We also identified infrastructure-caused false-positive violations of the transition rules.
 
 \begin{figure}[t]
+		\centering 
 		\includegraphics[width=4.5in]{img/hb1}
 		\caption{Heartbeat counter values over time}
 		\label{fig:hb_arrival}
@@ -117,6 +120,7 @@ We do not know from the available documentation whether a bad status in an on-ti
 
 
 \begin{figure}[t]
+\centering 
 \includegraphics[width=4.5in]{img/hb2}
 \caption{Bad heartbeat counter values \label{fig:hb_badcounter}}
 \end{figure}
