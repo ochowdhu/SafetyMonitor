@@ -16,17 +16,18 @@ Because our specification language is bounded, we can avoid dynamic allocation i
 Recursion is also usually prohibited because it can be difficult to guarantee a maximum stack depth when using recursion. Although \monitor utilizes recursion extensively, we can implement \monitor using a traditional iterative traversal of the specification formulas instead.
 
 \noindent\textbf{Hybrid Algorithm.}
-Our eager monitoring algorithm attempts to evaluate specification rules as soon as possible, but this requires checking trace properties which may not be fully reducible given the current trace. These unfinished formula reductions require extra computation time, and in practice the majority of the policy reductions performed by \monitor will be these eager reductions which may not fully reduce.
+%Our eager monitoring algorithm attempts to evaluate specification rules as soon as possible, but this requires checking trace properties which may not be fully reducible given the current trace. These unfinished formula reductions require extra computation time, and in practice the majority of the policy reductions performed by \monitor will be these eager reductions which may not fully reduce.
+The eager monitoring algorithm attempts to evaluate specification rules as soon as possible which requires checking properties which may be fully reducable given the current trace. 
+While early detection of violations can be useful, the costs of re-reducing partially reduced residues can become large given the right formula and trace. In some cases, the worst-case execution time to check a property (or set of properties) over a trace may be longer than is available for the monitor's period. Even if this worst-case situation does not occur, for monitoring safety-critical systems the monitor must be able to guarantee completion.
+%there are situations where eagerly checking an entire target specification may require more computation than is available from the monitor in a given period.
 
-While early detection of violations can be useful, there are situations where eagerly checking an entire target specification may require more computation than is available from the monitor in a given period.
-
-To enable the benefits of eager checking while avoiding the risks of losing real-time correctness, we have implemented a hybrid eager monitoring algorithm which performs non-eager (conservative) checking first and uses any spare time to eagerly check the remaining monitor residues.
+To enable the benefits of eager checking while avoiding the risks of losing real-time correctness, we can use a hybrid approach which first performs non-eager (conservative) checking and then uses any spare time left in the monitoring period to perform as much eager checking as possible.
+This hybrid approach preserves the monitor's promptness guarantee (that all violations will be detected within their delay $\Delta$) even if the monitor cannot finish eagerly checking the specification. Along with promptness the hybrid algorithm provides the chance to eagerly detect specification violations. The hybrid algorithm is functionally equivalent to the eager algorithm when it is able to keep up with the trace.
+%we have implemented a hybrid eager monitoring algorithm which performs non-eager (conservative) checking first and uses any spare time to eagerly check the remaining monitor residues.
 %
-Conservative \monitor monitoring is performed by only checking residues which are older than their formula delay, which guarantees that these residue will be reduced at their first evaluation.
+%Conservative \monitor monitoring is performed by only checking residues which are older than their formula delay, which guarantees that these residue will be reduced at their first evaluation. For a periodic monitor this only requires updating the history structures and checking a single residue for each policy.
 %
-Under our periodic sampling design, each step of conservative monitor only requires updating the history structures and checking a single residue (the oldest remaining one) for each specification policy.
-%
-This conservative check can be done quickly at each period, leaving any extra time until the next period for eager checking. This provides a conservative monitoring guarantee (\ie, the specification is checked within a known promptness delay) while also allowing the monitor to eagerly check as much of the specification as possible.
+%This conservative check can be done quickly at each period, leaving any extra time until the next period for eager checking. This provides a conservative monitoring guarantee (\ie, the specification is checked within a known promptness delay) while also allowing the monitor to eagerly check as much of the specification as possible.
 
 %As long as we know that the worst case execution time for message handing, incrementing the structures, and a single residue check is short enough to finish within a monitor period then we are guaranteed at least a conservatively correct and prompt output.
 

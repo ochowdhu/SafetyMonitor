@@ -56,15 +56,14 @@ proposition $\pred{speedLT40mph}$ could describe whether the vehicle speed is le
 \textit{Semantics. }
 \planguage formulas are interpreted over time-stamped \emph{traces}. A trace $\sigma$ is a sequence of states, each of which maps all propositions in \sfmap, to either \true or \false. We denote the $i^{th}$ position of the trace with $\sigma_i$ where $i\in\mathbb{N}$. Moreover, each $\sigma_i$ has an associated time stamp denoted by $\tau_i$ where $\tau_i\in\mathbb{N}$. 
 We denote the sequence of time stamps with $\tau$. For all $i, j\in\mathbb{N}$ such that $i < j$, we require $\tau_i < \tau_j$. For a given trace $\sigma$ and time stamp sequence $\tau$, we write $\sigma, \tau, i\models\policy$ to denote that the formula \policy is true with respect to the $i^{th}$ position of $\sigma$ and $\tau$. 
-The semantics of \planguage are standard for MTL, \eg, \cite{Basin2008}.
+The semantics of \planguage are standard for MTL, \eg, \cite{Basin2008}. Each specification policy is evaluated over the trace at every trace step (i.e., there is an implicit unbounded always over all top-level specification formulas.
 
 \textit{Auxiliary notions.} 
 Before we go any further, we introduce the readers with some auxiliary notions which will be 
 necessary to understand our algorithm \monitor. We first define ``\emph{residual formulas}'' or, just ``\emph{residues}''. 
-Given a formula \policy, we call another formula \policyv as \policy's residual, if we obtain \policyv after  evaluating 
-\policy with respect to the current information of the trace. Note that, residual of a formula might not be boolean because of future states 
-not yet being available. A residue $r^j_{\policy}$ is a tagged pair $\rpt{j}{\policyv}{\policy}$ where $j$ is a position in the trace in which we intend to evaluate $\policy$ (the original formula) and $
-\policyv$ is the current residual formula. We use these residues to efficiently hold policy summary for future time formulas which cannot be evaluated due to incomplete information.
+Given a formula \policy, we call another formula \policyv as \policy's residual, if we obtain \policyv after evaluating \policy with respect to the current information of the trace. 
+Note that a formula residue might not be a truth value if the formula could not conclusively be reduced given the current trace state (e.g, if future state is required to determine the truth value). 
+A residue $r^j_{\policy}$ is a tagged pair $\rpt{j}{\policyv}{\policy}$ where $j$ is a position in the trace in which we intend to evaluate $\policy$ (the original formula) and $\policyv$ is the current residual formula. We use these residues to efficiently hold trace history for evaluating temporal formulas.
 
 %Our monitoring algorithm utilizes \emph{residues}, which are partially reduced (\ie, rewritten) policy formulas representing the remaining portion of a formula which could not be fully evaluated given the current trace. A residue $r^j_{\policy}$ is a tagged pair $\rpt{j}{\policyv}{\policy}$ where $j$ is a position in the trace, $\policy$ is the original residue formula and $\policyv$ is the residual formula. We use these residues to efficiently hold policy history for future time formulas which cannot be evaluated due to incomplete information. 
 The next notion we introduce is of ``\emph{wait delay}''. It is a function \wdelay that takes as input a formula \policy and 
@@ -135,10 +134,20 @@ We note that due to the recursive nature of the monitoring algorithm, the top-le
 The history structure updates for the top-level policy are separated in the algorithm description for clarity only.
 The only difference between the top-level policy and other temporal subformula is that violations are reported for the top-level policy. 
 
+\begin{figure}
+\begin{align}
+\tempSub(\phi) &= \emptyset &\text{if } \phi \equiv p \\
+			   &= \{\alpha\} \cup \{\beta\} \cup \tempSub(\alpha) \cup \tempSub(\beta) &\text{if } \phi \equiv \alpha \until \beta \\
+			   &				&\text{or } \phi \equiv \alpha \since \beta \\
+			   &= \tempSub(\alpha) \cup \tempSub(\beta) &\text{if } \phi \equiv \alpha \vee \beta \\
+			   &= \tempSub(\alpha) &\text{if } \phi \equiv \neg \alpha \\	
+\end{align}
+\end{figure}
+
 \begin{figure}[t]
 \begin{algorithmic}[1]
 %\STATE Recognize formulas for which we build structures
-\STATE For all recognized formulas $\policyv \in \tempSub(\policy)$: $\histst[\policy_1]{-1} \leftarrow \emptyset$
+\STATE For all recognized formulas $\policyv \in \tempSub(\policy)$: $\histst[\policyv]{-1} \leftarrow \emptyset$
 \STATE $i \leftarrow 0$
 \LOOP
 \STATE Obtain next trace step $(\sigma_i, \tau_i)$ 
