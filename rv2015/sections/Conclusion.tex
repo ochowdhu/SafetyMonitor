@@ -9,6 +9,13 @@ that eagerly checks for violations of properties written in future-bounded
 propositional MTL. We have shown the efficiency of \monitor by implementing it
 and evaluating it against logs obtained from system testing of the ARV.
 \monitor was able to detect violations of several safety requirements in real-time.
-Future work includes exploring monitors running in multi-core environment
+
+We want to further explore runtime monitors executing in multi-core environment
 to provide increased monitoring power as well as further
 formalizing the interface mapping (possibly with a domain specific language).
+We also want to explore monitoring algorithms for event-based CAN where
+message arrival times can influence the satisfaction of the property that is
+being checked. In the current work, we have not investigated the energy consumption
+of the runtime monitors. It could be possible that the extra checks required for
+eager checking might not feasible due to energy consumption
+restriction in which case one has to investigate energy-efficient alternatives.
