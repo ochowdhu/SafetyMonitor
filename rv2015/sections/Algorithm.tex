@@ -234,14 +234,19 @@ and performs two actions:
 
 \subsection{Algorithm Properties}
 There are two important properties of \monitor which need to be shown. First, \emph{correctness} states that the algorithm's results are correct.
-That is, that if \monitor reports a policy violation, the trace really did violate the policy. Second, \emph{promptness}  requires that the algorithm
-provide a decision for the given policy in a timely fashion (\ie, with $t$ such that $t\leq \wdelay(\policy)$).
+That is, that if \monitor reports a policy violation, the trace really did violate the policy. 
+Second, \emph{promptness}  requires that the algorithm provide a decision for the given policy in a timely fashion (\ie, with $t$ such that $t\leq \wdelay(\policy)$).
 %at any given time $t$ within a finite bound, $\wdelay(\policy)$.
 Promptness requires that the algorithm decide satisfaction as soon as it is guaranteed to be possible.
-%guaranteed to be possible to decide.
+A strong promptness property exists where the algorithm can decide satisfaction as soon as it is possible (e.g., once a single event that is a part of an eventually occurs). 
+%Early satisfaction can be decided when the trace is a good or bad prefix of the given property \cite{Kupferman2001}.
+The eager algorithm provides this stronger promptness while the hybrid algorithm discussed in Section \ref{sec:implementation} only provides standard promptness.
 %
 %Besides correctness guarantees, our algorithm is also \emph{eager}. An eager algorithm reports satisfaction as soon as the trace is an informative prefix \cite{Kupferman2001} for the policy.
 %Many temporal policies can be evaluated before the promptness delay, providing early detection and extra time for recovery actions compared to other monitoring algorithms which wait until the promptness delay to ensure they can check the policy.
+
+\paragraph{Complexity}
+\monitor requires trying to reduce every unreduced residue in the history structures at every time step. In the worst case, \monitor must perform $d$ reductions per policy at every step, where $d$ is the policy's delay. Each top level reduce can require up to $m$ subreductions, for the policy size $m$. Thus \monitor requires $\sum_{p \in P} d_p*m_p$ reductions per trace step  where $P$ is the system specification and $p$ is an individual policy.
 
 The following theorem states that \monitor is correct and prompt. It requires  the history structures $\histSt{i}$ to be consistent at $i$ analogous to the trace $\sigma,\tau$.
 This means that the history structures contain correct history of the trace till step $i$. %The algorithm provides this consistency itself if run iteratively from step $0$.
