@@ -31,17 +31,17 @@ of the specification formulas instead.
 \noindent\textbf{Discussion. }
 Passively monitoring running systems requires attention to timing issues with regards to system state sampling/capture.
 %
-The monitor keeps a copy of the target system state. When a new CAN message from the system is seen, the monitor updates its system state based on the incoming message. The monitor periodically takes a snapshot of this constantly updated state and uses that snapshot as the trace state which is monitored.
+The monitor keeps a copy of the target system state and when a new CAN message from the system is seen it updates this system state based on the incoming message. The monitor periodically takes a snapshot of this constantly updated state and uses that snapshot as the trace state which is monitored.
 %
 This means that the monitor's system state view is constantly updated at the speed of the CAN bus messages, but the actual monitored state (\ie, the trace) is a discrete sampling of this bus-based state.
-The monitor's period must be fast enough that any changes in system state which are relevant to the specification are seen by the sampling.
-To ensure this, the monitor's period should be twice as fast as the shortest CAN message period, which causes the monitored trace to contain every value seen on the CAN bus.
+The monitor's period must be fast enough that any changes in system state which are relevant to the specification are seen in the sampled trace.
+To ensure this, the monitor's period should be twice as fast as the shortest CAN message period, which ensures the monitored trace contains every value seen on the CAN bus.
 If the monitor period is not fast enough, multiple CAN messages announcing the same system value may end up in the same trace state, which can cause those value changes to not be seen in the trace.
-For example, if the monitor is sampling at $2ms$, and three messages announcing the value of property $X$ are received at times $0$, $1ms$, and $1.5ms$, only the value announced at $1.5ms$ will be seen in the trace. To avoid this, the monitor would need to run faster than the messages interarrival rate (at least $0.5ms$ in this case).
+For example, if the monitor is sampling at $2ms$, and three messages announcing the value of property $X$ are received at times $0ms$, $1ms$, and $1.5ms$, only the value announced at $1.5ms$ will be seen in the trace. To avoid this, the monitor would need to run faster than the messages interarrival rate (at least $0.5ms$ in this case).
 
 Along with requiring the monitor to sample its trace state fast enough to see all the relevant state changes, the specification time bounds must be a multiple of the monitoring period.
 Doing this ensures that each time step in the formula is evaluated on updated data.
-A simple way of understanding this is to use monitor steps as the temporal bounds instead of real time.
+A simple way of understanding this is to use monitor steps as the temporal bounds instead of real time bounds.
 For example, if the monitor is running at a 2ms period, we can use $\henceforth_{[0,50]} p$ as an equivalent to $\henceforth_{[0,100ms]} p$.
 Because the monitored trace state is only updating at 2ms, the state is unchanged from 0-2ms, and then again from 2-4ms, etc.
 If time-based bounds that are not multiples of the monitor period are used, different bounds can look at the same state, \eg, $\henceforth_{[0,5ms]} p$ is equivalent to $\henceforth_{[1ms,4ms]} p$ for a $2ms$ monitor. Since this is unintiutive, using steps or period-multiple bounds is best.
@@ -51,12 +51,18 @@ Although the timing issues are intertwined, using a monitoring period at least t
 
 \noindent\textbf{Hybrid Algorithm.}
 %Our eager monitoring algorithm attempts to evaluate specification rules as soon as possible, but this requires checking trace properties which may not be fully reducible given the current trace. These unfinished formula reductions require extra computation time, and in practice the majority of the policy reductions performed by \monitor will be these eager reductions which may not fully reduce.
-The eager monitoring algorithm attempts to evaluate specification rules as soon as possible which requires checking properties which may be fully reducable given the current trace.
-While early detection of violations can be useful, the costs of re-reducing partially reduced residues can become large given the right formula and trace. In some cases, the worst-case execution time to check a property (or set of properties) over a trace may be longer than is available for the monitor's period. Even if this worst-case situation does not occur, for monitoring safety-critical systems the monitor must be able to guarantee completion.
+The eager monitoring algorithm attempts to evaluate specification rules as soon as possible which requires checking properties which may not be fully reducable given the current trace.
+While early detection of violations can be useful, continuously attempting to check partially reduced residues which need future information to evaluate requires extra computation.
+%While early detection of violations can be useful, the costs of re-reducing partially reduced residues can become large given the right formula and trace. 
+In some cases, the worst-case execution time to eagerly check a property (or set of properties) over a trace may be longer than the monitor's period. 
+In this case the eager algorithm cannot guarantee prompt monitoring since some residues will be left unchecked. This is unacceptable for safety-critical system monitoring, we need some guarantee of monitoring completion, even if it isn't as fast as possible.
+%Even if this worst-case situation does not occur, for monitoring safety-critical systems the monitor must be able to guarantee completion.
 %there are situations where eagerly checking an entire target specification may require more computation than is available from the monitor in a given period.
 
 To enable the benefits of eager checking while avoiding the risks of losing real-time correctness, we can use a hybrid approach which first performs non-eager (conservative) checking and then uses any spare time left in the monitoring period to perform as much eager checking as possible.
-This hybrid approach preserves the monitor's promptness guarantee (that all violations will be detected within their delay $\Delta$) even if the monitor cannot finish eagerly checking the specification. Along with promptness the hybrid algorithm provides the chance to eagerly detect specification violations. The hybrid algorithm is functionally equivalent to the eager algorithm when it is able to keep up with the trace.
+This hybrid approach preserves the monitor's promptness guarantee (that all violations will be detected within their delay $\Delta$) even if the monitor cannot finish eagerly checking the specification. 
+The hybrid algorithm preserves promptness while still providing the chance to eagerly detect specification violations. 
+The hybrid algorithm is functionally equivalent to the eager algorithm when it is able to keep up with the trace, and equivalent to the conservative algorithm if there is no spare execution time to perform eager checks.
 %we have implemented a hybrid eager monitoring algorithm which performs non-eager (conservative) checking first and uses any spare time to eagerly check the remaining monitor residues.
 %
 %Conservative \monitor monitoring is performed by only checking residues which are older than their formula delay, which guarantees that these residue will be reduced at their first evaluation. For a periodic monitor this only requires updating the history structures and checking a single residue for each policy.
@@ -71,16 +77,22 @@ This hybrid approach preserves the monitor's promptness guarantee (that all viol
 % \caption{Oscilloscope capture of embedded monitor task execution \label{fig:arch:oscope}}
 % \end{figure}
 
-We have implemented the hybrid monitoring algorithm in our embedded monitor. The monitor updates the history structures (shared between the conservative and eager checking) and performs a conservative check once every monitoring period. It then uses the idle time between periods to perform eager checking of any remaining unchecked specification properties.
+We have implemented the hybrid monitoring algorithm in our embedded monitor. The monitor updates the history structures (shared between the conservative and eager checking) and performs a conservative check once every monitoring period. It then uses the idle time between periods to perform eager checking of any remaining unchecked specification properties. The eager checking gets interrupted and cut-off by the next period when the extra time runs out.
+% replacing oscope figure info with hybrid eval description
+%@TODO update this
+%A quick evaluation of the hybrid monitor against offline logs demonstrates the usefulness and functionality of the hybrid approach. Figure \ref{fig:hyb_eval} shows the detection latency of specification violations for a specification with moderate temporal size.
+
+
+%% This is all oscope figure stuff, replaced with hybrid analysis
 %
 % Figure \ref{fig:arch:oscope} shows the execution of the embedded monitor
 % instrumented to output the currently executing task to an oscilloscope.
-The residue checks run twice per trace update due to the monitor configuration used during the test, but this is not required for correct monitoring.
-This task output was captured while monitoring the specification used in the case study (see Section \ref{sec:case_study}) plus another 200 time-step \emph{eventually} rule which was never satisfied.
+%The residue checks run twice per trace update due to the monitor configuration used during the test, but this is not required for correct monitoring.
+%This task output was captured while monitoring the specification used in the case study (see Section \ref{sec:case_study}) plus another 200 time-step \emph{eventually} rule which was never satisfied.
 %(guaranteeing an extra 200 eager residue checks every period).
-The rule never being satisfied means that the monitor performed an eager check of all 200 residues for this rule at every step (i.e., since they were never satisfied, they could never be reduced early).
-Even with this excess computation there was still a large portion of extra idle time -- 23ms of the 25ms monitoring loop was spent idle.
-This shows the eager checking finished reasonably quickly and the monitor could handle much longer formula durations or more complex formulas before the execution time becomes bad enough to require the hybrid algorithm for correctness guarantees.
+%The rule never being satisfied means that the monitor performed an eager check of all 200 residues for this rule at every step (i.e., since they were never satisfied, they could never be reduced early).
+%Even with this excess computation there was still a large portion of extra idle time -- 23ms of the 25ms monitoring loop was spent idle.
+%This shows the eager checking finished reasonably quickly and the monitor could handle much longer formula durations or more complex formulas before the execution time becomes bad enough to require the hybrid algorithm for correctness guarantees.
 
 \subsection{Case Study}
 \label{sec:case_study}
@@ -131,7 +143,11 @@ The specification evaluated in the embedded monitor on the test logs are shown i
 \caption{Case study monitoring specification \label{tab:monspec}}
 \end{table}
 
-Rule \#0 is a heartbeat detection which ensures that the interface component is still running (essentially a watchdog message). Rule \#1 is a second component of this check. The system's heartbeat message contains a single heartbeat status bit which we checked directly in Rule \#0, but the message also has a rolling counter field. We use the \sfmap to ensure that this counter is incrementing correctly and output this check as the $\pred{HeartbeakOk}$ predicate which is checked in Rule \#1.
+$\pred{HeartBeatOn}$ is a guard which is true when once the target component has started in the logs (to avoid false-positive missing heartbeats during system startup). 
+The system's heartbeat message contains a single heartbeat status bit which we checked directly in Rule \#0 to ensure the component is still running (essentially a watchdog message). 
+The heartbeat message also has a rolling counter field. 
+We use the \sfmap to ensure that this counter is incrementing correctly and output this check as the $\pred{HeartbeakOk}$ predicate which is monitored in Rule \#1.
+%Rule \#0 is a heartbeat detection which ensures that the interface component is still running (essentially a watchdog message).  Rule \#1 is a second component of this check. 
 We also checked for illegal state transitions. Rules \#2 through \#5 check both for illegal transition commands from the vehicle controller and actual illegal state transitions in the interface component.
 
 %% move hybrid algorithm explanation here maybe?
