@@ -28,7 +28,8 @@ Instrumenting systems without access to component source code is more difficult,
 
 \noindent
 \textit{Obtaining relevant policy constructs.}
-Instead of instrumentation, we obtain the relevant information for monitoring the ARV system through passive observation of the system's broadcast buses. % \cite{Rushby2001}.
+To avoid instrumentation, we obtain the relevant information for monitoring the ARV system through passive observation of
+its broadcast buses. % \cite{Rushby2001}.
 Controller area network (CAN) is a
 %common and
 standard broadcast bus for ground vehicles which is the primary system bus in the ARV. We can obtain useful amounts of system state relevant information for monitoring
@@ -57,11 +58,19 @@ associated with the future temporal operators must be finite. % classic cite, co
 
 \noindent
 \textit{Monitoring algorithm.}
-We have developed a runtime monitoring algorithm, which we call \monitor, that incrementally takes as input a system state (\ie, a state maps relevant propositions to either true or false) and a MTL formula and eagerly checks the state trace for violations.
+We have developed a runtime monitoring algorithm, which we call \monitor, that incrementally takes as input a system state
+(\ie, a state maps relevant propositions to either true/false) and a MTL formula and eagerly checks the state trace for violations.
 Some of the existing monitoring algorithms that support bounded future formulas wait for the full-time of the bound before evaluating the formula (\eg, \cite{Basin2008}).
 \monitor uses a dynamic programming based iterative algorithm that tries to reduce the input formula as soon as possible using history summarizing structures and straightforward formula-rewriting based simplifications when possible (leaving a partially reduced formula when future input is required).
-This eager nature of the algorithm is helpful because detecting a violation earlier provides the system more time to attempt a graceful recovery.
-We have also proved the correctness of our algorithm.
+This eager nature of the algorithm can detect a violation earlier leaving the system more time to attempt a graceful recovery.
+We have also proved the correctness of our algorithm. As the target systems we envision to monitor
+have strict time restriction,
+it is possible that the eager checks
+performed by \monitor are not finished before the next trace state arrives,
+possibly corrupting \monitor's state. To overcome this,
+we have developed a hybrid monitoring algorithm, \ha, that first performs conservative
+checking like traditional runtime monitoring algorithms for MTL and performs eager check
+if time permits.
 
 \noindent
 \textit{Empirical evaluation.}
