@@ -344,17 +344,21 @@ and performs two actions:
 \subsection{Algorithm Properties}
 There are two important properties of \monitor which need to be shown. First, \emph{correctness} states that the algorithm's results are correct.
 That is, that if \monitor reports a property violation, the trace really did violate the property.
-Second, \emph{promptness} requires that the algorithm provide a decision for the given property in a timely fashion (\ie, with $t$ such that $t\leq \wdelay(\policy)$).
+Second, \emph{promptness} requires that the algorithm provide a decision for the given property in a timely fashion.
+% (\ie, with $t$ such that $t\leq \wdelay(\policy)$).
 %at any given time $t$ within a finite bound, $\wdelay(\policy)$.
-Promptness precisely requires that the algorithm decides satisfaction of the given property at trace position $i$ as soon as there is another trace position $j$ available such that $j\geq i$ and $\tau_j-\tau_i \geq \wdelay(\policy)$.
-Note that it is possible to define a stronger notion of promptness, \emph{strong promptness}, which ensures that the runtime monitor makes a judgement about the satisfaction of a property as soon as it is possible to do so. In this discussion we however we only consider promptness.
+Promptness precisely requires that the algorithm decides satisfaction of the
+given property at trace position $i$ as soon as there is another trace position
+$j$ available such that $j\geq i$ and $\tau_j-\tau_i \geq \wdelay(\policy)$.
+% Note that it is possible to define a stronger notion of promptness, \emph{strong promptness}, which ensures that the runtime monitor makes a judgement about the satisfaction of a property as soon as it is possible to do so. In this discussion we however we only consider promptness.
 %guaranteed to be possible to decide.
 %
 %Besides correctness guarantees, our algorithm is also \emph{eager}. An eager algorithm reports satisfaction as soon as the trace is an informative prefix \cite{Kupferman2001} for the policy.
 %Many temporal policies can be evaluated before the promptness delay, providing early detection and extra time for recovery actions compared to other monitoring algorithms which wait until the promptness delay to ensure they can check the policy.
 %
-The following theorem states that \monitor is correct and prompt. It requires  the history structures $\histSt{i}$ to be consistent at $i$ analogous to the trace $\sigma,\tau$.
-This means that the history structures contain correct history of the trace till step $i$. %The algorithm provides this consistency itself if run iteratively from step $0$.
+The following theorem states that \monitor is correct and prompt. It requires  the history structures $\histSt{i}$
+to be consistent at $i$ analogous to the trace $\sigma,\tau$, that is,
+the history structures contain correct history of $\sigma$ till step $i$. %The algorithm provides this consistency itself if run iteratively from step $0$.
 
 \begin{theorem}[Correctness and Promptness of \monitor]
 For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\tau$ and all traces $\sigma$ it is the case that (1) if $\rp{j}{\false} \in \histst{i}$ then $\sigma, \tau, j \nvDash \policy$ and if $\rp{j}{\true} \in \histst{i}$ then $\sigma, \tau, j \vDash \policy$ (Correctness) and (2) if $\tau_i - \tau_j \geq \wdelay(\policy)$ then if $\sigma, \tau, j \nvDash \policy$ then $\rp{j}{\false} \in \histst{i}$ and if $\sigma, \tau, j \vDash \policy$ then $\rp{j}{\true} \in \histst{i}$ (Promptness)
@@ -362,13 +366,16 @@ For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\ta
 \end{theorem}
 \textit{Proof.} By  induction on the  formula $\policy$ and time step $i$. See \cite{Kane2015} \\
 
-We now discuss the runtime complexity of \monitor while checking satisfaction of a property \policy. At any most recent position of the trace, let us assume we have maximum $L$ positions in the current trace for which \policy has not yet been reduced to a boolean value.
-Note that if the value of $\wdelay(\policy)$ is large $L$ can be as large as the current trace length we have seen so far.
+We now discuss the runtime complexity of \monitor while checking satisfaction of a property \policy.
+For any evaluation position of the trace $\sigma$,
+let us assume we have maximum $L$ positions in $\sigma$ for which
+\policy has not yet been reduced to a boolean value.
+Note that if the value of $\wdelay(\policy)$ is large, then
+$L$ can be as large as $|\sigma|$.
 Addtionally, for each temporal subformula $\phi_1\until\phi_2$ of \policy,
 we build history structures that
-keep track of segments of the trace positions for which $\phi_1$ is true. Let  assume
-we have $S$ such segments that are relevant (relevant means they can possibly
-influence the satisfaction of the remaining unreduced formulas).
+keep track of segments of  positions in $\sigma$ for which $\phi_1$ is true. Let  assume
+we have a maximum of $S$ such segments that are relevant for \policy evaluation.
 Hence, the complexity of \monitor is
 $\mathcal{O}(LM|\policy|)$.
 
