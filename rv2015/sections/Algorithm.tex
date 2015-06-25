@@ -265,17 +265,12 @@ and performs two actions:
 
 
 \subsection{Algorithm Properties}
-There are two important properties of \monitor which need to be shown. First, \emph{correctness} states that the algorithm's
-results are correct.
-That is, that if \monitor reports a property violation, the trace really did violate the property. Second, \emph{promptness}  requires that
-the algorithm provide a decision for the given property in a timely fashion (\ie, with $t$ such that $t\leq \wdelay(\policy)$).
+There are two important properties of \monitor which need to be shown. First, \emph{correctness} states that the algorithm's results are correct.
+That is, that if \monitor reports a property violation, the trace really did violate the property. 
+Second, \emph{promptness} requires that the algorithm provide a decision for the given property in a timely fashion (\ie, with $t$ such that $t\leq \wdelay(\policy)$).
 %at any given time $t$ within a finite bound, $\wdelay(\policy)$.
- Promptness precisely requires that the algorithm decides satisfaction of the given
-property at trace position $i$ as soon as  there is another
-trace position $j$ available such that $j\geq i$ and $\tau_j-\tau_i \geq \wdelay(\policy)$.
-Note that it is possible to define a stronger notion of promptness, \emph{strong promptness}, which
-ensures that the runtime monitor makes a judgement about the satisfaction of a property as soon as
-it is possible to do so. In this discussion we however we only consider promptness.
+Promptness precisely requires that the algorithm decides satisfaction of the given property at trace position $i$ as soon as there is another trace position $j$ available such that $j\geq i$ and $\tau_j-\tau_i \geq \wdelay(\policy)$.
+Note that it is possible to define a stronger notion of promptness, \emph{strong promptness}, which ensures that the runtime monitor makes a judgement about the satisfaction of a property as soon as it is possible to do so. In this discussion we however we only consider promptness.
 %guaranteed to be possible to decide.
 %
 %Besides correctness guarantees, our algorithm is also \emph{eager}. An eager algorithm reports satisfaction as soon as the trace is an informative prefix \cite{Kupferman2001} for the policy.
@@ -290,10 +285,7 @@ For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\ta
 \end{theorem}
 \textit{Proof.} By  induction on the  formula $\policy$ and time step $i$. See \cite{Kane2015} \\
 
-We now discuss the runtime complexity of \monitor while checking satisfaction of a property \policy. At any
-most recent position of the trace, let us assume we have maximum $L$ positions in the current trace
-for which \policy has not yet
-been reduced to a boolean value.
+We now discuss the runtime complexity of \monitor while checking satisfaction of a property \policy. At any most recent position of the trace, let us assume we have maximum $L$ positions in the current trace for which \policy has not yet been reduced to a boolean value.
 Note that if the value of $\wdelay(\policy)$ is large $L$ can be as large as the current trace length we have seen so far.
 Addtionally, for each temporal subformula $\phi_1\until\phi_2$ of \policy,
 we build history structures that
