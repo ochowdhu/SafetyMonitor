@@ -3,8 +3,13 @@
 \section{Conclusion and Future Work}
 We have developed a runtime monitoring approach for an ARV system.
 Instead of instrumention, we passively monitor the system, generating the system trace from the observed network state.
-We have developed an efficient runtime monitoring algorithm, \monitor, that eagerly checks for violations of properties written in future-bounded propositional MTL. We have shown the efficiency of \monitor by implementing it and evaluating it against logs obtained from system testing of the ARV.
+We have developed an efficient runtime monitoring algorithm, \monitor, that eagerly checks for violations of properties written
+in future-bounded propositional MTL. We have shown the efficiency of \monitor by implementing it and evaluating it against
+logs obtained from system testing of the ARV.
 \monitor was able to detect violations of several safety requirements in real-time.
-We want to further explore runtime monitors executing in multi-core environment to provide increased monitoring power as well as further formalizing the \sfmap (possibly with a domain specific language).
-% We also want to explore monitoring algorithms for event-based CAN where message arrival times can influence the satisfaction of the property that is being checked. 
-In the current work, we have not investigated the energy consumption of the runtime monitors. It could be possible that the extra checks required for eager checking might not feasible due to energy consumption restrictions in which case one has to investigate energy-efficient alternatives.
+We want to further explore runtime monitors executing in multi-core environment to provide increased
+monitoring power as well as further formalizing the \sfmap (in a domain specific language).
+% We also want to explore monitoring algorithms for event-based CAN where message arrival times can influence the satisfaction of the property that is being checked.
+ Currently, we do not investigate the energy consumption of the runtime monitors.
+ It could be possible that the extra checks required for eager checking might not
+ feasible due to energy consumption restrictions in which case one has to investigate energy-efficient alternatives.
