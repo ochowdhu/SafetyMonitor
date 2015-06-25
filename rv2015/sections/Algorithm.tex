@@ -6,7 +6,7 @@
 %%% need real-time finite trace checking
 
 %In order to
-For checking whether our desired ARV system  adheres to its specification,
+For checking whether the given ARV system  adheres to its specification,
 %distributed embedded systems
 we need an algorithm which %can %continuously
 incrementally checks explicit time specifications (\ie, propositional metric-time temporal logic~\cite{Koymans1990})
@@ -20,13 +20,13 @@ Many of the existing algorithms for evaluating formulas like $\eventually_{[l,h]
 between the evaluation state and the future state in which $a$ is true, $t_d$, is within the
 bound $[l,h]$) wait enough time so that $\eventually_{[l,h]} a$ can be fully evaluated.
 \monitor however tries to eagerly evaluate both $\eventually_{[l,h]} a$ and $b$ and see
-whether it can reduce the whole formula to boolean.
+whether it can reduce the whole formula to boolean value.
 For another eagerness checking example,
 let us assume we are checking the property $a\until_{[l, h]}b$ (read, the formula is true at trace position $i$ if there is a trace position
-$j$ in which $b$ holds such that $j>=i$ and the time difference between position $i$ and $j$ is in the range $[l,h]$
-and for all positions $k$ such that $i\leq k < j$ the formula $a$ holds) at trace position $i$.
+$j$ in which $b$ holds such that $j\geq i$ and the time difference between position $i$ and $j$ is in the range $[l,h]$
+and for all trace positions $k$ such that $i\leq k < j$ the formula $a$ holds) at trace position $i$.
 During checking if we can find a trace position $k > i$ for which $b$ and $a$ are both false then we can evaluate the formula to be
-false without waiting for a trace position in which $b$ is true. Nesting of  temporal formulas can make the eager check challenging.
+false without waiting for a trace position in which $b$ is true. Nesting of  temporal formulas can make the eager check nontrivial.
 We want to emphasize that \monitor optimistically
 checks for violations and hence we could possible have a trace in which each formula can only be evaluated in
 the last possible trace position in which case our algorithm will behave in the exact same way as the current non-eager
@@ -60,28 +60,39 @@ The syntax of \planguage is as follows:
 \policy_1\since_{\interval}\policy_2 \mid \policy_1\until_{\interval}\policy_2\mid\yesterday_{\interval}\policy\mid \tomorrow_{\interval}\policy
 \end{array}
 \) \\
-
 \textit{Syntax.}
 \planguage has logical true (\ie, \true),
  propositions $\pred{p}$, logical connectives (\ie, $\neg, \vee$),
 past temporal operators \emph{since} and \emph{yesterday} $(\since, \yesterday)$,
 and future temporal operators \emph{until} and \emph{next} $(\until, \tomorrow)$.
-The temporal bound $\interval$ of form $[l,h]$ ($l\leq h$ and $l,h\in\mathbb{N}$)
-associated with the future temporal operators must be finite.
+There is a bound $\mathbb{I}$ of form $[l,h]$ ($l\leq h$ and $l,h\in\mathbb{N}\cup\infty$)
+associated with each temporal operator.
+Note that the bound  $[l,h]$ associated with the future temporal operators must be finite.
 Specification propositions \pred{p} come from a finite set of propositions provided in
 the system trace by the \sfmap.
 These propositions are derived from the observable system state and represent specific system properties, for instance,
 proposition $\pred{speedLT40mph}$ could describe whether the vehicle speed is less than 40mph.
+We use \policy, $\phi$, $\alpha$, and $\beta$ (possibly with subscripts) to denote valid \planguage formulas.
 %
 
 
 \textit{Semantics. }
 \planguage formulas are interpreted over time-stamped \emph{traces}. A trace $\sigma$ is a sequence of states, each of which maps all propositions in \sfmap, to either \true or \false. We denote the $i^{th}$ position of the trace with $\sigma_i$ where $i\in\mathbb{N}$. Moreover, each $\sigma_i$ has an associated time stamp denoted by $\tau_i$ where $\tau_i\in\mathbb{N}$.
 We denote the sequence of time stamps with $\tau$. For all $i, j\in\mathbb{N}$ such that $i < j$, we require $\tau_i < \tau_j$. For a given trace $\sigma$ and time stamp sequence $\tau$, we write $\sigma, \tau, i\models\policy$ to denote that the formula \policy is true with respect to the $i^{th}$ position of $\sigma$ and $\tau$.
-The semantics of \planguage are standard for MTL, \eg, \cite{Basin2008}.
-Each  property \policy
-is evaluated over the trace at every trace step (\ie, there is an implicit unbounded always over all top-level specification formulas.
+The semantics of \planguage future bounded MTL is standard, see for instance, \cite{Basin2008}.
+Each  property \policy has an implicit unbounded \henceforth future operator ($\henceforth\policy$ signifies that
+\policy is true in all future trace positions including the current trace position) at the top-level and we handle it by
+checking whether \policy is true in each trace position.
+% is evaluated over the trace at every trace step (\ie, there is an implicit unbounded always over all top-level specification formulas.
 
+\[
+\tempSub(\policy) = \begin{cases}
+\emptyset & \mbox{ if } \policy \equiv p\\
+\{\alpha\} \cup \{\beta\} \cup \tempSub(\alpha) \cup \tempSub(\beta) & \mbox{ if } \policy\equiv\alpha\until_\mathbb{I}\beta|\alpha\since_\mathbb{I}\beta\\
+\tempSub(\alpha) \cup \tempSub(\beta) & \mbox{ if } \policy\equiv\alpha\vee\beta\\
+\tempSub(\alpha) & \mbox{ if }\policy\equiv\neg\alpha
+\end{cases}
+\]
 % \textit{Auxiliary notions.}
 Before we go any further, we introduce the readers with some auxiliary notions which will be
 necessary to understand our algorithm \monitor. We first define ``\emph{residual formulas}'' or, just ``\emph{residues}''.
@@ -158,14 +169,6 @@ We note that due to the recursive nature of the monitoring algorithm, the top-le
 The history structure updates for the top-level formula are separated in the algorithm description for clarity only.
 The only difference between the top-level formula and other temporal subformula is that violations are reported for the top-level formula.
 
-\[
-\tempSub(\policy) = \begin{cases}
-\emptyset & \mbox{ if } \policy \equiv p\\
-\{\alpha\} \cup \{\beta\} \cup \tempSub(\alpha) \cup \tempSub(\beta) & \mbox{ if } \policy\equiv\alpha\until_\mathbb{I}\beta|\alpha\since_\mathbb{I}\beta\\
-\tempSub(\alpha) \cup \tempSub(\beta) & \mbox{ if } \policy\equiv\alpha\vee\beta\\
-\tempSub(\alpha) & \mbox{ if }\policy\equiv\neg\alpha
-\end{cases}
-\]
 
 
 
@@ -279,8 +282,13 @@ For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\ta
 
 We now discuss the runtime complexity of \monitor while checking satisfaction of a property \policy. At any most recent position of the trace, let us assume we have maximum $L$ positions in the current trace for which \policy has not yet been reduced to a boolean value.
 Note that if the value of $\wdelay(\policy)$ is large $L$ can be as large as the current trace length we have seen so far.
-Addtionally, for each temporal subformula $\phi_1\until\phi_2$ of \policy, we build history structures that keep track of segments of the trace positions for which $\phi_1$ is true. Let  assume we have $S$ such segments that are relevant (relevant means they can possibly influence the satisfaction of the remaining unreduced formulas).
-Hence, the complexity of \monitor is $\mathcal{O}(LM|\policy|)$ where $|\policy|$ denotes the size of the formula \policy.
+Addtionally, for each temporal subformula $\phi_1\until\phi_2$ of \policy,
+we build history structures that
+keep track of segments of the trace positions for which $\phi_1$ is true. Let  assume
+we have $S$ such segments that are relevant (relevant means they can possibly
+influence the satisfaction of the remaining unreduced formulas).
+Hence, the complexity of \monitor is
+$\mathcal{O}(LM|\policy|)$.
 
 %Theorem \ref{thm:eagerness} states that \monitor is eager.
 %
