@@ -115,7 +115,12 @@ A PC was connected to a PCAN-USB Pro \cite{PCAN-USBPro} device which provides a 
 
 %% paragraph 4 -- specification
 Requirements documentation for this system was available, so we were able to build a monitoring specification based on actual system requirements.
-The specification evaluated in the embedded monitor on the test logs are shown in Table \ref{tab:monspec}. This specification was derived from the system requirements based on the observable system state available in the testing logs.
+The specification evaluated in the embedded monitor on the test logs are shown in Table \ref{tab:monspec}. This specification was derived from the system requirements based on the observable system state available in the testing logs. 
+% acknowledge that case study looks simple -- but there are reasons for that
+We note that the safety specification is simple and does not fully excercise the monitor's constraints. Safety specifications derived from common system safety analysis would likely have a larger number of rules with similar complexities. Monitoring additional rules scales nicely, both because each rule adds at worst it's own checking time independent of the other rules and because independent rules can be split up across multiple monitors.
+%
+% don't need hybrid here
+Since this specification is small and does not have long duration future-time formulas, the hybrid algorithm is unnecessary for the case study -- the eager algorithm can finish within the monitor period in the worst case. We still use the hybrid implementation for the study since it acts the same as the eager algorithm when there is excess monitoring time. Safety rules for common target systems may often be similarly simple, but even with simple rules as the number of rules increases the overall monitor execution time also increases. Eventually, even with simple rules there are too many to check eagerly in a prompt fashion. Using the hybrid algorithm helps us avoid worrying about the execution time. As long as the monitor can finish the conservative checks and history structure update within the period the monitor will be prompt.
 
 
 
