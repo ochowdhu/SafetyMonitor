@@ -15,7 +15,7 @@ When the monitor detects a violation of a property, it notifies a command module
 
 The ARV is an autonomous heavy truck which is being designed for use in vehicle platoons. It is representative of common modern ground vehicle designs.
 These systems are generally built by system integrators who utilize commercial-off-the-shelf  components, some of which may be provided as black-box systems,
-developed from multiple vendors.
+developed by multiple vendors.
 %The ARV system we consider are built by system integrators utilizing multiple vendors and commercial-off-the-shelf (COTS) components, some of which can be viewed as black box components for the integrator.
 These systems are also often hard real-time systems which leads to additional constraints on system monitoring \cite{Goodloe2010}.
 % instrumentation citations -- bonakdarpour2011 has some, but a little weak (gdb)
@@ -34,7 +34,7 @@ Controller area network (CAN) is a
 %common and
 standard broadcast bus for ground vehicles which is the primary system bus in the ARV. We can obtain useful amounts of system state relevant information for monitoring
 the system safety specification by observing the data within the CAN messages that are broadcasted between system components.
-However, before we can start monitoring the ARV system, we need a component, which we call the \sfmap (in short, \emph{state to proposition}), that observes messages transmitted on the bus and decodes
+Before we can start monitoring the ARV system, we need a component, which we call the \sfmap (in short, \emph{state to proposition}), that observes messages transmitted on the bus and interprets
 them into propositions relevant to monitoring which are then fed into the monitor.
 % This acts similarly to the low-level specification and filter/event recognizers from MaC \cite{Kim2004}.
 We want to emphasize that the limits of external observability can cause significant challenges
@@ -51,15 +51,16 @@ System requirements like
  for instance,
 ``\emph{Cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed}''.
 %
-For efficient monitoring, we use a fragment of propositional, discrete time metric temporal logic (MTL)\cite{Koymans1990} in which the
-%bound
-time constraint
-associated with the future temporal operators must be finite. % classic cite, could go newer, thati2005 is close to ours
+For efficient monitoring, we use a fragment of propositional, discrete time, future-bounded metric temporal logic (MTL)\cite{Koymans1990}.
+% in which the
+% %bound
+% time constraint
+% associated with the future temporal operators must be finite. % classic cite, could go newer, thati2005 is close to ours
 
 \noindent
 \textit{Monitoring algorithm.}
 We have developed a runtime monitoring algorithm, which we call \monitor, that incrementally takes as input a system state
-(\ie, a state maps relevant propositions to either true/false) and a MTL formula and eagerly checks the state trace for violations.
+(\ie, a state maps  propositions to either true/false) and a MTL formula and eagerly checks the state trace for violations.
 Some of the existing monitoring algorithms that support bounded future formulas wait for the full-time of the bound before evaluating the formula (\eg, \cite{Basin2008}).
 \monitor uses a dynamic programming based iterative algorithm that tries to reduce the input formula as soon as possible using history summarizing structures and straightforward formula-rewriting based simplifications when possible (leaving a partially reduced formula when future input is required).
 This eager nature of the algorithm can detect a violation earlier leaving the system more time to attempt a graceful recovery.
@@ -75,7 +76,8 @@ if time permits.
 \noindent
 \textit{Empirical evaluation.}
 We have implemented \monitor on an inexpensive embedded platform and empirically evaluated it against logs obtained from the testing of an ARV system using properties derived from its safety requirements.
-\monitor has moderate monitoring overhead and detected several safety violations in our experimental evaluation.
+\monitor has moderate monitoring overhead and detected several safety violations.
+% in our experimental evaluation.
 
 
 %is a commonly used logic for specifying these types of properties, and a bounded-future fragment of MTL can be used to ensure efficient monitoring of useful system properties.
