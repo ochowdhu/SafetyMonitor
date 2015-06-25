@@ -25,12 +25,12 @@ For another eagerness checking example,
 let us assume we are checking the property $a\until_{[l, h]}b$ (read, the formula is true at trace position $i$ if there is a trace position
 $j$ in which $b$ holds such that $j\geq i$ and the time difference between position $i$ and $j$ is in the range $[l,h]$
 and for all trace positions $k$ such that $i\leq k < j$ the formula $a$ holds) at trace position $i$.
-During checking if we can find a trace position $k > i$ for which $b$ and $a$ are both false then we can evaluate the formula to be
+While monitoring if we can find a trace position $k > i$ for which $b$ and $a$ are both false then we can evaluate the formula to be
 false without waiting for a trace position in which $b$ is true. Nesting of  temporal formulas can make the eager check nontrivial.
 We want to emphasize that \monitor optimistically
 checks for violations and hence we could possible have a trace in which each formula can only be evaluated in
-the last possible trace position in which case our algorithm will behave in the exact same way as the current non-eager
-algorithms modulo the extra computation \monitor performs for eager checking.
+the last possible trace position then our algorithm will behave in the exact same way as the non-eager
+algorithms modulo the extra computation for eager checking.
 %either true or false.
 %
 %To constantly check that the target system is adhering to its specification, we must constantly check the specification against the current system trace. To constantly check the system efficiently, \monitor is an iterative algorithm, performing additional checking as each new trace step arrives.
@@ -65,6 +65,8 @@ The syntax of \planguage is as follows:
  propositions $\pred{p}$, logical connectives (\ie, $\neg, \vee$),
 past temporal operators \emph{since} and \emph{yesterday} $(\since, \yesterday)$,
 and future temporal operators \emph{until} and \emph{next} $(\until, \tomorrow)$.
+Other temporal operators (\ie, \once,\historically,\eventually,\henceforth) can be easily derived
+from the ones above.
 There is a bound $\mathbb{I}$ of form $[l,h]$ ($l\leq h$ and $l,h\in\mathbb{N}\cup\infty$)
 associated with each temporal operator.
 Note that the bound  $[l,h]$ associated with the future temporal operators must be finite.
@@ -94,7 +96,7 @@ checking whether \policy is true in each trace position.
 \end{cases}
 \]
 % \textit{Auxiliary notions.}
-Before we go any further, we introduce the readers with some auxiliary notions which will be
+We now introduce the readers with some auxiliary notions which will be
 necessary to understand our algorithm \monitor. We first define ``\emph{residual formulas}'' or, just ``\emph{residues}''.
 Given a formula \policy, we call another formula \policyv as \policy's residual, if we obtain \policyv after evaluating \policy with respect to the current information of the trace.
 Note that a formula residue might not be a truth value if the formula could not conclusively be reduced given the current trace state (e.g, if future state is required to determine the truth value).
@@ -131,7 +133,10 @@ The function \tempSub takes as input a formula \policy, and returns all the temp
 
 
 \subsection{\monitor Algorithm}
-Our runtime monitoring algorithm \monitor takes as input an \planguage formula $\policy$ and monitors a growing trace, building history structures and reporting the specification violations as soon as they are detected. We summarize the relevant algorithm functions below:
+Our runtime monitoring algorithm \monitor takes as input an
+\planguage formula $\policy$ and monitors a growing trace,
+building history structures and reporting the specification violations
+as soon as they are detected. We summarize the relevant algorithm functions below:
 
 \begin{description}
 \item[$\monitor{}(\policy)$] is the top-level function.
