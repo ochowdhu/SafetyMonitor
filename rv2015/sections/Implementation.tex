@@ -120,7 +120,12 @@ The specification evaluated in the embedded monitor on the test logs are shown i
 We note that the safety specification is simple and does not fully excercise the monitor's constraints. Safety specifications derived from common system safety analysis would likely have a larger number of rules with similar complexities. Monitoring additional rules scales nicely, both because each rule adds at worst it's own checking time independent of the other rules and because independent rules can be split up across multiple monitors.
 %
 % don't need hybrid here
-Since this specification is small and does not have long duration future-time formulas, the hybrid algorithm is unnecessary for the case study -- the eager algorithm can finish within the monitor period in the worst case. We still use the hybrid implementation for the study since it acts the same as the eager algorithm when there is excess monitoring time. Safety rules for common target systems may often be similarly simple, but even with simple rules as the number of rules increases the overall monitor execution time also increases. Eventually, even with simple rules there are too many to check eagerly in a prompt fashion. Using the hybrid algorithm helps us avoid worrying about the execution time. As long as the monitor can finish the conservative checks and history structure update within the period the monitor will be prompt.
+Since this specification is small, does not have long duration future-time formulas, and the monitor period is relatively slow ($25ms$) the hybrid algorithm is unnecessary for the case study -- the eager algorithm can finish within the monitor period in the worst case. 
+We were able to eagerly monitor this specification plus an additional 200 residues in under $2ms$. If the specification properties required a faster trace resolution we would run into worst-case speed problems for the eager monitor and require the hybrid implementation.
+%
+We use the hybrid implementation for the study since it acts the same as the eager algorithm when there is excess monitoring time. 
+Using the hybrid algorithm helps us avoid worrying about the execution time. 
+As long as the monitor can finish the conservative checks and history structure update within the period the monitor will be prompt.
 
 
 
