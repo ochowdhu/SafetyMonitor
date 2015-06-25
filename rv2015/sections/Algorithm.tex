@@ -331,12 +331,12 @@ $\incrS(\histst[\policyv]{i-1}, \histSt[\policyv]{i}, \sigma_i, \tau_i, i) =
 (\displaystyle\bigcup_{r \in \histst[\policyv]{i-1}} \reduce(\sigma_i, \tau_i, \histst[\policyv]{i}, r)) \cup
 \reduce(\sigma_i, \tau_i, \histst[\policyv]{i}, \rp{i}{\policyv})$.
 %
-This function takes the previous step's history structure $\histst[\policyv]{i-1}$ and the current state
+This function takes the previous step's history structure $\histst[\policyv]{i-1}$ and the current state $\sigma_i$
 %($\sigma_i,\tau_i$, and the updated smaller history structures $\histSt[\policyv]{i}$)
 and performs two actions:
 %\begin{enumerate}
-	1) Adds a residue for the current step $i$ to $\histst[\policyv]{i-1}$ and
-	2) Reduces all residues contained in $\histst[\policyv]{i-1}$ with the current state.
+	1) Adds a residue for the current step $i$ to $\histst[\policyv]{i}$ and
+	2) Reduces all residues contained in $\histst[\policyv]{i-1}$ using $\sigma_i$.
 %\end{enumerate}
 %Together, these two actions leave an updated history structure $\histst[\policyv]{i}$ which has updated history information for all the required steps.
 
