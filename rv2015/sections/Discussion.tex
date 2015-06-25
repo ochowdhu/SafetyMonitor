@@ -1,19 +1,34 @@
 %%% Discussion section
 
-\section{Discussion}
+\section{Practical Issues Discussion}
 
-%% section soft intro
-The design and implementation choices for our monitor were heavily influenced by the autonomous ground vehicle use case. This lead us to give primary consideration to common commercial embedded constraints such as black-box multi-vendor components and high monitoring cost sensitivity (both in design and implementation overhead).
+Passively monitoring running systems requires attention to timing issues with regards to system state sampling/capture.
 %
-Focusing on ground vehicles also led us towards the bus-monitor architecture, and CAN networks in particular. Since CAN networks are often scheduled and implemented as periodic broadcast networks, a periodic sampling-based monitor also was straightforward.
+The monitor keeps a copy of the target system state. When a new CAN message from the system is seen, the monitor updates its system state based on the incoming message. The monitor periodically takes a snapshot of this constantly updated state and uses that snapshot as the trace state which is monitored.
+%
+This means that the monitor's system state view is constantly updated at the speed of the CAN bus messages, but the actual monitored state (\ie, the trace) is a discrete sampling of this bus-based state. 
+The monitor's period must be fast enough that any changes in system state which are relevant to the specification are seen by the sampling. 
+To ensure this, the monitor's period should be twice as fast as the shortest CAN message period, which causes the monitored trace to contain every value seen on the CAN bus. 
+If the monitor period is not fast enough, multiple CAN messages announcing the same system value may end up in the same trace state, which can cause those value changes to not be seen in the trace. 
+For example, if the monitor is sampling at $2ms$, and three messages announcing the value of property $X$ are received at times $0$, $1ms$, and $1.5ms$, only the value announced at $1.5ms$ will be seen in the trace. To avoid this, the monitor would need to run faster than the messages interarrival rate (at least $0.5ms$ in this case).
 
-%% future work
-Once you have a monitor that is capable of correctly identifying when a system is violating its safety specification, the next obvious step is to enable it to attempt system recoveries.
-%
-Emergency stops/shutdowns are a common and straightforward recovery mechanism, but many systems cannot simply be safely stopped (\eg, aerial vehicles) or prefer a controlled shutdown to avoid damage to the system or environment (\eg, trains, chemical/industrial plants, \etc.).
-%% need to cut down a bit
-More advanced recovery techniques including graduated shutdowns or switchover to backup controllers are known \cite{}. 
-A difficult aspect of performing these more complex recoveries is that they are initiated only when a system is faulty, and so the recovery controller must be robust to different fault scenarios.
-%
-It’s possible that the fault which necessitates a recovery also blocks the preferred recovery tactic. 
-It may be possible to perform partial fault diagnosis at runtime within the monitor (based on the specification), allowing the monitor to choose a viable recovery mechanism. 
+Along with requiring the monitor to sample its trace state fast enough to see all the relevant state changes, the specification time bounds must be a multiple of the monitoring period. 
+Doing this ensures that each time step in the formula is evaluated on updated data. 
+A simple way of understanding this is to use monitor steps as the temporal bounds instead of real time. 
+For example, if the monitor is running at a 2ms period, we can use $\henceforth_{[0,50]} p$ as an equivalent to $\henceforth_{[0,100ms]} p$.
+Because the monitored trace state is only updating at 2ms, the state is unchanged from 0-2ms, and then again from 2-4ms, etc. 
+If time-based bounds that are not multiples of the monitor period are used, different bounds can look at the same state, \eg, $\henceforth_{[0,5ms]} p$ is equivalent to $\henceforth_{[1ms,4ms]} p$ for a $2ms$ monitor. Since this is unintiutive, using steps or period-multiple bounds is best.
+
+Although the timing issues are intertwined, using a monitoring period at least twice as fast as the shortest CAN message period (\ie, shortest time between a CAN message retransmission) and only using temporal bound values that are multiples of this period provides intuitive monitoring results.
+
+
+%%% future work
+%Once you have a monitor that is capable of correctly identifying when a system is violating its safety specification, the next obvious step is to enable it to attempt system recoveries.
+%%
+%Emergency stops/shutdowns are a common and straightforward recovery mechanism, but many systems cannot simply be safely stopped (\eg, aerial vehicles) or prefer a controlled shutdown to avoid damage to the system or environment (\eg, trains, chemical/industrial plants, \etc.).
+%%% need to cut down a bit
+%More advanced recovery techniques including graduated shutdowns or switchover to backup controllers are known \cite{}. 
+%A difficult aspect of performing these more complex recoveries is that they are initiated only when a system is faulty, and so the recovery controller must be robust to different fault scenarios.
+%%
+%It’s possible that the fault which necessitates a recovery also blocks the preferred recovery tactic. 
+%It may be possible to perform partial fault diagnosis at runtime within the monitor (based on the specification), allowing the monitor to choose a viable recovery mechanism. 
