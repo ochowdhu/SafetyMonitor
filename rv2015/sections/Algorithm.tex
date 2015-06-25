@@ -115,7 +115,7 @@ For past- and present-time formulas \policyv, $\wdelay(\policyv)=0$.
 Future time formulas have a delay based on the interval of the future operator
 (\eg, $\wdelay(\LTLdiamond_{[0,3]} \pred{p}) = 3$). The length of a formula $\policy$, denoted $|\policy|$, returns the total number of subformulas of \policy.
 %, (\ie, the number of nodes in the policy AST).
-The function \tempSub takes as input a formula \policy, and returns all the temporal subformulas \policyv of \policy and strict subformulas of \policyv.
+% The function \tempSub takes as input a formula \policy, and returns all the temporal subformulas \policyv of \policy and strict subformulas of \policyv.
 
 
 
@@ -266,7 +266,7 @@ and performs two actions:
 
 \subsection{Algorithm Properties}
 There are two important properties of \monitor which need to be shown. First, \emph{correctness} states that the algorithm's results are correct.
-That is, that if \monitor reports a property violation, the trace really did violate the property. 
+That is, that if \monitor reports a property violation, the trace really did violate the property.
 Second, \emph{promptness} requires that the algorithm provide a decision for the given property in a timely fashion (\ie, with $t$ such that $t\leq \wdelay(\policy)$).
 %at any given time $t$ within a finite bound, $\wdelay(\policy)$.
 Promptness precisely requires that the algorithm decides satisfaction of the given property at trace position $i$ as soon as there is another trace position $j$ available such that $j\geq i$ and $\tau_j-\tau_i \geq \wdelay(\policy)$.
