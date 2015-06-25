@@ -155,15 +155,22 @@ A PC was connected to a PCAN-USB Pro \cite{PCAN-USBPro} device which provides a 
 Requirements documentation for this system was available, so we were able to build a monitoring specification based on actual system requirements.
 The specification evaluated in the embedded monitor on the test logs are shown in Table \ref{tab:monspec}. This specification was derived from the system requirements based on the observable system state available in the testing logs.
 % acknowledge that case study looks simple -- but there are reasons for that
-We note that the safety specification is simple and does not fully excercise the monitor's constraints. Safety specifications derived from common system safety analysis would likely have a larger number of rules with similar complexities. Monitoring additional rules scales nicely, both because each rule adds at worst it's own checking time independent of the other rules and because independent rules can be split up across multiple monitors.
+We note that the safety specification is simple and does not fully excercise the monitor's constraints. Safety specifications derived from common system safety analysis would likely have a larger number of rules with similar complexities.
+Monitoring additional rules scales well as each rule adds at worst it's own checking time independent of the other rules and
+also because independent rules can be split up across multiple monitors.
 %
 % don't need hybrid here
-Since this specification is small, does not have long duration future-time formulas, and the monitor period is relatively slow ($25ms$) the hybrid algorithm is unnecessary for the case study -- the eager algorithm can finish within the monitor period in the worst case.
-We were able to eagerly monitor this specification plus an additional 200 residues in under $2ms$. If the specification properties required a faster trace resolution we would run into worst-case speed problems for the eager monitor and require the hybrid implementation.
+Since this specification is small, does not have long duration future-time formulas,
+and the monitor period is relatively slow ($25ms$) \ha and \monitor functions equivalently
+for the case study -- \monitor can always finish within the monitoring period in the worst case.
+We were able to eagerly monitor this specification plus an additional 200 residues in under $2ms$.
+If the specification properties required a faster trace resolution we would run into
+worst-case speed problems for \monitor and would require to use \ha.
 %
-We use the hybrid implementation for the study since it acts the same as the eager algorithm when there is excess monitoring time.
-Using the hybrid algorithm helps us avoid worrying about the execution time.
-As long as the monitor can finish the conservative checks and history structure update within the period the monitor will be prompt.
+We use the \ha for the study since it acts the same as \monitor when there is excess monitoring time.
+Using \ha helps us avoid worrying about the execution time.
+As long as the monitor can finish the conservative checks and
+history structure update within the period the monitor will be prompt.
 
 
 
@@ -194,7 +201,7 @@ As long as the monitor can finish the conservative checks and history structure 
 $\pred{HeartBeatOn}$ is a guard which is true when once the target component has started in the logs (to avoid false-positive missing heartbeats during system startup).
 The system's heartbeat message contains a single heartbeat status bit which we checked directly in Rule \#0 to ensure the component is still running (essentially a watchdog message).
 The heartbeat message also has a rolling counter field.
-We use the \sfmap to ensure that this counter is incrementing correctly and output this check as the $\pred{HeartbeakOk}$ predicate which is monitored in Rule \#1.
+We use the \sfmap to ensure that this counter is incrementing correctly and output this check as the $\pred{HeartbeakOk}$ proposition which is monitored in Rule \#1.
 %Rule \#0 is a heartbeat detection which ensures that the interface component is still running (essentially a watchdog message).  Rule \#1 is a second component of this check.
 We also checked for illegal state transitions. Rules \#2 through \#5 check both for illegal transition commands from the vehicle controller and actual illegal state transitions in the interface component.
 
@@ -237,7 +244,12 @@ A good rolling counter should increment by one every message up to its maximum (
 Every consecutive heartbeat status message must have an incremented heartbeat counter or a violation will be triggered. Figure \ref{fig:hb_badcounter} shows the counter value history for one of the traces with a heartbeat violation caused by a bad counter value.
 %
 %@EDIT describe robustness testing, define these false positives like the talk?
-Further inspection of this violation showed that the bad counter values were sent by the testing framework rather than the actual system. In this case, the network traffic the monitor is seeing is not real system state but actually it is messages being injected by the testing framework. This is not a real violation (since the violating state is not the actual system state), and so we consider this a false positive violation.
+Further inspection of this violation showed that the bad counter values were sent by the testing framework rather than the actual system. In this case, the network traffic the monitor is seeing is not real system state
+instead are observing
+% but actually it is
+messages that are being injected by the testing framework.
+This is not a real violation (since the violating state is not the actual system state),
+and so we consider this a false positive violation.
 
 
 
