@@ -38,7 +38,7 @@ which is updated when a new CAN message is observed.
 %and
 %when a new CAN message from the system is seen it updates this
 %system state based on the incoming message. 
-In short, the monitor periodically takes a snapshot of this constantly updated state and uses that snapshot as the trace state which is monitored.
+The monitor periodically takes a snapshot of this constantly updated state and uses that snapshot as the trace state which is monitored.
 %
 Thus, the actual monitored state (\ie, the trace) is a discrete sampling of the monitor's constantly updated system state. 
 The monitor's period must be fast enough that any changes in system state which are relevant to the specification are seen in the sampled trace.
@@ -50,10 +50,10 @@ Along with requiring the monitor to sample its trace state fast enough to see al
 This ensures that each time step in the formula is evaluated on the updated information.
 A simple way of understanding this is to use monitor steps as the temporal bounds instead of explicit time bounds.
 For example, if the monitor is running at  2ms intervals, we can use $\henceforth_{[0,50]} p$ as an equivalent to
-$\henceforth_{[0,100ms]} p$.
+$\henceforth_{[0,100ms]} \pred{p}$.
 %As the monitored trace state is only updated at 2ms, the state is unchanged from 0-2ms, and then again from 2-4ms, etc.
 If a bound is not a multiple of the monitor's interval, then formulas with different bounds can look indistinguishable,
-\eg, $\henceforth_{[0,5ms]} p$ is equivalent to $\henceforth_{[1ms,4ms]} p$ for a $2ms$ monitor.
+\eg, $\henceforth_{[0,5ms]} \pred{p}$ is equivalent to $\henceforth_{[1ms,4ms]} \pred{p}$ for a $2ms$ monitor.
 % Since this is unintuitive, using steps or period-multiple
 % bounds is best.
 %
@@ -66,14 +66,11 @@ and only using temporal bound values that are multiples of this period provides 
 %Our eager monitoring algorithm attempts to evaluate specification rules as soon as possible, but this requires checking trace properties which may not be fully reducible given the current trace. These unfinished formula reductions require extra computation time, and in practice the majority of the policy reductions performed by \monitor will be these eager reductions which may not fully reduce.
 The eager monitoring algorithm attempts to evaluate specification rules as soon as possible
 which requires checking properties which may not be fully reducible given the current trace.
-While early detection of violations can be useful, continuously attempting to check
-partially reduced residues which need future information to evaluate requires extra computation.
+%While early detection of violations can be useful, 
+Continuously attempting to check partially reduced residues which need future information to evaluate requires extra computation.
 %While early detection of violations can be useful, the costs of re-reducing partially reduced residues can become large given the right formula and trace.
-In some cases, the worst-case execution time to eagerly check a property (or set of properties)
-over a trace may be longer than the monitor's period.
-In this case the eager algorithm cannot guarantee prompt monitoring since some
-residues will be left unchecked. This is unacceptable for
-safety-critical system monitoring, as without a promptness guarantee the results cannot be fully trusted. 
+In some cases, the worst-case execution time to eagerly check a property (or set of properties) over a trace may be longer than the monitor's period.
+In this case the eager algorithm cannot guarantee prompt monitoring since some residues will be left unchecked. This is unacceptable for safety-critical system monitoring, as without a promptness guarantee the results cannot be fully trusted. 
 %Even if this worst-case situation does not occur, for monitoring safety-critical systems the monitor must be able to guarantee completion.
 %there are situations where eagerly checking an entire target specification may require more computation than is available from the monitor in a given period.
 %
