@@ -142,7 +142,7 @@ as soon as they are detected. We summarize the relevant algorithm functions belo
 The top-level monitoring algorithm \monitor is a sampling-based periodic monitor which uses history structures to store trace state for evaluating temporal subformulas.
 \emph{History structures} are lists of residues along with past-time markers for evaluating infinite past-time formulas.
 The algorithm checks the given formula $\policy$ periodically at every trace sample step.
-When the fomula cannot be decided at a given step (\eg, it requires future state to evaluate), the remaining formula residue is saved in a history structure for evaluation in future steps when the state will be available.
+When the formula cannot be decided at a given step (\eg, it requires future state to evaluate), the remaining formula residue is saved in a history structure for evaluation in future steps when the state will be available.
 The history structure for formula $\policyv$ at trace step $i$ is denoted $\histst[\policyv]{i}$.
 We use $\histSt[\policy]{i}$ to denote the set of history structures for all temporal subformula of $\policy$, \ie,
 $\histSt[\policy]{i} = \bigcup_{\policyv \in \tempSub(\policy)} \histst[\policyv]{i}$.
@@ -340,7 +340,7 @@ Second, \emph{promptness} requires that the algorithm provide a decision for the
 Promptness precisely requires that the algorithm decides satisfaction of the
 given property at trace position $i$ as soon as there is another trace position
 $j$ available such that $j\geq i$ and $\tau_j-\tau_i \geq \wdelay(\policy)$.
-% Note that it is possible to define a stronger notion of promptness, \emph{strong promptness}, which ensures that the runtime monitor makes a judgement about the satisfaction of a property as soon as it is possible to do so. In this discussion we however we only consider promptness.
+% Note that it is possible to define a stronger notion of promptness, \emph{strong promptness}, which ensures that the runtime monitor makes a judgment about the satisfaction of a property as soon as it is possible to do so. In this discussion we however we only consider promptness.
 %guaranteed to be possible to decide.
 %
 %Besides correctness guarantees, our algorithm is also \emph{eager}. An eager algorithm reports satisfaction as soon as the trace is an informative prefix \cite{Kupferman2001} for the policy.
@@ -359,7 +359,7 @@ For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\ta
 We now discuss the runtime complexity of \monitor while checking satisfaction of a property \policy.
 For any evaluation position of the trace $\sigma$, let us assume we have maximum $L$ positions in $\sigma$ for which \policy has not yet been reduced to a boolean value.
 Note that the maximum number of positions in that are not yet reduced must be $\frac{\wdelay(\policy)}{P}$ where $P$ is the monitor's period. 
-Addtionally, for each temporal subformula $\phi_1\until\phi_2$ of \policy,
+Additionally, for each temporal subformula $\phi_1\until\phi_2$ of \policy,
 we build history structures that keep track of segments of positions in $\sigma$ for which $\phi_1$ is true. Let us assume we have a maximum of $M$ such segments that are relevant for \policy evaluation.
 Hence, the complexity of \monitor is $\mathcal{O}(LM|\policy|)$.
 

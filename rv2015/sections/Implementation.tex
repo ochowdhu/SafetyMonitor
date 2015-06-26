@@ -44,7 +44,7 @@ Thus, the actual monitored state (\ie, the trace) is a discrete sampling of the 
 The monitor's period must be fast enough that any changes in system state which are relevant to the specification are seen in the sampled trace.
 To ensure this, the monitor's period should be twice as fast as the shortest CAN message period.
 If the monitor's period is not fast enough, multiple CAN messages announcing the same system value may end up in the same trace state causing those values to not be seen in the trace.
-For example, if the monitor is sampling at $2ms$, and three messages announcing the value of property $X$ are received at times $0ms$, $1ms$, and $1.5ms$, only the value announced at $1.5ms$ will be seen in the trace. To avoid this, the monitor would need to run faster than the messages interarrival rate (at least $0.5ms$ in this case).
+For example, if the monitor is sampling at $2ms$, and three messages announcing the value of property $X$ are received at times $0ms$, $1ms$, and $1.5ms$, only the value announced at $1.5ms$ will be seen in the trace. To avoid this, the monitor would need to run faster than the messages inter-arrival rate (at least $0.5ms$ in this case).
 
 Along with requiring the monitor to sample its trace state fast enough to see all the relevant state changes, the specification time bounds must be a multiple of the monitoring period.
 This ensures that each time step in the formula is evaluated on the updated information.
@@ -54,7 +54,7 @@ $\henceforth_{[0,100ms]} p$.
 %As the monitored trace state is only updated at 2ms, the state is unchanged from 0-2ms, and then again from 2-4ms, etc.
 If a bound is not a multiple of the monitor's interval, then formulas with different bounds can look indistinguishable,
 \eg, $\henceforth_{[0,5ms]} p$ is equivalent to $\henceforth_{[1ms,4ms]} p$ for a $2ms$ monitor.
-% Since this is unintiutive, using steps or period-multiple
+% Since this is unintuitive, using steps or period-multiple
 % bounds is best.
 %
 To summarize, using a monitoring period at least twice as fast as the shortest
@@ -159,7 +159,7 @@ A PC was connected to a PCAN-USB Pro \cite{PCAN-USBPro} device which provides a 
 Requirements documentation for this system was available, so we were able to build a monitoring specification based on actual system requirements.
 The specification evaluated in the embedded monitor on the test logs are shown in Table \ref{tab:monspec}. This specification was derived from the system requirements based on the observable system state available in the testing logs.
 % acknowledge that case study looks simple -- but there are reasons for that
-We note that the safety specification is simple and does not fully excercise the monitor's constraints. 
+We note that the safety specification is simple and does not fully exercise the monitor's constraints. 
 %Safety specifications derived from common system safety analysis would likely have a larger number of rules with similar complexities.
 %Monitoring additional rules scales well as each rule adds at worst it's own checking time independent of the other rules and also because independent rules can be split up across multiple monitors.
 %
