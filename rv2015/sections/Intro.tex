@@ -62,13 +62,13 @@ Some existing monitoring algorithms that support bounded future formulas wait fo
 This eager nature of the algorithm can detect a violation earlier leaving the system more time to attempt a graceful recovery.
 We have also proved the correctness of our algorithm. As the target systems we envision to monitor
 have strict time restriction,
-it is possible that the eager checks performed by \monitor are not finished before the next trace state arrives, possibly leaving trace properties unchecked. 
+it is possible that the eager checks performed by \monitor are not finished before the next trace state arrives, possibly leaving trace properties unchecked.
 To overcome this, we have developed a hybrid monitoring algorithm, \ha, that first performs conservative checking like traditional runtime monitoring algorithms for MTL and performs as many eager checks as the remaining time permits.
 
 \noindent
 \textit{Empirical evaluation.}
-We have implemented \monitor on an inexpensive embedded platform and empirically evaluated it against logs obtained from the testing of an ARV system using properties derived from its safety requirements.
-\monitor has moderate monitoring overhead and detected several safety violations.
+We have implemented both \monitor and \ha on an inexpensive embedded platform and empirically evaluated it against logs obtained from the testing of an ARV system using properties derived from its safety requirements.
+\monitor (resp., \ha) has moderate monitoring overhead and detected several safety violations.
 % in our experimental evaluation.
 
 

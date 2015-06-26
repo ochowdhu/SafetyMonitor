@@ -20,7 +20,7 @@ important and common constraints for these systems are avoiding recursion  and
 % dynamic memory alloc
 % Common safety-critical coding guidelines discourage or prohibit dynamic memory
 % allocation to avoid memory leaks.
-As \planguage is bounded, we avoid dynamic allocation
+As \planguage is future bounded, we avoid dynamic allocation
 in our \monitor implementation by statically allocating space for the maximum
 number of entries for our history structures and other temporary data structures.
 % recursion
@@ -33,14 +33,14 @@ of the specification formulas instead.
 \noindent\textbf{Discussion. }
 Passive monitoring of running systems requires attention to timing issues with regards to system state sampling.
 %
-The monitor possesses a copy of the target system state 
+The monitor possesses a copy of the target system state
 which is updated when a new CAN message is observed.
 %and
 %when a new CAN message from the system is seen it updates this
-%system state based on the incoming message. 
+%system state based on the incoming message.
 The monitor periodically takes a snapshot of this constantly updated state and uses that snapshot as the trace state which is monitored.
 %
-Thus, the actual monitored state (\ie, the trace) is a discrete sampling of the monitor's constantly updated system state. 
+Thus, the actual monitored state (\ie, the trace) is a discrete sampling of the monitor's constantly updated system state.
 The monitor's period must be fast enough that any changes in system state which are relevant to the specification are seen in the sampled trace.
 To ensure this, the monitor's period should be twice as fast as the shortest CAN message period.
 If the monitor's period is not fast enough, multiple CAN messages announcing the same system value may end up in the same trace state causing those values to not be seen in the trace.
@@ -66,11 +66,11 @@ and only using temporal bound values that are multiples of this period provides 
 %Our eager monitoring algorithm attempts to evaluate specification rules as soon as possible, but this requires checking trace properties which may not be fully reducible given the current trace. These unfinished formula reductions require extra computation time, and in practice the majority of the policy reductions performed by \monitor will be these eager reductions which may not fully reduce.
 The eager monitoring algorithm attempts to evaluate specification rules as soon as possible
 which requires checking properties which may not be fully reducible given the current trace.
-%While early detection of violations can be useful, 
+%While early detection of violations can be useful,
 Continuously attempting to check partially reduced residues which need future information to evaluate requires extra computation.
 %While early detection of violations can be useful, the costs of re-reducing partially reduced residues can become large given the right formula and trace.
 In some cases, the worst-case execution time to eagerly check a property (or set of properties) over a trace may be longer than the monitor's period.
-In this case the eager algorithm cannot guarantee prompt monitoring since some residues will be left unchecked. This is unacceptable for safety-critical system monitoring, as without a promptness guarantee the results cannot be fully trusted. 
+In this case the eager algorithm cannot guarantee prompt monitoring since some residues will be left unchecked. This is unacceptable for safety-critical system monitoring, as without a promptness guarantee the results cannot be fully trusted.
 %Even if this worst-case situation does not occur, for monitoring safety-critical systems the monitor must be able to guarantee completion.
 %there are situations where eagerly checking an entire target specification may require more computation than is available from the monitor in a given period.
 %
@@ -87,10 +87,13 @@ execution before the monitoring period whereas \ha is
 % when it is able to keep up with the trace, and
 equivalent to the conservative algorithm when there is no spare execution time to perform eager checks.
 
-Figure \ref{fig:hybrid_comp} shows the detection latency for the hybrid algorithm checking  the property $(\pred{CruiseActive} \wedge \pred{brakePressed} \rightarrow \henceforth_{[250ms, 1s]} (\neg \pred{CruiseActive})$ over an artificial log using different monitor periods. 
-With a $1ms$ period the monitor is able to eagerly detect every violation as soon as possible. 
-The $8.2us$ period is able to detect some violations early, but it does not detect them as early as possible. 
-The $1us$ period is too fast so the hybrid check only provides conservative checking, identifying the violations at the promptness limit of $1s$.
+Figure \ref{fig:hybrid_comp} shows the violation detection latency for \ha while
+checking  the property $(\pred{CruiseActive} \wedge \pred{brakePressed} \rightarrow \henceforth_{[250ms, 1s]} (\neg \pred{CruiseActive})$
+over a synthetic trace using different monitoring periods.
+With a $1ms$ monitoring period \ha is able to eagerly detect every violation early.
+For $8.2us$ monitoring period, \ha is able to detect some violations early, but it does not detect all of them right away.
+For $1us$ monitoring period,  \ha only evaluates conservatively due to lack of left-over time,
+identifying the violations at the promptness limit of $1s$.
 
 \begin{figure}[t]
 \centering
@@ -156,7 +159,7 @@ A PC was connected to a PCAN-USB Pro \cite{PCAN-USBPro} device which provides a 
 Requirements documentation for this system was available, so we were able to build a monitoring specification based on actual system requirements.
 The specification evaluated in the embedded monitor on the test logs are shown in Table \ref{tab:monspec}. This specification was derived from the system requirements based on the observable system state available in the testing logs.
 % acknowledge that case study looks simple -- but there are reasons for that
-We note that the safety specification is simple and does not fully exercise the monitor's constraints. 
+We note that the safety specification is simple and does not fully exercise the monitor's constraints.
 %Safety specifications derived from common system safety analysis would likely have a larger number of rules with similar complexities.
 %Monitoring additional rules scales well as each rule adds at worst it's own checking time independent of the other rules and also because independent rules can be split up across multiple monitors.
 %
@@ -195,8 +198,8 @@ Using \ha allows us to avoid worrying about the execution time and has little do
 \caption{Case study monitoring specification \label{tab:monspec}}
 \end{table}
 
-Table \ref{tab:monspec} shows the monitored specification. 
-$\pred{HeartBeatOn}$ is a guard used to avoid false-positive violations during system startup. 
+Table \ref{tab:monspec} shows the monitored specification.
+$\pred{HeartBeatOn}$ is a guard used to avoid false-positive violations during system startup.
 %which is true when once the target component has started in the logs (to avoid false-positive missing heartbeats during system startup).
 The system's heartbeat message contains a single heartbeat status bit which we checked directly in Rule \#0 to ensure the component is still running (essentially a watchdog message).
 The heartbeat message also has a rolling counter field.
