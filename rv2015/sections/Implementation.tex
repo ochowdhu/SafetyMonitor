@@ -88,7 +88,7 @@ execution before the monitoring period whereas \ha is
 equivalent to the conservative algorithm when there is no spare execution time to perform eager checks.
 
 Figure \ref{fig:hybrid_comp} shows the violation detection latency for \ha while
-checking  the property $(\pred{CruiseActive} \wedge \pred{brakePressed} \rightarrow \henceforth_{[250ms, 1s]} (\neg \pred{CruiseActive})$
+checking  the property $(\pred{CruiseActive} \wedge \pred{brakePressed}) \rightarrow \henceforth_{[250ms, 1s]} (\neg \pred{CruiseActive})$
 over a synthetic trace using different monitoring periods.
 With a $1ms$ monitoring period \ha is able to eagerly detect every violation early.
 For $8.2us$ monitoring period, \ha is able to detect some violations early, but it does not detect all of them right away.
