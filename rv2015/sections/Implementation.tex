@@ -39,7 +39,7 @@ system state based on the incoming message. In short, the monitor periodically
 takes a snapshot of this constantly updated state and uses that snapshot
 as the trace state which is monitored.
 %
-Thus, the monitor's system state view is constantly updated at the speed of the CAN bus messages, but the actual monitored state (\ie, the trace) is a discrete sampling of this bus-based state.
+Thus, the actual monitored state (\ie, the trace) is a discrete sampling of the monitor's constantly updated system state. 
 The monitor's period must be fast enough that any changes in system state which are relevant to the specification are seen in the sampled trace.
 To ensure this, the monitor's period should be twice as fast as the shortest CAN message period, which ensures the monitored trace contains every value seen on the CAN bus.
 If the monitor period is not fast enough, multiple CAN messages announcing the same system value may end up in the same trace state, which can cause those value changes to not be seen in the trace.
@@ -61,8 +61,7 @@ for a $2ms$ monitor.
 %
 To summarize, using a monitoring period at least twice as fast as the shortest
 CAN message period (\ie, shortest time between a CAN message retransmission)
-and only using temporal bound values that are multiples of this period, provides
-intuitive monitoring results.
+and only using temporal bound values that are multiples of this period provides intuitive monitoring results.
 
 
 \noindent\textbf{Hybrid Algorithm (\ha).}
@@ -76,8 +75,7 @@ In some cases, the worst-case execution time to eagerly check a property (or set
 over a trace may be longer than the monitor's period.
 In this case the eager algorithm cannot guarantee prompt monitoring since some
 residues will be left unchecked. This is unacceptable for
-safety-critical system monitoring, as one needs guarantee of monitoring completion,
-even if violation detection is not prompt.
+safety-critical system monitoring, as without a promptness guarantee the results cannot be fully trusted. 
 %Even if this worst-case situation does not occur, for monitoring safety-critical systems the monitor must be able to guarantee completion.
 %there are situations where eagerly checking an entire target specification may require more computation than is available from the monitor in a given period.
 %
@@ -86,14 +84,24 @@ real-time correctness, we can use a hybrid approach (called \ha) which first per
 (conservative) checking and then uses any spare time left in the monitoring period to
 perform as much eager checking as possible.
 \ha preserves the monitor's promptness guarantee (all violations will be
-detected within their delay $\Delta$) even if the \monitor cannot finish eager
+detected within their delay $\wdelay$) even if the \monitor cannot finish eager
 checking the specification.
-\ha preserves promptness while providing limited chance to eagerly detect specification violations.
-\ha is functionally equivalent to the \monitor when \monitor finishes
+\ha preserves promptness while providing a chance to eagerly detect specification violations.
+\ha is functionally equivalent to \monitor when it finishes
 execution before the monitoring period whereas \ha is
 % when it is able to keep up with the trace, and
-equivalent to the conservative
-algorithm when there is no spare execution time to perform eager checks.
+equivalent to the conservative algorithm when there is no spare execution time to perform eager checks.
+
+Figure \ref{fig:hybrid_comp} shows the detection latency for the hybrid algorithm checking  the property $(\pred{CruiseActive} \wedge \pred{brakePressed} \rightarrow \henceforth_{[250ms, 1s]} (\neg \pred{CruiseActive})$ over an artificial log using different monitor periods. 
+With a $1ms$ period the monitor is able to eagerly detect every violation as eagerly as soon as possible (\ie, when the first false inside the always occurs). 
+The $8.2us$ period is able to detect some violations early, but it does not detect them as early as possible. 
+The $1us$ period is too fast and the hybrid check only provides conservative checking, identifying the violations at the promptness limit of $1s$.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=4in]{img/hybrid_comp}
+\caption{Detection latencies with different hybrid monitor periods\label{fig:hybrid_comp}}
+\end{figure}
 %we have implemented a hybrid eager monitoring algorithm which performs non-eager (conservative) checking first and uses any spare time to eagerly check the remaining monitor residues.
 %
 %Conservative \monitor monitoring is performed by only checking residues which are older than their formula delay, which guarantees that these residue will be reduced at their first evaluation. For a periodic monitor this only requires updating the history structures and checking a single residue for each policy.
@@ -174,7 +182,7 @@ history structure update within the period the monitor will be prompt.
 
 
 
-\begin{table}[htbp]
+\begin{table}[t]
 \centering
 %\begin{tabular}{|p{3in}|l|}
 \footnotesize
@@ -215,7 +223,7 @@ Three different types of heartbeat violations were identified after inspecting t
 %some actual violations and some false-positives caused by the testing infrastructure.
 We also identified infrastructure-caused false-positive violations of the transition rules.
 
-\begin{figure}[htbp]
+\begin{figure}[t]
 		\centering
 		\includegraphics[width=4.0in]{img/hb1}
 		\caption{Heartbeat counter values over time}
@@ -230,7 +238,7 @@ The second violation is on-time heartbeat status message but the heartbeat statu
 We do not know from the available documentation whether a bad status in an on-time message with a good counter is valid or not. So without more information we cannot tell whether these violations are false positives or not. This is worthy of further investigation.
 
 
-\begin{figure}[htbp]
+\begin{figure}[t]
 \centering
 \includegraphics[width=4.0in]{img/hb2}
 \caption{Bad heartbeat counter values \label{fig:hb_badcounter}}

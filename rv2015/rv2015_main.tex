@@ -110,12 +110,12 @@ in SC system development makes these systems  unamenable to instrumentation.
 %that means these systems
 %are not always amenable to \emph{instrumentation} which is commonly used to produce the relevant events necessary for checking
 %the desired safety properties.
-In this paper, we develop an online runtime monitoring approach that targets an autonomous research
+In this paper we develop an online runtime monitoring approach targeting an autonomous research
 vehicle (ARV) system and recount our experience with it. To avoid instrumentation we passively monitor the target system by
-generating atomic property constructs (propositions) from the observed network state.
+generating atomic propositions from the observed network state.
 We then develop an efficient runtime monitoring algorithm, \monitor, that \emph{eagerly} checks for violations of desired properties
-written in  future-bounded, propositional metric temporal logic.
-We show the efficacy of \monitor by implementing it and empirically evaluating it against logs obtained from
+written in future-bounded, propositional metric temporal logic.
+We show the efficacy of \monitor by implementing and empirically evaluating it against logs obtained from
 the testing of an ARV system. \monitor was able to detect violations of several safety requirements.
 
 

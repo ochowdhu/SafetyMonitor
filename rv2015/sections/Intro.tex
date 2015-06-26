@@ -14,8 +14,7 @@ properties.
 When the monitor detects a violation of a property, it notifies a command module which then attempts to recover from the violation. \emph{In this paper, we develop a runtime monitor that monitors an autonomous research vehicle (ARV) and describe our experience with it}.
 
 The ARV is an autonomous heavy truck which is being designed for use in vehicle platoons. It is representative of common modern ground vehicle designs.
-These systems are generally built by system integrators who utilize commercial-off-the-shelf  components, some of which may be provided as black-box systems,
-developed by multiple vendors.
+These systems are generally built by system integrators who utilize commercial-off-the-shelf components developed by multiple vendors, some of which may be provided as black-box systems.
 %The ARV system we consider are built by system integrators utilizing multiple vendors and commercial-off-the-shelf (COTS) components, some of which can be viewed as black box components for the integrator.
 These systems are also often hard real-time systems which leads to additional constraints on system monitoring \cite{Goodloe2010}.
 % instrumentation citations -- bonakdarpour2011 has some, but a little weak (gdb)
@@ -24,7 +23,7 @@ These systems are also often hard real-time systems which leads to additional co
 % havelund2002/2004 (2004 better)-- the system must be instrumented to emit execution events to the dispatcher
 % Kim2004 -- MaC paper, also good for interface discussion
 This type of system architecture is incompatible with many existing runtime monitoring techniques, which often require program or system instrumentation \cite{Havelund2004, Chen2003, Bonakdarpour2012,Kim2004} to obtain the relevant events or policy-constructs (\eg, propositions) necessary to check for violations.
-Instrumenting systems without access to component source code is more difficult, and even when the source is available there are risks of affecting the timing and correctness of the target system when instrumented.
+Without access to component source code instrumenting systems is more difficult, and even when the source is available there are risks of affecting the timing and correctness of the target system when instrumented.
 
 \noindent
 \textit{Obtaining relevant policy constructs.}
@@ -34,7 +33,7 @@ Controller area network (CAN) is a
 %common and
 standard broadcast bus for ground vehicles which is the primary system bus in the ARV. We can obtain useful amounts of system state relevant information for monitoring
 the system safety specification by observing the data within the CAN messages that are broadcasted between system components.
-Before we can start monitoring the ARV system, we need a component, which we call the \sfmap (in short, \emph{state to proposition}), that observes messages transmitted on the bus and interprets
+Before we can start monitoring the ARV system, we need a component, which we call the \sfmap (in short, \emph{state to proposition map}), that observes messages transmitted on the bus and interprets
 them into propositions relevant to monitoring which are then fed into the monitor.
 % This acts similarly to the low-level specification and filter/event recognizers from MaC \cite{Kim2004}.
 We want to emphasize that the limits of external observability can cause significant challenges
@@ -46,10 +45,7 @@ the necessary atomic policy-constructs \cite{Kane2014}.
 \textit{Specification logic.}
 To obtain the relevant safety requirements and invariants for monitoring the ARV system we consulted the safety requirements of the ARV system.
 We observed that many desired properties for these types of systems are timing related, so using an explicit-time based specification language for expressing these properties is helpful.
-System requirements like
- of the form ``\emph{the system must perform action $a$ within $t$ seconds of event $e$}'' are common,
- for instance,
-``\emph{Cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed}''.
+System requirements of the form ``\emph{the system must perform action $a$ within $t$ seconds of event $e$}'' are common, for instance, ``\emph{Cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed}''.
 %
 For efficient monitoring, we use a fragment of propositional, discrete time, future-bounded metric temporal logic (MTL)\cite{Koymans1990}.
 % in which the
@@ -61,17 +57,13 @@ For efficient monitoring, we use a fragment of propositional, discrete time, fut
 \textit{Monitoring algorithm.}
 We have developed a runtime monitoring algorithm, which we call \monitor, that incrementally takes as input a system state
 (\ie, a state maps  propositions to either true/false) and a MTL formula and eagerly checks the state trace for violations.
-Some of the existing monitoring algorithms that support bounded future formulas wait for the full-time of the bound before evaluating the formula (\eg, \cite{Basin2008}).
-\monitor uses a dynamic programming based iterative algorithm that tries to reduce the input formula as soon as possible using history summarizing structures and straightforward formula-rewriting based simplifications when possible (leaving a partially reduced formula when future input is required).
+Some existing monitoring algorithms that support bounded future formulas wait for the full-time of the bound before evaluating the formula (\eg, \cite{Basin2008}).
+\monitor uses a dynamic programming based iterative algorithm that tries to reduce the input formula as soon as possible using history summarizing structures and formula-rewriting (leaving a partially reduced formula when future input is required).
 This eager nature of the algorithm can detect a violation earlier leaving the system more time to attempt a graceful recovery.
 We have also proved the correctness of our algorithm. As the target systems we envision to monitor
 have strict time restriction,
-it is possible that the eager checks
-performed by \monitor are not finished before the next trace state arrives,
-possibly corrupting \monitor's state. To overcome this,
-we have developed a hybrid monitoring algorithm, \ha, that first performs conservative
-checking like traditional runtime monitoring algorithms for MTL and performs eager check
-if time permits.
+it is possible that the eager checks performed by \monitor are not finished before the next trace state arrives, possibly leaving trace properties unchecked. 
+To overcome this, we have developed a hybrid monitoring algorithm, \ha, that first performs conservative checking like traditional runtime monitoring algorithms for MTL and performs as many eager checks as the remaining time permits.
 
 \noindent
 \textit{Empirical evaluation.}

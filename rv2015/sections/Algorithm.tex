@@ -10,41 +10,33 @@ For checking whether the given ARV system  adheres to its specification,
 %distributed embedded systems
 we need an algorithm which %can %continuously
 incrementally checks explicit time specifications (\ie, propositional metric-time temporal logic~\cite{Koymans1990})
-over finite, timed system traces (Every trace position of a \emph{timed trace} has an explicit time associated with it).
+over finite, timed system traces.
 This has led to our algorithm \monitor which is an iterative monitoring algorithm based on formula rewriting and summarizing the relevant history of the trace
-in \emph{history-structures}. To detect violations early, \monitor, eagerly checks whether it can reduce subformulas of the original formula to boolean value
+in \emph{history-structures}. 
+To detect violations early, \monitor, eagerly checks whether it can reduce subformulas of the original formula to boolean value
 %either true/false
-using formula simplifications (\eg, $a\wedge \mathit{false} \equiv \mathit{false}$).
-Many of the existing algorithms for evaluating formulas like $\eventually_{[l,h]} a \vee b$
-(read, either $b$ is true or sometimes in the future $a$ is true such that the time difference
-between the evaluation state and the future state in which $a$ is true, $t_d$, is within the
-bound $[l,h]$) wait enough time so that $\eventually_{[l,h]} a$ can be fully evaluated.
-\monitor however tries to eagerly evaluate both $\eventually_{[l,h]} a$ and $b$ and see
-whether it can reduce the whole formula to boolean value.
+by checking the known (potentially incomplete) trace history and using formula simplifications (\eg, $a\wedge \mathit{false} \equiv \mathit{false}$).
+Many of the existing algorithms for evaluating formulas like $\eventually_{[l,h]} a \vee b$ (read, either $b$ is true or sometimes in the future $a$ is true such that the time difference between the evaluation state and the future state in which $a$ is true, $t_d$, is within the bound $[l,h]$) wait enough time so that $\eventually_{[l,h]} a$ can be fully evaluated.
+\monitor however tries to eagerly evaluate both $\eventually_{[l,h]} a$ and $b$ immediately and see whether it can reduce the whole formula to boolean value.
 For another eagerness checking example,
 let us assume we are checking the property $a\until_{[l, h]}b$ (read, the formula is true at trace position $i$ if there is a trace position
 $j$ in which $b$ holds such that $j\geq i$ and the time difference between position $i$ and $j$ is in the range $[l,h]$
 and for all trace positions $k$ such that $i\leq k < j$ the formula $a$ holds) at trace position $i$.
-While monitoring if we can find a trace position $k > i$ for which $b$ and $a$ are both false then we can evaluate the formula to be
-false without waiting for a trace position in which $b$ is true. Nesting of  temporal formulas can make the eager check nontrivial.
-We want to emphasize that \monitor optimistically
-checks for violations and hence we could possible have a trace in which each formula can only be evaluated in
-the last possible trace position then our algorithm will behave in the exact same way as the non-eager
-algorithms modulo the extra computation for eager checking.
+While monitoring if we can find a trace position $k > i$ for which $a$ is false and no previous $b$'s (\eg, at position $l, i \leq l < k$) are true then we can evaluate the formula to be false without waiting for a trace position in which $b$ is true. 
+Nesting of temporal formulas causes the eager evaluation to wait for subformula to evaluate.
+We want to emphasize that \monitor optimistically checks for violations and hence we could have a trace in which each formula can only be evaluated at the last possible trace position which causes our algorithm will behave in the exact same way as the non-eager algorithms modulo the extra computation for eager checking.
 %either true or false.
 %
 %To constantly check that the target system is adhering to its specification, we must constantly check the specification against the current system trace. To constantly check the system efficiently, \monitor is an iterative algorithm, performing additional checking as each new trace step arrives.
 
 \subsection{Specification Logic}
-Many safety specification rules for ARV-like systems require explicit time bounds to ensure timely behavior,
-so a specification language with explicit time bounds is important.
-For instance,
-%Examples of rules that utilize explicit time bounds include: %
-``\natlangrule{cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed}''
-($\pred{brakeDepress} \rightarrow \eventually_{[0, 500]} \henceforth_{[0,250]} \neg \pred{CruiseEng}$).
-%,
-%\natlangrule{the cruise control mode cannot transition directly from Off to Engaged within 250ms} ($\neg (\pred{CruiseEngaged} \wedge \yesterday_{[0,250]} \pred{CruiseOff})$),
-%and \natlangrule{the vehicle should not be within 1m of the current lane edge for 1s while lane centering is enabled} ($\neg \historically_{[0, 1000]}(\pred{LaneCentering} \wedge \pred{distToLaneEdgeLT1m})$).
+%% This stuff is redundant with intro section
+%%Many safety specification rules for ARV-like systems require explicit time bounds to ensure timely behavior,
+%%so a specification language with explicit time bounds is important.
+%%For instance,
+%%%Examples of rules that utilize explicit time bounds include: %
+%%``\natlangrule{cruise control shall disengage for 250ms within 500ms of the brake pedal being depressed}''
+%%($\pred{brakeDepress} \rightarrow \eventually_{[0, 500]} \henceforth_{[0,250]} \neg \pred{CruiseEng}$).
 Our safety specification language for the ARV system, which we call \planguage, is a future-bounded,
 discrete time, propositional metric temporal logic (MTL \cite{Koymans1990}).
 %%past temporal operators may have infinite bounds but
@@ -83,8 +75,7 @@ We use \policy, $\phi$, $\alpha$, and $\beta$ (possibly with subscripts) to deno
 We denote the sequence of time stamps with $\tau$. For all $i, j\in\mathbb{N}$ such that $i < j$, we require $\tau_i < \tau_j$. For a given trace $\sigma$ and time stamp sequence $\tau$, we write $\sigma, \tau, i\models\policy$ to denote that the formula \policy is true with respect to the $i^{th}$ position of $\sigma$ and $\tau$.
 The semantics of \planguage future bounded MTL is standard, see for instance, \cite{Basin2008}.
 Each  property \policy has an implicit unbounded \henceforth future operator ($\henceforth\policy$ signifies that
-\policy is true in all future trace positions including the current trace position) at the top-level and we handle it by
-checking whether \policy is true in each trace position.
+\policy is true in all future trace positions including the current trace position) at the top-level which is handled by checking whether \policy is true in each trace position.
 % is evaluated over the trace at every trace step (\ie, there is an implicit unbounded always over all top-level specification formulas.
 
 \[
@@ -367,17 +358,11 @@ For all $i \in \mathbb{N}$, all formula $\varphi$, all time stamp sequences $\ta
 \textit{Proof.} By  induction on the  formula $\policy$ and time step $i$. See \cite{Kane2015} \\
 
 We now discuss the runtime complexity of \monitor while checking satisfaction of a property \policy.
-For any evaluation position of the trace $\sigma$,
-let us assume we have maximum $L$ positions in $\sigma$ for which
-\policy has not yet been reduced to a boolean value.
-Note that if the value of $\wdelay(\policy)$ is large, then
-$L$ can be as large as $|\sigma|$.
+For any evaluation position of the trace $\sigma$, let us assume we have maximum $L$ positions in $\sigma$ for which \policy has not yet been reduced to a boolean value.
+Note that the maximum number of positions in that are not yet reduced must be $\frac{\wdelay(\policy)}{P}$ where $P$ is the monitor's period. 
 Addtionally, for each temporal subformula $\phi_1\until\phi_2$ of \policy,
-we build history structures that
-keep track of segments of  positions in $\sigma$ for which $\phi_1$ is true. Let  assume
-we have a maximum of $S$ such segments that are relevant for \policy evaluation.
-Hence, the complexity of \monitor is
-$\mathcal{O}(LM|\policy|)$.
+we build history structures that keep track of segments of positions in $\sigma$ for which $\phi_1$ is true. Let us assume we have a maximum of $M$ such segments that are relevant for \policy evaluation.
+Hence, the complexity of \monitor is $\mathcal{O}(LM|\policy|)$.
 
 %Theorem \ref{thm:eagerness} states that \monitor is eager.
 %
