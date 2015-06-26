@@ -13,17 +13,16 @@ incrementally checks explicit time specifications (\ie, propositional metric-tim
 over finite, timed system traces.
 This has led to our algorithm \monitor which is an iterative monitoring algorithm based on formula rewriting and summarizing the relevant history of the trace
 in \emph{history-structures}. 
-To detect violations early, \monitor, eagerly checks whether it can reduce subformulas of the original formula to boolean value
+To detect violations early, \monitor, eagerly checks whether it can reduce subformulas of the original formula to a truth value
 %either true/false
-by checking the known (potentially incomplete) trace history and using formula simplifications (\eg, $a\wedge \mathit{false} \equiv \mathit{false}$).
-Many of the existing algorithms for evaluating formulas like $\eventually_{[l,h]} a \vee b$ (read, either $b$ is true or sometimes in the future $a$ is true such that the time difference between the evaluation state and the future state in which $a$ is true, $t_d$, is within the bound $[l,h]$) wait enough time so that $\eventually_{[l,h]} a$ can be fully evaluated.
-\monitor however tries to eagerly evaluate both $\eventually_{[l,h]} a$ and $b$ immediately and see whether it can reduce the whole formula to boolean value.
+by checking the (potentially incomplete) trace history and using formula simplifications (\eg, $a\wedge \mathit{false} \equiv \mathit{false}$).
+Many of the existing algorithms for evaluating formulas such as $\eventually_{[l,h]} a \vee b$ (\ie, either $b$ is true or sometimes in the future $a$ is true such that the time difference between the evaluation state and the future state in which $a$ is true, $t_d$, is within the bound $[l,h]$) wait enough time so that $\eventually_{[l,h]} a$ can be fully evaluated.
+\monitor however tries to eagerly evaluate both $\eventually_{[l,h]} a$ and $b$ immediately and see whether it can reduce the whole formula to a truth value.
 For another eagerness checking example,
 let us assume we are checking the property $a\until_{[l, h]}b$ (read, the formula is true at trace position $i$ if there is a trace position
 $j$ in which $b$ holds such that $j\geq i$ and the time difference between position $i$ and $j$ is in the range $[l,h]$
 and for all trace positions $k$ such that $i\leq k < j$ the formula $a$ holds) at trace position $i$.
 While monitoring if we can find a trace position $k > i$ for which $a$ is false and no previous $b$'s (\eg, at position $l, i \leq l < k$) are true then we can evaluate the formula to be false without waiting for a trace position in which $b$ is true. 
-Nesting of temporal formulas causes the eager evaluation to wait for subformula to evaluate.
 We want to emphasize that \monitor optimistically checks for violations and hence we could have a trace in which each formula can only be evaluated at the last possible trace position which causes our algorithm will behave in the exact same way as the non-eager algorithms modulo the extra computation for eager checking.
 %either true or false.
 %
