@@ -13,7 +13,7 @@ incrementally checks explicit time specifications (\ie, propositional metric-tim
 over finite, timed system traces.
 This has led to our algorithm \monitor which is an iterative monitoring algorithm based on formula rewriting and summarizing the relevant history of the trace
 in \emph{history-structures}. 
-To detect violations early, \monitor, eagerly checks whether it can reduce subformulas of the original formula to a truth value
+To detect violations early, \monitor eagerly checks whether it can reduce subformulas of the original formula to a truth value
 %either true/false
 by checking the (potentially incomplete) trace history and using formula simplifications (\eg, $a\wedge \mathit{false} \equiv \mathit{false}$).
 Many of the existing algorithms for evaluating formulas such as $\eventually_{[l,h]} a \vee b$ (\ie, either $b$ is true or sometimes in the future $a$ is true such that the time difference between the evaluation state and the future state in which $a$ is true, $t_d$, is within the bound $[l,h]$) wait enough time so that $\eventually_{[l,h]} a$ can be fully evaluated.

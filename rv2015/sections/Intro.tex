@@ -22,23 +22,23 @@ These systems are also often hard real-time systems which leads to additional co
 % chen2003 -- MoP paper, they instrument for both inline and offline (to get events out)
 % havelund2002/2004 (2004 better)-- the system must be instrumented to emit execution events to the dispatcher
 % Kim2004 -- MaC paper, also good for interface discussion
-This type of system architecture is incompatible with many existing runtime monitoring techniques, which often require program or system instrumentation \cite{Havelund2004, Chen2003, Bonakdarpour2012,Kim2004} to obtain the relevant events or policy-constructs (\eg, propositions) necessary to check for violations.
+This type of system architecture is incompatible with many existing runtime monitoring techniques, which often require program or system instrumentation \cite{Havelund2004, Chen2003, Bonakdarpour2012,Kim2004} to obtain the relevant events or system properties (\eg, propositions) necessary to check for violations.
 Without access to component source code instrumenting systems is more difficult, and even when the source is available there are risks of affecting the timing and correctness of the target system when instrumented.
 
 \noindent
-\textit{Obtaining relevant policy constructs.}
+\textit{Obtaining relevant system state.}
 To avoid instrumentation, we obtain the relevant information for monitoring the ARV system through passive observation of
 its broadcast buses. % \cite{Rushby2001}.
 Controller area network (CAN) is a
 %common and
-standard broadcast bus for ground vehicles which is the primary system bus in the ARV. We can obtain useful amounts of system state relevant information for monitoring
+standard broadcast bus for ground vehicles which is the primary system bus in the ARV. We can obtain useful amounts of system-state relevant information for monitoring
 the system safety specification by observing the data within the CAN messages that are broadcasted between system components.
 Before we can start monitoring the ARV system, we need a component, which we call the \sfmap (in short, \emph{state to proposition map}), that observes messages transmitted on the bus and interprets
 them into propositions relevant to monitoring which are then fed into the monitor.
 % This acts similarly to the low-level specification and filter/event recognizers from MaC \cite{Kim2004}.
 We want to emphasize that the limits of external observability can cause significant challenges
 in designing the \sfmap when considering the state available from the system messages and
-the necessary atomic policy-constructs \cite{Kane2014}.
+the necessary atomic propositions \cite{Kane2014}.
 %We want to emphasize that depending on the granularity of the information available in the messages and the necessary atomic policy-constructs, developing the \textsf{SF Map} poses a significant challenge.
 
 \noindent
@@ -59,7 +59,7 @@ We have developed a runtime monitoring algorithm, which we call \monitor, that i
 (\ie, a state maps  propositions to either true/false) and a MTL formula and eagerly checks the state trace for violations.
 Some existing monitoring algorithms that support bounded future formulas wait for the full-time of the bound before evaluating the formula (\eg, \cite{Basin2008}).
 \monitor uses a dynamic programming based iterative algorithm that tries to reduce the input formula as soon as possible using history summarizing structures and formula-rewriting (leaving a partially reduced formula when future input is required).
-This eager nature of the algorithm can detect a violation earlier leaving the system more time to attempt a graceful recovery.
+This eager nature of the algorithm can detect a violation earlier, leaving the system more time to attempt a graceful recovery.
 We have also proved the correctness of our algorithm. As the target systems we envision to monitor
 have strict time restriction,
 it is possible that the eager checks performed by \monitor are not finished before the next trace state arrives, possibly leaving trace properties unchecked.
